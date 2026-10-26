@@ -87,3 +87,39 @@ class TestHistory:
         summary = spheres.history_summary(entries)[0]
         assert len(summary["cities"]) == 5
         assert summary["cities_total"] == 7, "+2 в подписи не должно теряться"
+
+
+class TestCustomCatalog:
+    """Правки из окна «Сферы»: главнее встроенных и переживают битый файл."""
+
+    def _path(self, tmp_path, monkeypatch):
+        from yandex_maps_parser import spheres as spheres_mod
+        path = tmp_path / "spheres.json"
+        monkeypatch.setattr(spheres_mod, "_custom_path", lambda: str(path))
+        return path
+
+    def test_saved_catalog_replaces_builtin(self, tmp_path, monkeypatch):
+        path = self._path(tmp_path, monkeypatch)
+        saved = spheres.save_custom([
+            {"id": "cafe", "name": "Кофейни", "icon": "☕",
+             "queries": ["Кофе", "  кофейня  "]},
+            {"name": "Грумеры", "queries": ["груминг"]},
+        ])
+        assert saved[0]["queries"] == ["кофе", "кофейня"]
+        assert [s["name"] for s in spheres.catalog()] == ["Кофейни", "Грумеры"]
+        # Новая сфера участвует и в подписях истории.
+        assert spheres.sphere_for_queries(["груминг"])["name"] == "Грумеры"
+        assert path.exists()
+
+    def test_broken_file_falls_back_to_builtin(self, tmp_path, monkeypatch):
+        path = self._path(tmp_path, monkeypatch)
+        path.write_text("{не json", encoding="utf-8")
+        assert len(spheres.catalog()) >= 20
+
+    def test_sphere_without_words_is_dropped(self, tmp_path, monkeypatch):
+        self._path(tmp_path, monkeypatch)
+        saved = spheres.save_custom([
+            {"id": "ok", "name": "Сфера", "queries": ["слово"]},
+            {"id": "empty", "name": "Пустая", "queries": ["   "]},
+        ])
+        assert [s["id"] for s in saved] == ["ok"]

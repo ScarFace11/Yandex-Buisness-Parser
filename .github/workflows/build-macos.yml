@@ -233,17 +233,6 @@ jobs:
             echo "::warning::каталог данных не создан"
           fi
 
-      - name: Package the .zip (ditto keeps symlinks and permissions)
-        run: |
-          # Страховка: метка локальной сборки (.local-build) снимает порог
-          # минимальной версии — в релизе её быть не должно (её ставит только
-          # build-mac.sh / build-manual.yml, см. config.skips_min_version).
-          rm -f "dist-mac/YandexBusinessParser.app/.local-build"
-          ARCH="${{ matrix.asset_arch }}"
-          ditto -c -k --sequesterRsrc --keepParent \
-            "dist-mac/YandexBusinessParser.app" "dist-mac/YandexBusinessParser-macos-$ARCH.zip"
-          ls -lh dist-mac/*.zip
-
       - name: Build the .dmg
         # hdiutil на раннере падает с «Resource busy», если от предыдущего
         # запуска (или от смоук-теста приложения) остался неотмонтированный
@@ -252,6 +241,10 @@ jobs:
         # Поэтому три попытки с отмонтированием и паузой между ними; после
         # третьей — падаем с той же ошибкой, что и раньше, но с логом.
         run: |
+          # Страховка: метка локальной сборки (.local-build) снимает порог
+          # минимальной версии — в релизе её быть не должно (её ставит только
+          # build-mac.sh / build-manual.yml, см. config.skips_min_version).
+          rm -f "dist-mac/YandexBusinessParser.app/.local-build"
           ARCH="${{ matrix.asset_arch }}"
           STAGE="$(mktemp -d)"
           cp -R "dist-mac/YandexBusinessParser.app" "$STAGE/"
@@ -270,15 +263,13 @@ jobs:
           [ "$ok" = "1" ] || { echo "::error::.dmg не создан за 3 попытки"; exit 1; }
           ls -lh dist-mac/*.dmg
 
-      - name: Verify the .dmg and the .zip before uploading them
-        # Проверка образа и архива до загрузки на релиз.
+      - name: Verify the .dmg before uploading it
+        # Проверка образа до загрузки на релиз. Отдельный .zip для macOS с
+        # 2.3.5 не собирается: приложение ставится из .dmg.
         run: |
           set -uo pipefail
           ARCH="${{ matrix.asset_arch }}"
           DMG="dist-mac/YandexBusinessParser-macos-$ARCH.dmg"
-          ZIP="dist-mac/YandexBusinessParser-macos-$ARCH.zip"
-          VERSION=""
-          case "${GITHUB_REF_NAME:-}" in v*) VERSION="${GITHUB_REF_NAME#v}" ;; esac
 
           ok=0
           for attempt in 1 2 3; do
@@ -302,9 +293,7 @@ jobs:
           echo "OK: образ смонтирован, приложение внутри есть ($MP)"
           hdiutil detach "$MP" -force || true
 
-          PYARGS=(--check-local "$ZIP")
-          [ -n "$VERSION" ] && PYARGS+=(--version "$VERSION")
-          python3 scripts/verify_release_assets.py "${PYARGS[@]}" || exit 1
+          python3 scripts/verify_release_assets.py --check-local "$DMG" || exit 1
 
       - name: Verify the bundle layout
         # Данные (templates/, static/) и библиотеки обязаны лежать внутри
@@ -357,9 +346,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: YandexBusinessParser-macos-${{ matrix.asset_arch }}
-          path: |
-            dist-mac/*.zip
-            dist-mac/*.dmg
+          path: dist-mac/*.dmg
           retention-days: 30
 
       - name: Attach to the GitHub Release
@@ -378,5 +365,5 @@ jobs:
             echo "Ждём релиз $TAG (Windows-сборка создаёт его первой)… $i/40"
             sleep 15
           done
-          gh release upload "$TAG" dist-mac/*.zip dist-mac/*.dmg --clobber
+          gh release upload "$TAG" dist-mac/*.dmg --clobber
           gh release view "$TAG" --json assets --jq '.assets[].name'

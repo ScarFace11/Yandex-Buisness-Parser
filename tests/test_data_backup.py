@@ -107,6 +107,18 @@ class TestAtomicSave:
             "https://a": {"reviewed_at": 1.0}}
         assert not (root / "_reviewed.json.tmp").exists(), "временный файл убран"
 
+    def test_mark_route_answers_json_when_the_store_cannot_be_written(self, client, monkeypatch):
+        """Ошибка записи — это JSON-ответ, а не HTML-страница отладки."""
+        from routes import api as api_mod
+
+        def boom(_data):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(api_mod, "_save_reviewed", boom)
+        res = client.post("/reviewed", json={"url": "https://a", "reviewed": True})
+        assert res.status_code == 500
+        assert res.get_json() == {"ok": False, "error": "disk full"}
+
     def test_corrupt_main_falls_back_to_the_previous_version(self, client):
         from routes import api as api_mod
         api_mod._save_reviewed({"https://a": {"reviewed_at": 1.0}})

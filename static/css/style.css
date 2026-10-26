@@ -825,15 +825,51 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
   margin:1px 2px 1px 0;text-decoration:none;letter-spacing:.01em;
 }
 /* Lead score badge in the results table (green = hot lead) */
+/* Бейдж — кнопка: по клику открывается разбор оценки (см. .score-pop).
+   Поэтому здесь reset кнопочных стилей, а не только плашка. */
 .score-badge{
   display:inline-block;min-width:26px;padding:2px 7px;border-radius:4px;
-  font-size:11px;font-weight:800;text-align:center;
+  font-size:11px;font-weight:800;text-align:center;line-height:1.35;
   background:var(--track);color:var(--sub);
+  border:none;font-family:inherit;cursor:pointer;
 }
-.score-badge.hot{background:var(--ok-bg);color:var(--ok-strong)}
-.score-badge.warm{background:var(--warn-bg);color:var(--warn-strong)}
-.score-badge.cold{background:var(--track);color:var(--sub)}
+.score-badge:hover{filter:brightness(.96)}
+.score-badge:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+
+/* Мини-окно «почему столько баллов» — открывается кликом по оценке. */
+.score-pop{
+  position:fixed;z-index:80;min-width:240px;max-width:330px;
+  padding:10px 12px;border:1px solid var(--bdr);border-radius:9px;
+  background:var(--card);color:var(--txt);box-shadow:0 8px 24px rgba(0,0,0,.18);
+  font-size:12px;line-height:1.45;
+}
+.score-pop:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.score-pop-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px}
+.score-pop-name{font-weight:700;font-size:12.5px;flex:1 1 auto;overflow-wrap:anywhere}
+.score-pop-x{
+  flex:0 0 auto;width:20px;height:20px;padding:0;border:none;border-radius:5px;
+  background:transparent;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;
+}
+.score-pop-x:hover{background:var(--cl);color:var(--txt)}
+.score-pop-x:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+.score-pop-sum{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+/* В разборе оценка — просто цифра, а не ещё одна кнопка: курсор обычный. */
+.score-pop-sum .score-badge{cursor:default;filter:none}
+.score-pop-max{color:var(--sub);font-size:11.5px}
+.score-pop-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
+.score-pop-list li{color:var(--sub);font-size:12px}
+.score-pop-list li.hit{color:var(--txt)}
 .score-na{color:var(--sub)}
+.score-badge.hot{background:var(--ok-bg);color:var(--ok-strong)}
+/* «новая» у названия: организации не было в файлах прошлых поисков.
+   Тот же зелёный, что у других подтверждённых состояний (бейдж движка,
+   завершённая история) — в обеих темах цвет берётся из токенов. */
+.new-tag{
+  display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;
+  font-size:10px;font-weight:800;line-height:16px;vertical-align:1px;
+  background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr);
+  white-space:nowrap;
+}
 [data-theme="dark"] .score-badge{background:var(--warn-on);color:var(--sub)}
 [data-theme="dark"] .score-badge.hot{background:var(--ok-bg);color:var(--ok-txt)}
 [data-theme="dark"] .score-badge.warm{background:var(--warn-bg);color:var(--warn-txt)}
@@ -1238,6 +1274,42 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 .stat-card .lbl{font-size:11px;color:var(--muted);margin-top:6px;font-weight:600}
 .stat-section{margin-bottom:26px}
 .stat-section h3{font-size:13px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:13px}
+
+/* ── «Новые организации»: одна полоса на две доли ──────────────────────
+   Слева новые — тот же зелёный, что у «Горячих лидов» (свежие данные),
+   справа уже встречавшиеся — нейтральный --bdr-h. Процент крупно в
+   заголовке, точные числа — в легенде: полоса декоративна. */
+.new-split-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.new-split-head b{font-size:24px;font-weight:800;color:var(--c);letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.new-split-head span{font-size:12px;color:var(--muted)}
+.new-split-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--track)}
+.new-split-fresh,.new-split-repeat{display:block;height:100%;transition:width .5s ease}
+.new-split-fresh{background:var(--grn);border-radius:6px 0 0 6px}
+.new-split-repeat{background:var(--bdr-h);border-radius:0 6px 6px 0}
+.new-split-legend{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:10px}
+.new-split-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--sub)}
+.new-split-item b{font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
+.new-split-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.new-split-dot.fresh{background:var(--grn)}
+.new-split-dot.repeat{background:var(--bdr-h)}
+
+/* ── «Новые организации»: одна полоса на две доли ──────────────────────
+   Слева новые — тот же зелёный, что у «Горячих лидов» (свежие данные),
+   справа уже встречавшиеся — нейтральный --bdr-h. Процент крупно в
+   заголовке, точные числа — в легенде: полоса декоративна. */
+.new-split-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.new-split-head b{font-size:24px;font-weight:800;color:var(--c);letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
+.new-split-head span{font-size:12px;color:var(--muted)}
+.new-split-bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--track)}
+.new-split-fresh,.new-split-repeat{display:block;height:100%;transition:width .5s ease}
+.new-split-fresh{background:var(--grn);border-radius:6px 0 0 6px}
+.new-split-repeat{background:var(--bdr-h);border-radius:0 6px 6px 0}
+.new-split-legend{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:10px}
+.new-split-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--sub)}
+.new-split-item b{font-weight:700;color:var(--txt);font-variant-numeric:tabular-nums}
+.new-split-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.new-split-dot.fresh{background:var(--grn)}
+.new-split-dot.repeat{background:var(--bdr-h)}
 
 /* ── «Динамика по дням» ────────────────────────────────────────────────
    Панель статистики прокручивается ЦЕЛИКОМ: блок динамики стоит над
@@ -1672,7 +1744,7 @@ details[open].sender-advanced summary::before{content:"▼  "}
    выпадающий список, и две разные вёрстки для одного элемента читались бы
    как ошибка. Здесь только то, что у сфер иное: кнопка и строки-опции. */
 .spheres-btn{
-  margin-left:auto;flex-shrink:0;display:inline-flex;align-items:center;gap:4px;
+  flex-shrink:0;display:inline-flex;align-items:center;gap:4px;
   padding:2px 9px;border:1px solid var(--bdr);border-radius:999px;
   background:var(--field);color:var(--txt);font:inherit;font-size:11px;
   font-weight:600;cursor:pointer;transition:background .12s,border-color .12s;
@@ -1682,6 +1754,26 @@ details[open].sender-advanced summary::before{content:"▼  "}
 .sphere-dropdown .sphere-option{width:100%;text-align:left}
 .sphere-dropdown .city-option-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sphere-empty{padding:10px 12px;font-size:12px;color:var(--muted)}
+
+/* Кнопки у поля запросов: «Очистить» и «Сферы» стоят вместе справа. */
+.hint-actions{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+
+/* ── Редактор сфер (окно «Сферы ✎») ─────────────
+   Список правится прямо в окне: название + слова через запятую. */
+.spheres-modal{max-width:620px}
+.spheres-hint{font-size:12px;color:var(--sub);line-height:1.5;margin-bottom:10px}
+.spheres-list{display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto;
+  padding-right:2px;scrollbar-width:thin}
+.sphere-edit-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(150px,1.6fr) auto;
+  gap:6px;align-items:center}
+.sphere-edit-row input{width:100%;min-width:0;padding:6px 8px;border:1px solid var(--bdr);
+  border-radius:6px;background:var(--field);color:var(--txt);font:inherit;font-size:12px}
+.sphere-edit-row input:focus{outline:2px solid var(--c);outline-offset:1px;border-color:var(--c)}
+.sphere-edit-del{width:26px;height:26px;border:1px solid var(--bdr);border-radius:6px;
+  background:transparent;color:var(--muted);cursor:pointer;font-size:12px;line-height:1}
+.sphere-edit-del:hover{border-color:var(--red);color:var(--red);background:var(--err-bg)}
+.spheres-add{margin:8px 0 4px;width:100%;border-style:dashed}
+.spheres-reset{margin-right:auto}
 
 /* «Только данные компании» в блоке персональных данных */
 .pd-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
@@ -1741,20 +1833,21 @@ details[open].sender-advanced summary::before{content:"▼  "}
    ════════════════════════════════ */
 #update-banner{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-  padding:10px 24px;
+  margin:0 0 10px;padding:10px 14px;
   background:var(--grn-btn);
   color:var(--on-accent);font-size:13px;font-weight:600;
-  /* Прижат ПОД шапку и не зависит от прокрутки: раньше это был
-     position:sticky внутри потока — баннер уезжал вместе со страницей и
-     его было видно только после прокрутки вниз (иногда его перекрывала
-     приклеенная шапка). */
-  position:fixed;top:calc(var(--hdr-h) + 2px);left:0;right:0;z-index:240;
-  box-shadow:0 6px 18px rgba(9,30,36,.22);
+  /* Баннер живёт В ПОТОКЕ правой колонки, сразу под вкладками: раньше он
+     был position:fixed, а body получал padding-top на его высоту. Шапка
+     уезжала вниз, баннер оставался вверху и перекрывал её вместе с меню.
+     Теперь никакого наложения: навигация всегда выше, контент — ниже. */
+  border-radius:10px;
+  box-shadow:0 3px 10px rgba(9,30,36,.12);
 }
-/* Пока баннер висит поверх контента, сдвигаем страницу на его высоту.
-   Точное значение ставит JS (_syncBannerOffset) — оно зависит от переноса
-   кнопок на узком экране. */
-body.has-update-banner{padding-top:48px}
+/* Когда баннер вставлен между вкладками и панелями, нижняя рамка вкладок
+   больше не стыкуется с панелью — возвращаем панели самостоятельный вид. */
+.right-col > #update-banner + .tab-panels{
+  margin-top:2px;border-top:1px solid var(--bdr);border-radius:var(--r);
+}
 .ub-text{flex:1}
 .ub-text b{color:var(--on-accent);font-weight:800}
 .ub-btn{
@@ -1780,7 +1873,14 @@ body.has-update-banner{padding-top:48px}
   transition:color .12s;
 }
 .ub-close:hover{color:var(--on-accent)}
-
+/* Причина сбоя обновления — строкой внутри баннера, а не только тостом:
+   тост исчезает, а пользователь остаётся с неработающей кнопкой. */
+.ub-error{
+  flex-basis:100%;margin-top:2px;padding:7px 10px;border-radius:7px;
+  background:rgba(0,0,0,.16);color:var(--on-accent);
+  font-size:12px;font-weight:600;line-height:1.45;word-break:break-word;
+}
+.ub-error[hidden]{display:none}
 /* Видимая с первого взгляда индикация обновления в шапке.
    Шапка приклеена к верху окна, поэтому кнопку видно при любой прокрутке —
    именно она (а не только тонкая точка) сообщает о новой версии, даже если
@@ -1809,24 +1909,48 @@ body.has-update-banner{padding-top:48px}
 #update-dot.on{opacity:1;transform:scale(1);animation:dot-pulse 1.8s ease infinite}
 @keyframes dot-pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,150,13,.55)}55%{box-shadow:0 0 0 6px rgba(232,150,13,0)}}
 
-/* ── Changelog viewer modal («Что нового») ── */
-.changelog-modal{max-width:520px}
+/* ── Changelog viewer modal («История изменений») ── */
+.changelog-modal{max-width:620px}
 .changelog-modal h3{display:flex;align-items:center;gap:7px}
-.cl-list{max-height:52vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+.cl-sub{margin:-4px 0 12px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.cl-sub b{color:var(--txt)}
+.cl-offline{margin:-4px 0 10px;padding:6px 9px;border-radius:6px;font-size:12px;
+  color:var(--warn-strong);background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.30)}
+.cl-list{max-height:56vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+/* Запись списка — кнопка: краткое описание, полный текст открывается по ней. */
 .cl-entry{
   border:1px solid var(--bdr);border-radius:9px;padding:11px 13px;
   background:var(--row-alt);display:flex;flex-direction:column;gap:5px;
+  width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;
+  transition:border-color .15s,background .15s;
 }
+.cl-entry:hover{border-color:var(--c);background:var(--cl)}
+.cl-entry:focus-visible{outline:2px solid var(--c);outline-offset:2px}
 .cl-entry.cl-latest{border-color:var(--c);background:var(--cl)}
+.cl-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
 .cl-ver{font-size:13px;font-weight:800;color:var(--c);display:flex;align-items:center;gap:7px}
+.cl-name{font-size:12.5px;font-weight:700;color:var(--txt);line-height:1.4}
+.cl-sum{font-size:12.5px;color:var(--sub);line-height:1.55}
+.cl-more{font-size:11.5px;font-weight:700;color:var(--c)}
+.cl-date{font-size:11px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.cl-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:13px}
+.cl-foot{justify-content:space-between}
+/* Одна кнопка (список версий) — у правого края, как в остальных окнах. */
+.cl-foot .m-cancel:only-child{margin-left:auto}
 .cl-tag{
   font-size:10px;font-weight:800;padding:1px 8px;border-radius:20px;
   background:var(--brand);color:var(--on-accent);letter-spacing:.02em;
 }
 .cl-tag.cl-yours{background:var(--grn)}
 .cl-text{font-size:12.5px;color:var(--sub);line-height:1.55}
+/* Полный текст версии (открывается нажатием на запись списка). */
+.cl-detail{display:flex;flex-direction:column;gap:12px}
+.cl-dtitle{margin:0;font-size:14px;font-weight:800;color:var(--txt);line-height:1.4}
+.cl-item{border-left:2px solid var(--c);padding-left:10px;display:flex;flex-direction:column;gap:3px}
+.cl-item-t{font-size:12.5px;font-weight:700;color:var(--txt)}
+.cl-item-x{margin:0;font-size:12.5px;color:var(--sub);line-height:1.6}
 [data-theme="dark"] .cl-entry{background:var(--panel)}
-[data-theme="dark"] .cl-entry.cl-latest{background:var(--tip-bg)}
+[data-theme="dark"] .cl-entry:hover,[data-theme="dark"] .cl-entry.cl-latest{background:var(--tip-bg)}
 
 /* ════════════════════════════════
    DESIGN POLISH
@@ -2056,7 +2180,7 @@ html.theme-anim #log-output{
   :root{--hdr-h:52px}
   header{padding:0 16px}
   /* шапка ниже — баннер опускается вместе с ней (top берётся из --hdr-h) */
-  #update-banner{padding:9px 16px}
+  #update-banner{padding:9px 12px;font-size:12px}
   .layout{padding:12px;gap:12px}
   .flow-steps{grid-template-columns:1fr}
   .onboarding{padding:28px 18px;min-height:400px}
@@ -2711,6 +2835,9 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* Кнопка копирования — вне rep-shot (у того роль button, и кнопка внутри
    была бы вложенным элементом управления). [hidden] глобально её гасит. */
 .rep-shot-actions{display:flex;gap:8px;margin-top:8px}
+
+.rep-shot-del{color:var(--red);border-color:var(--err-bdr)}
+.rep-shot-del:hover{border-color:var(--red);color:var(--red);background:var(--err-bg)}
 /* Модалка сброса уже есть (.reset-modal), здесь только её ширина. */
 .reset-modal{max-width:460px}
 .ui-modal-btns button{
@@ -3359,6 +3486,17 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .tbl-filter-btn:hover{border-color:var(--c);color:var(--c)}
 .tbl-filter-btn.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
 
+
+/* Число новых записей на кнопке «Только новые»: тихая плашка, на активной
+   кнопке — полупрозрачная, чтобы цифра читалась на фоне бренда в обеих темах. */
+.tbl-filter-count{
+  display:inline-block;min-width:16px;margin-left:5px;padding:0 4px;
+  border-radius:8px;background:var(--track);color:var(--sub);
+  font-size:10px;font-weight:800;line-height:15px;text-align:center;
+  vertical-align:1px;
+}
+.tbl-filter-btn.active .tbl-filter-count{background:rgba(255,255,255,.24);color:inherit}
+
 /* ── File browser (RAW / PROCESSED / ARCHIVE) ── */
 .files-toolbar{display:flex;align-items:center;gap:9px;margin-bottom:15px;flex-wrap:wrap}
 .files-toolbar input{
@@ -3713,7 +3851,9 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 [data-theme="dark"] .bulk-copy-btn:hover,[data-theme="dark"] .bulk-persist-btn:hover,
 [data-theme="dark"] .bulk-reset:hover,[data-theme="dark"] .tbl-filter-btn:hover{
   border-color:var(--c);color:var(--c);background:var(--c-soft)}
-[data-theme="dark"] .tbl-filter-btn.active{background:var(--brand);border-color:var(--c);color:var(--bg)}
+/* Надпись на активном фильтре — --on-accent: раньше здесь стоял --bg, и
+   в тёмной теме текст был почти чёрным на тёмном --brand (1.9:1). */
+[data-theme="dark"] .tbl-filter-btn.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
 [data-theme="dark"] .city-tabs{border-color:var(--bdr)}
 [data-theme="dark"] .city-tab{color:var(--sub)}
 [data-theme="dark"] .history-title{color:var(--sub);border-left-color:var(--c)}
@@ -3729,10 +3869,6 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 [data-theme="dark"] .files-toolbar input{background:var(--field);border-color:var(--bdr);color:var(--txt)}
 [data-theme="dark"] .files-toolbar input:focus{border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring)}
 [data-theme="dark"] .files-badge.raw{background:var(--field);color:var(--sub);border-color:var(--bdr)}
-/* .files-badge.processed/.archive в тёмной теме больше не переопределяются:
-   светлые правила уже собраны из токенов (--ok-*/--warn-*), а литеральные
-   rgba(16,185,129) и rgba(245,158,11) тянули за собой эмеральд и «янтарь»
-   из старой палитры. */
 [data-theme="dark"] .file-btn{background:var(--panel);border-color:var(--bdr);color:var(--sub)}
 [data-theme="dark"] .file-btn:hover{background:var(--field);border-color:var(--c)}
 [data-theme="dark"] .links-modal textarea{background:var(--term);border-color:var(--bdr);color:var(--txt)}
@@ -3960,7 +4096,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 
 /* ── Тулбар экспорта ── */
 .export-sel-lbl{font-size:11px;color:var(--muted);font-weight:700}
-
+#export-sel-count{color:var(--txt);margin-left:3px}
 /* ── Инлайн-сноска внутри <label> ── */
 .lbl-note-inline{font-weight:400;text-transform:none;color:var(--muted)}
 

@@ -6,9 +6,9 @@
 маршрутами API. Тесты держат обе стороны контракта:
 
   * блокировка действительно наступает — иначе смысла в пороге нет;
-  * блокировка НЕ наступает там, где она была бы вредна: DEV-сборка, порог
-    не задан, GitHub недоступен (пропавшая сеть не должна «кирпить»
-    установленное приложение).
+  * блокировка НЕ наступает там, где она была бы вредна: порог не задан,
+    GitHub недоступен (пропавшая сеть не должна «кирпить» установленное
+    приложение), сборка локальная.
 
 Плюс разметочный контракт: окно блокировки есть в шаблоне, скрыто по
 умолчанию и подключено к своему обработчику — иначе сервер может сколько
@@ -28,7 +28,7 @@ APP_INIT_JS = (ROOT / "static" / "js" / "11-app-init.js").read_text(encoding="ut
 
 
 def _client(tmp_path, monkeypatch, *, current, meta=None, raise_meta=False,
-            dev=False, cached=None, cached_age=0.0, local=False):
+            cached=None, cached_age=0.0, local=False):
     """Flask-клиент только с blueprints/update и подменённым окружением.
 
     `local=False` по умолчанию неслучайно: тесты идут из исходников, а запуск
@@ -39,7 +39,6 @@ def _client(tmp_path, monkeypatch, *, current, meta=None, raise_meta=False,
     import config
 
     monkeypatch.setattr(upd, "_work_dir", lambda: tmp_path)
-    monkeypatch.setattr(upd, "_is_dev", lambda: bool(dev))
     monkeypatch.setattr(upd, "_is_local_build", lambda: bool(local))
     monkeypatch.setattr(upd, "_is_frozen", lambda: False)
     monkeypatch.setattr(upd, "_self_update_supported", lambda: False)
@@ -88,14 +87,6 @@ class TestBlocking:
                             meta={"version": "2.4.0"})
         d = client.get("/version/minimum").get_json()
         assert d["blocked"] is False and d["minimum"] == ""
-
-    def test_dev_build_is_never_blocked(self, tmp_path, monkeypatch):
-        """DEV-ветка не блокируется даже при высоком пороге: иначе она
-        перестаёт запускаться и её нельзя починить."""
-        client, _ = _client(tmp_path, monkeypatch, current="0.0.1", dev=True,
-                            meta={"min_version": "99.0.0", "version": "2.4.0"})
-        d = client.get("/version/minimum").get_json()
-        assert d["dev"] is True and d["blocked"] is False
 
 
 class TestOffline:

@@ -492,3 +492,57 @@ class TestRawPipelineMode:
         assert any("Этап 2 пропущен" in str(m) for _lv, m in logs), logs[-5:]
         assert not any("Ничего не найдено по заданным фильтрам" in str(m)
                        for _lv, m in logs), " ложная причина пустоты в логе"
+
+
+class TestJsonlSidecar:
+    """Боковой JSONL — страховка от жёсткого убийства процесса.
+
+    Файл обещает «ничего не терять уже найденное», поэтому строка должна
+    доходить до диска сразу, а сбой записи — попадать в лог, а не молчать:
+    итоговая выгрузка собирается именно из него.
+    """
+
+    def test_handle_is_line_buffered(self, tmp_path):
+        path = tmp_path / "raw.jsonl"
+        fh = state.open_result_handle(str(path))
+        try:
+            fh.write('{"name": "Кафе"}\n')
+            # Читаем, не закрывая хэндл: без построчной записи строка ещё в буфере.
+            assert path.read_text(encoding="utf-8") == '{"name": "Кафе"}\n'
+        finally:
+            fh.close()
+
+    def test_broken_handle_is_reported_not_swallowed(self, tmp_path, monkeypatch):
+        logs = []
+
+        class Broken:
+            def write(self, _text):
+                raise OSError("disk full")
+
+        monkeypatch.setattr(state, "_RESULT_FILE", str(tmp_path / "raw.jsonl"))
+        monkeypatch.setattr(state, "_RESULT_HANDLE", Broken())
+        monkeypatch.setattr(state, "_LOG_FN", lambda lv, msg: logs.append((lv, msg)))
+        monkeypatch.setattr(state, "_jsonl_write_fails", 0, raising=False)
+
+        state._emit_result({"name": "Кафе", "city": "Москва"})   # не должно бросить
+
+        warns = [m for lv, m in logs if lv == "warn"]
+        assert warns and "JSONL" in warns[0], logs
+
+    def test_failure_message_is_not_repeated_forever(self, tmp_path, monkeypatch):
+        logs = []
+
+        class Broken:
+            def write(self, _text):
+                raise OSError("disk full")
+
+        monkeypatch.setattr(state, "_RESULT_FILE", str(tmp_path / "raw.jsonl"))
+        monkeypatch.setattr(state, "_RESULT_HANDLE", Broken())
+        monkeypatch.setattr(state, "_LOG_FN", lambda lv, msg: logs.append((lv, msg)))
+        monkeypatch.setattr(state, "_jsonl_write_fails", 0, raising=False)
+
+        for _ in range(5):
+            state._emit_result({"name": "Кафе"})
+
+        warns = [m for lv, m in logs if lv == "warn"]
+        assert len(warns) == 1, "одна и та же ошибка не должна заливать лог"

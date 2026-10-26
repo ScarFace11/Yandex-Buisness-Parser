@@ -126,8 +126,9 @@ _STATE_JS = """
   };
 
   // Организация состояния → карточка. Координаты Яндекс отдаёт как
-  // [широта, долгота], наружу уходят как "долгота,широта" — этот порядок
-  // ждёт остальной конвейер (см. _card_feature).
+  // [долгота, широта] (GeoJSON, так же как атрибут data-coordinates в вёрстке),
+  // поэтому порядок сохраняем: остальной конвейер ждёт "долгота,широта"
+  // (см. _items_to_cards, _card_feature).
   const norm = (it) => {
     const id = (it && it.id !== undefined && it.id !== null) ? String(it.id) : '';
     const name = String((it && (it.title || it.shortTitle || it.name)) || '').trim();
@@ -144,7 +145,7 @@ _STATE_JS = """
       address: String(it.address || it.fullAddress || '').trim(),
       rating: rating,
       reviews: count > 0 ? String(count) : '',
-      coords: coords.length > 1 ? (String(coords[1]) + ',' + String(coords[0])) : ''
+      coords: coords.length > 1 ? (String(coords[0]) + ',' + String(coords[1])) : ''
     };
   };
 

@@ -28,9 +28,9 @@ python app.py
 
 Все настройки доступны в веб-интерфейсе; продвинутые — в `config.py`
 (`MAX_PAGES`, `MAX_CANDIDATES_PER_CITY`, `FETCH_DETAIL`, `RESUME_MODE` и др.).
-Порт задаётся переменной окружения `YP_PORT` (по умолчанию Windows-релиз `5000`,
-macOS-релиз `5050` — на macOS 5000 занят AirPlay Receiver, сборка разработчика
-`5010`; занятый порт не фатален: приложение берёт следующий свободный).
+Порт задаётся переменной окружения `YP_PORT` (по умолчанию Windows `5000`,
+macOS `5050` — на macOS 5000 занят AirPlay Receiver; занятый порт не фатален:
+приложение берёт следующий свободный).
 
 ## 🏗️ Локальная сборка (.exe / .app)
 
@@ -41,11 +41,26 @@ macOS-релиз `5050` — на macOS 5000 занят AirPlay Receiver, сбо�
 
 ```bat
 build.bat              :: Windows → dist\YandexBusinessParser\YandexBusinessParser.exe
+build-installer.bat    :: Windows → dist\YandexBusinessParser-windows-x64-setup.exe
 ```
 
 ```bash
+Установщик собирается Inno Setup 6 из уже готовой папки
+`dist\YandexBusinessParser`:
+
+```bat
+winget install JRSoftware.InnoSetup
+build-installer.bat
+```
+
+Он ставит приложение per-user в `%LOCALAPPDATA%\Programs\YandexBusinessParser`
+(без администратора), создаёт ярлыки и кладёт данные в
+`%APPDATA%\YandexBusinessParser`. Portable-zip остаётся portable: метку
+`.installed` ставит только установщик, а `.portable` рядом с exe возвращает
+данные в папку программы. Подробности — в
+[installer/windows.iss](installer/windows.iss) и [docs/GUIDE.md](GUIDE.md).
+
 ./build-mac.sh         # macOS → dist-mac/YandexBusinessParser.app
-./build-mac.sh --dev   # сборка разработчика: имя с суффиксом Dev, порт 5010
 ```
 
 PyInstaller не собирает под чужую ОС, поэтому для второй платформы есть ручной
@@ -63,11 +78,12 @@ gh run download --name YandexBusinessParser-windows-x64
 
 **Автоматически:** тег `v*` → `.github/workflows/build-macos.yml` соберёт две
 сборки (Apple Silicon `arm64` и Intel `x64`), прогонит смоук-тест бандла и
-приложит `.zip` + `.dmg` к GitHub Release:
+приложит `.dmg` к GitHub Release (отдельный `.zip` для macOS больше не
+собирается — приложение ставится из образа):
 
 ```
-YandexBusinessParser-macos-arm64.zip / .dmg
-YandexBusinessParser-macos-x64.zip   / .dmg
+YandexBusinessParser-macos-arm64.dmg
+YandexBusinessParser-macos-x64.dmg
 ```
 
 **Локально (на Mac):**
@@ -132,7 +148,7 @@ APPLE_ID=you@example.com APPLE_APP_SPECIFIC_PASSWORD=xxxx APPLE_TEAM_ID=TEAMID \
 |---|---|---|
 | `ci.yml` | каждый PR, push в `main` | тесты на трёх системах (Ubuntu, Windows, macOS), node-тесты UI, `ruff`, покрытие на Ubuntu и проверка, что `.spec`-файлы и workflow-YAML парсятся |
 | `build-exe.yml` | тег `v*` | гейт версии, тесты, Windows `.exe` (в него штампуется версия тега), смоук-тест, черновик GitHub Release |
-| `build-macos.yml` | тег `v*` | `.app` для arm64 и x64, подпись Developer ID **или ad-hoc**, нотаризация, смоук-тест, `.zip` + `.dmg` |
+| `build-macos.yml` | тег `v*` | `.app` для arm64 и x64, подпись Developer ID **или ad-hoc**, нотаризация, смоук-тест, `.dmg` |
 | `build-manual.yml` | вручную (Actions → Run workflow или `gh workflow run build-manual.yml -f target=both`) | сборка «как есть» без релиза и без смены версии: Windows `.exe` и macOS `.zip` (arm64/x64) в артефактах запуска — файл просто скачивается и порог минимальной версии к нему не применяется |
 | `publish-release.yml` | завершение сборок Windows/macOS | публикует черновик **сам**, когда у тега зелёные обе сборки и на релизе лежат все файлы; dev/rc-теги не публикует. Ручной запуск (`workflow_dispatch` с тегом) — для уже собранных релизов |
 | `announce-release.yml` | публикация релиза | объявляет версию в `static/version.json` на `main` — только после того, как релиз опубликован и архив на месте |
@@ -175,7 +191,6 @@ git commit -am "chore(release): минимальная версия 2.3.4" && gi
 |---|---|
 | GitHub недоступен | не блокируем: пропавшая сеть не должна «кирпитить» приложение у пользователя. Если порог уже был получен ранее, он применяется |
 | Пункт `min_version` пуст | блокировки нет |
-| Сборка разработчика (версия с `-dev`) | никогда не блокируется: это рабочая ветка |
 | Запуск из исходников (`python app.py`) | не блокируется — это не установленный релиз |
 | Локальная сборка (`build.bat`, `build-mac.sh`, `build-manual.yml`) | не блокируется: рядом с exe (или в корне `.app`) лежит метка `.local-build` |
 | Переменная `YP_SKIP_MIN_VERSION=1` | не блокируется — ручной способ снять порог в любой копии |
@@ -194,12 +209,24 @@ git commit -am "chore(release): минимальная версия 2.3.4" && gi
 
 ## 📜 История изменений
 
-[CHANGELOG.md](../CHANGELOG.md) — единственное место с заметками о версиях:
-1–2 абзаца на фичу, что стало удобнее и что починили. Тело GitHub Release
-собирается из него (`scripts/release_notes.py`), и он же прикладывается к
-релизу ассетом. Нерелизнутые правки живут в разделе `[Unreleased]` и при
-выпуске переименовываются в номер версии — что версия сборки описана,
-проверяет `tests/test_changelogs.py`.
+Тексты разделены на две части, и у каждой один владелец:
+
+- **`update_notes/`** — то, что читает пользователь. `notes/<версия>.json` —
+  краткое описание (`summary`) и полный текст (`items`) одной версии;
+  `ui.json` — подписи окна «Что нового» и баннера. Эти же тексты уезжают в
+  `static/version.json` при штамповке версии, поэтому клиент видит краткое
+  описание новой версии ещё до установки, а `/update/changelog` собирает
+  список версий без сети.
+- **[CHANGELOG.md](../CHANGELOG.md)** — история для репозитория и тело
+  GitHub Release: 1–2 абзаца на фичу, что стало удобнее и что починили.
+  Тело релиза собирается из него (`scripts/release_notes.py`), и он же
+  прикладывается к релизу ассетом. Нерелизнутые правки живут в разделе
+  `[Unreleased]` и при выпуске переименовываются в номер версии — что
+  версия сборки описана, проверяет `tests/test_changelogs.py`.
+
+Новая версия — это один файл `update_notes/notes/<версия>.json` с полями
+`version`, `date`, `title`, `summary`, `items`. Ничего больше править не
+нужно: список в окне, баннер и `version.json` берут текст оттуда.
 
 Плюс `dependabot.yml`: еженедельные PR на обновление pip-зависимостей и
 версий GitHub Actions (мажоры PyInstaller игнорируются — они ломают spec'и).

@@ -1951,12 +1951,13 @@ class TestStatsGraphics:
         for name in ("function ratingBucketRows(", "function leadBucketRows(",
                      "function coverageRows(", "function pctBarRows(",
                      "function ratingSectionHTML(", "function leadSectionHTML(",
-                     "function coverageSectionHTML("):
+                     "function coverageSectionHTML(", "function newShare(",
+                     "function newSectionHTML("):
             assert name in APP_JS, name
 
     def test_graphics_are_rendered_into_the_stats_panel(self):
         for call in ("${ratingSectionHTML(data)}", "${leadSectionHTML(data)}",
-                     "${coverageSectionHTML(data)}"):
+                     "${coverageSectionHTML(data)}", "${newSectionHTML(data)}"):
             assert call in APP_JS, call
 
     def test_bucket_colors_are_theme_tokens(self):
@@ -1976,6 +1977,15 @@ class TestStatsGraphics:
     def test_summary_cards_grow_with_quality_metrics(self):
         assert "'Средний рейтинг'" in APP_JS
         assert "'Горячих лидов'" in APP_JS
+        # Доля новых — процент в карточке рядом с «Всего найдено».
+        assert "lbl: 'Новых'" in APP_JS
+
+    def test_new_organizations_split_bar_is_theme_aware(self):
+        """Полоса «новые/повторные» — токены темы, и легенда дублирует числа."""
+        assert ".new-split-fresh{background:var(--grn)" in STYLE
+        assert ".new-split-repeat{background:var(--bdr-h)" in STYLE
+        assert 'class="new-split-dot fresh"' in APP_JS
+        assert "role=\"img\" aria-label=\"Новые" in APP_JS
 
     def test_empty_stats_have_an_illustration(self):
         assert 'class="sta-art" aria-hidden="true"' in APP_JS

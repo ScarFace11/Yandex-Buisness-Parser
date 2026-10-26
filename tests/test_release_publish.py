@@ -119,10 +119,11 @@ class TestGates:
         required = wf()["jobs"]["publish"]["env"]["REQUIRED_ASSETS"].split()
         assert required == [
             "YandexBusinessParser-windows-x64.zip",
-            "YandexBusinessParser-macos-arm64.zip",
-            "YandexBusinessParser-macos-x64.zip",
-            # Регресс 2.3.4.1: релиз ушёл в публикацию без .dmg — macOS-
-            # установщик обязателен, иначе пользователям ставить нечего.
+            # Установщик с ярлыком и удалением: именно его скачивают
+            # пользователи Windows, portable-архив остаётся альтернативой.
+            "YandexBusinessParser-windows-x64-setup.exe",
+            # 2.3.5: отдельный .zip для macOS больше не собирается —
+            # приложение ставится из .dmg, и требовать архив не за что.
             "YandexBusinessParser-macos-arm64.dmg",
             "YandexBusinessParser-macos-x64.dmg",
             "CHANGELOG.md",
@@ -130,9 +131,9 @@ class TestGates:
         # Каждый файл обязан реально появляться в сборке — иначе публикация
         # зависнет навсегда, а релиз будет без архива.
         assert "YandexBusinessParser-windows-x64.zip" in text(WINDOWS_BUILD)
+        assert "YandexBusinessParser-windows-x64-setup.exe" in text(WINDOWS_BUILD)
         assert "CHANGELOG.md" in text(WINDOWS_BUILD)
         macos = text(MACOS_BUILD)
-        assert "YandexBusinessParser-macos-$ARCH.zip" in macos
         assert "YandexBusinessParser-macos-$ARCH.dmg" in macos
         assert 'asset_arch: arm64' in macos and 'asset_arch: x64' in macos
 
@@ -296,13 +297,11 @@ class TestOnlyStableTags:
     def test_dev_and_other_tags_are_left_alone(self, tag):
         assert not self._pattern().match(tag)
 
-    def test_dev_versions_cannot_be_auto_published(self, monkeypatch):
-        """То же правило, что и у сборки: DEV-версия — не публичный релиз."""
+    def test_dev_versions_cannot_be_auto_published(self):
+        """Тег с суффиксом — не публичный релиз: автоматика его не публикует."""
         import config
-        monkeypatch.setattr(config, "APP_VERSION", "2.3.4-dev")
-        assert config.is_dev_build() is True
         assert not self._pattern().match("v2.3.4-dev")
-        assert not self._pattern().match("v" + str(config.APP_VERSION))
+        assert not self._pattern().match("v" + str(config.APP_VERSION) + "-dev")
 
 
 # ── Ручной ввод тега: шаг прогоняется целиком ────────────────

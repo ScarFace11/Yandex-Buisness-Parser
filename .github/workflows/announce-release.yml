@@ -89,10 +89,12 @@ jobs:
           fi
           reason=""
           for i in $(seq 1 15); do
-            if ! state=$(gh release view "$TAG" --json isDraft,assets 2>/tmp/gh.err); then
+            if ! state=$(gh release view "$TAG" --json isDraft,assets 2>&1); then
               # Релиз не читается: ещё не создан, удалён или (что и случилось
               # на 2.3.4) передан несуществующий тег. Говорим причину как есть.
-              reason="$(head -1 /tmp/gh.err | tr -d '\r')"
+              # stderr читаем из вывода команды, а не из /tmp: шаг не зависит
+              # от того, есть ли на машине каталог /tmp.
+              reason="$(printf '%s' "$state" | head -1 | tr -d '\r')"
               echo "Релиз $TAG пока не читается: ${reason:-неизвестная ошибка gh}"
               sleep 10
               continue

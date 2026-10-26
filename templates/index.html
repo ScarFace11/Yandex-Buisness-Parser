@@ -48,6 +48,7 @@
      style="position:absolute;width:0;height:0;overflow:hidden">
   <symbol id="i-search" viewBox="0 0 24 24"><path d="M11 4.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z"/><path d="M15.8 15.8 21 21"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.6-6"/><path d="M20.5 4.5V10h-5.5"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4.5V9h4.5"/><path d="M12 8v4.4l3 1.8"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20V9.5"/><path d="M7.5 14 12 9.5l4.5 4.5"/><path d="M4.5 4h15"/></symbol>
   <!-- Звезда избранного города: в обычном состоянии — контур, у избранного
        заливка (CSS .fav-star.on). -->
@@ -106,11 +107,6 @@
 <header>
   <h1>Поиск клиентов <span class="hdr-sep">·</span> <span class="hdr-src">Яндекс.Карты</span></h1>
   <div class="hdr-right">
-    {% if DEV_BUILD %}
-    <span id="app-dev" title="Сборка разработчика: авто-обновление отключено, порт 5010">
-      <svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg>DEV
-    </span>
-    {% endif %}
     <span id="app-version">v{{ APP_VERSION }}</span>
     <button id="btn-terms" onclick="openTermsOverlay()"
             title="Открыть пользовательское соглашение ещё раз"
@@ -211,6 +207,12 @@
             aria-label="Сообщить о проблеме">
       <svg class="ico" aria-hidden="true"><use href="#i-bug"/></svg>
       <span class="hdr-lbl">Проблема</span>
+    </button>
+    <button id="btn-whatsnew" onclick="showChangelog()"
+            title="История изменений: что появилось и что починили в каждой версии"
+            aria-label="История изменений">
+      <svg class="ico" aria-hidden="true"><use href="#i-history"/></svg>
+      <span class="hdr-lbl">Что нового</span>
     </button>
     <button id="btn-updates" onclick="manualUpdateCheck(this)"
             title="Проверить наличие новой версии на GitHub" aria-label="Обновления">
@@ -324,13 +326,24 @@
             <div class="acc-inner">
 
               <div>
-                <label class="lbl" for="f-queries">Кого будем искать?</label>
+                <!-- Кнопки — в строке заголовка, а не под полем: там их
+                     накрывает открытый список сфер, и «Сферы» не нажать. -->
+                <div class="lbl-row">
+                  <label class="lbl" for="f-queries">Кого будем искать?</label>
+                  <span class="hint-actions">
+                    <button type="button" class="clear-all-btn" id="clear-queries-btn"
+                            onclick="clearQueriesField()" hidden
+                            title="Очистить поле запросов — сферы и города останутся">
+                      <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить</button>
+                    <button type="button" class="spheres-btn" id="spheres-btn"
+                            aria-haspopup="dialog"
+                            title="Добавить сферу или изменить её название и слова">
+                      <svg class="ico" aria-hidden="true"><use href="#i-pencil"/></svg>Сферы</button>
+                  </span>
+                </div>
                 <textarea id="f-queries" placeholder="кафе&#10;ресторан&#10;парикмахерская">кафе</textarea>
                 <div class="hint hint-row">
                   <span>Напишите по одному виду бизнеса в строке</span>
-                  <button type="button" class="spheres-btn" id="spheres-btn"
-                          aria-haspopup="listbox" aria-expanded="false" aria-controls="sphere-dropdown"
-                          title="Готовые наборы запросов по сферам и когда их уже парсили">Сферы ▾</button>
                   <span class="hint-count" id="queries-count" hidden></span>
                 </div>
                 <!-- Список сфер: существует с загрузки страницы (иначе aria-controls
@@ -1099,6 +1112,10 @@
               <div class="bulk-row bulk-checks">
                 <label class="bulk-chk"><input type="checkbox" id="bulk-skip-viewed" checked onchange="updateBulkStats()"> Пропускать просмотренные</label>
                 <label class="bulk-chk"><input type="checkbox" id="bulk-mark-viewed" checked> Помечать как просмотренные</label>
+                <label class="bulk-chk" id="bulk-only-filtered-wrap" hidden
+                       title="Обходить только те строки, которые сейчас видны в таблице: город, поиск, соцсети, оценка, «Только новые». Ровно этот набор уходит и в «Выборка» — Excel/CSV.">
+                  <input type="checkbox" id="bulk-only-filtered" onchange="onBulkOnlyFilteredChange()">
+                  <span id="bulk-only-filtered-txt">Только под фильтром</span></label>
               </div>
               <div class="bulk-row bulk-actions">
                 <button class="bulk-open-btn" id="bulk-open-btn" onclick="bulkOpenBatch()"
@@ -1137,6 +1154,9 @@
             <button id="btn-scope-all" class="tbl-filter-btn" onclick="toggleScopeAll()"
                     title="Показаны только результаты текущего поиска. Нажмите, чтобы увидеть все файлы в папке (прошлые поиски).">
               <svg class="ico" aria-hidden="true"><use href="#i-square"/></svg>Все поиски</button>
+            <button id="btn-only-new" class="tbl-filter-btn" onclick="toggleOnlyNewFilter()" aria-pressed="false"
+                    title="Только те организации, которых не было в прошлых прогонах (сравнение по ссылке на карточку). Помогает отсеять дубли при повторном парсинге того же города.">
+              <svg class="ico" aria-hidden="true"><use href="#i-bolt"/></svg>Только новые<span class="tbl-filter-count" id="btn-only-new-count" hidden></span></button>
             <input type="text" id="tbl-search" placeholder="Поиск по строкам: название, адрес, телефон, сайт…"
                    oninput="filterTable()"
                    aria-label="Поиск по данным таблицы">
@@ -1163,7 +1183,7 @@
               </div>
             </div>
             <div id="export-sel-wrap">
-              <span class="export-sel-lbl">Выборка:</span>
+              <span class="export-sel-lbl">Выборка:<b id="export-sel-count"></b></span>
               <button class="export-sel-btn" onclick="exportFiltered('xlsx')">
                 <svg class="ico" aria-hidden="true"><use href="#i-spreadsheet"/></svg>Excel</button>
               <button class="export-sel-btn" onclick="exportFiltered('csv')">

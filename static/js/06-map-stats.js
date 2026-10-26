@@ -366,6 +366,44 @@ function coverageSectionHTML(data) {
     </div>`;
 }
 
+// «Новые организации»: сколько записей текущего прогона не встречалось в
+// прошлых файлах. Сервер ставит каждой записи `_is_new` (true/false), а
+// `null` — сравнивать не с чем: нет маркера старта текущего поиска. Долю
+// считаем от записей с известным статусом; если таких нет — null, иначе
+// «0%» на экране читалось бы как «всё повторное», хотя сравнения не было.
+function newShare(data) {
+  let fresh = 0, known = 0;
+  for (const r of data) {
+    if (!r) continue;
+    if (r._is_new === true) { fresh++; known++; }
+    else if (r._is_new === false) known++;
+  }
+  if (!known) return null;
+  return {fresh, repeat: known - fresh, known, pct: Math.round(fresh / known * 100)};
+}
+
+// Одна полоса на две доли: новые слева, повторные справа. Цифры дублируются
+// в легенде — полоса декоративна (aria-label), читается и без неё.
+function newSectionHTML(data) {
+  const s = newShare(data);
+  if (!s) return '';
+  const repeatPct = 100 - s.pct;
+  return `<div class="stat-section">
+      <h3>Новые организации</h3>
+      <div class="new-split">
+        <div class="new-split-head"><b>${s.pct}%</b><span>${s.fresh} из ${s.known} не встречались в прошлых прогонах</span></div>
+        <div class="new-split-bar" role="img" aria-label="Новые — ${s.pct}%, уже встречались — ${repeatPct}%">
+          <span class="new-split-fresh" style="width:${s.pct}%"></span>
+          <span class="new-split-repeat" style="width:${repeatPct}%"></span>
+        </div>
+        <div class="new-split-legend">
+          <span class="new-split-item"><i class="new-split-dot fresh"></i>Новые<b>${s.fresh} · ${s.pct}%</b></span>
+          <span class="new-split-item"><i class="new-split-dot repeat"></i>Уже встречались<b>${s.repeat} · ${repeatPct}%</b></span>
+        </div>
+      </div>
+    </div>`;
+}
+
 // Пустая «Статистика»: столбцы и тренд — та же идея, что в онбординге,
 // но в статистическом ключе. Декоративна (aria-hidden): вся информация —
 // в тексте рядом.
@@ -393,6 +431,13 @@ function renderStats(data, elapsed, skippedCities) {
     {num: dur,     lbl: 'Время'},
   ];
   if (socOn) cards.splice(1, 0, {num: withSo, lbl: 'С соцсетями'});
+  // Доля новых — итог прогона наравне с «Всего»: сразу видно, дал ли
+  // повторный поиск свежие организации или только дубли.
+  const fresh = newShare(data);
+  if (fresh) {
+    cards.splice(1, 0, {num: fresh.pct + '%', lbl: 'Новых',
+      tip: `Организаций, которых не было в прошлых прогонах: ${fresh.fresh} из ${fresh.known}`});
+  }
   // Качество данных — тоже итог: средняя оценка и горячие лиды читаются
   // одним взглядом, без прокрутки к полосам ниже.
   const rated = data.filter(r => scoreRating(r) > 0);
@@ -529,6 +574,7 @@ function renderStats(data, elapsed, skippedCities) {
     ${ratingSectionHTML(data)}
     ${leadSectionHTML(data)}
     ${coverageSectionHTML(data)}
+    ${newSectionHTML(data)}
   `;
     // Свежие файлы и отметки могли появиться только что — обновляем динамику,
     // но не во время прогона: там renderStats зовётся каждые 1.5 с, а обход

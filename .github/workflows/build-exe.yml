@@ -29,22 +29,6 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Guard — релиз нельзя собрать из dev-версии
-        # Публичная сборка выпускается только версией без суффикса «-dev»:
-        # иначе у пользователей включится метка DEV и отключится авто-обновление.
-        env:
-          YANDEX_API_KEY: ci-dummy-key
-        run: |
-          python - <<'PY'
-          import sys
-          import config
-          print('APP_VERSION =', config.APP_VERSION)
-          if config.is_dev_build():
-              print('::error::APP_VERSION содержит суффикс -dev. В config.py укажите '
-                    'версию релиза без суффикса (например "2.3.0") и повторите.')
-              sys.exit(1)
-          PY
-
       - name: Guard — тег совпадает с APP_VERSION, version.json не забегает вперёд
         # version.json на main рекламирует ТОЛЬКО опубликованные релизы: он
         # обновляется workflow «Announce release» в момент публикации релиза.
@@ -212,6 +196,27 @@ jobs:
           python scripts/verify_release_assets.py @pyArgs
           if ($LASTEXITCODE -ne 0) { throw 'архив не прошёл проверку целостности' }
 
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe не найден: $iscc" }
+
+      - name: Build the Windows installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          $version = python -c "import config; print(config.APP_VERSION)"
+          & $iscc "/DMyAppVersion=$version" 'installer\windows.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup завершился с ошибкой' }
+          $setup = 'dist/YandexBusinessParser-windows-x64-setup.exe'
+          if (-not (Test-Path $setup)) { throw "установщик не создан: $setup" }
+          if ((Get-Item $setup).Length -lt 10MB) { throw 'установщик подозрительно мал' }
+          python scripts/verify_release_assets.py --check-local $setup
+          if ($LASTEXITCODE -ne 0) { throw 'установщик не прошёл проверку целостности' }
+          Write-Host "Installer: $setup ($([math]::Round((Get-Item $setup).Length / 1MB, 1)) MB)"
+
       - name: Verify no local-build marker and version threshold (release build)
         # Релизная сборка обязана ПОДЧИНЯТЬСЯ порогу минимальной версии: метка
         # .local-build (её ставит build.bat / build-manual.yml, см.
@@ -266,6 +271,7 @@ jobs:
           # (ZIP_ASSET_NAME в routes/update.py) — лишние ассеты ему не мешают.
           files: |
             dist/YandexBusinessParser-windows-x64.zip
+            dist/YandexBusinessParser-windows-x64-setup.exe
             CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -287,7 +293,9 @@ jobs:
         run: |
           $tag = '${{ github.ref_name }}'
           # Релиз обязан уехать вместе с историей изменений.
-          $need = @('YandexBusinessParser-windows-x64.zip', 'CHANGELOG.md')
+          $need = @('YandexBusinessParser-windows-x64.zip',
+                   'YandexBusinessParser-windows-x64-setup.exe',
+                   'CHANGELOG.md')
           for ($i = 0; $i -lt 10; $i++) {
             $rel = gh release view $tag --json assets,isDraft 2>$null | ConvertFrom-Json
             if ($rel) {
@@ -309,5 +317,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: YandexBusinessParser-windows-x64
-          path: dist/YandexBusinessParser-windows-x64.zip
+          path: |
+            dist/YandexBusinessParser-windows-x64.zip
+            dist/YandexBusinessParser-windows-x64-setup.exe
           retention-days: 14

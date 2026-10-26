@@ -317,9 +317,21 @@ function orderCitiesForTabs(cities) {
 }
 
 function bulkScopeRows() {
+  // «Только под фильтром»: обход идёт ровно по тем строкам, что видны
+  // в таблице. Фильтр уже учитывает город — городить его второй раз не надо.
+  if (bulkOnlyFiltered()) return filteredRows || [];
   if (!activeCity) return allResults;
   return allResults.filter(r => cityOf(r) === activeCity);
 }
+
+// Обходить/считать только видимые в таблице строки. Выключен по умолчанию:
+// по умолчанию обход идёт по городу, как и раньше.
+function bulkOnlyFiltered() {
+  const cb = document.getElementById('bulk-only-filtered');
+  return !!(cb && cb.checked);
+}
+
+function onBulkOnlyFilteredChange() { updateBulkStats(); }
 
 function renderCityTabs(cities) {
   const box = document.getElementById('city-tabs');
@@ -604,6 +616,12 @@ function bulkParams() {
     mark_viewed: !!(document.getElementById('bulk-mark-viewed') || {}).checked,
     sort_col: sort.col,
     sort_asc: sort.asc,
+    // «Только под фильтром»: фильтры живут на клиенте, поэтому серверу
+    // уезжает список ключей видимых строк — иначе он отдал бы и те
+    // организации, что поиск/порог оценки/«Только новые» спрятали.
+    only_keys: bulkOnlyFiltered()
+      ? (filteredRows || []).map(r => reviewKey(r)).filter(Boolean)
+      : null,
   };
 }
 
@@ -644,6 +662,8 @@ async function bulkOpenBatch() {
     const data = await postJSON('/bulk/urls', {
       view: p.view, scope: p.scope, file: p.file, city: p.city, social: p.social,
       count: wanted, skip_viewed: p.skip_viewed, exclude_keys: [...bulkState.keys],
+      // Выборка фильтра — ровно эти строки и должны открыться.
+      only_keys: p.only_keys,
       // Порядок вкладок — как порядок строк в таблице.
       sort_col: p.sort_col, sort_asc: p.sort_asc,
       template: bulkTpl ? bulkTpl.text : '',
@@ -815,6 +835,8 @@ async function bulkCopyLinks() {
     const data = await postJSON('/bulk/urls', {
       view: p.view, scope: p.scope, file: p.file, city: p.city, social: p.social,
       count, skip_viewed: p.skip_viewed, exclude_keys: [...bulkState.keys, ...bulkState.copied],
+       // Как и в открытии вкладок — только строки, видимые под фильтром.
+      only_keys: p.only_keys,
     });
     const list = data.urls || [];
     if (!list.length) { showToast('Нет непросмотренных компаний с этой соцсетью', 'warning'); return; }
@@ -1227,6 +1249,9 @@ function initResultsPanel() {
   loadFavoriteCities();
   try { if (localStorage.getItem(SCOPE_KEY) === 'all') _resultsScope = 'all'; } catch (e) {}
   updateScopeButton();
+  // «Только новые» — фильтр таблицы, состояние его собственное.
+  try { onlyNewFilter = localStorage.getItem(ONLY_NEW_KEY) === '1'; } catch (e) { onlyNewFilter = false; }
+  updateOnlyNewButton();
   try {
     if (localStorage.getItem(BULK_OPEN_KEY) === '0') {
       const body = document.getElementById('bulk-body');

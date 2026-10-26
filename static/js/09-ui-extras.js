@@ -1181,9 +1181,20 @@ function diagRowHTML(row) {
 // re-uses the same check on demand.
 const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000;
 
-// DEV-сборка (config.is_dev_build) не обновляется публичными релизами:
-// сервер отвечает dev:true, баннер и точка обновления не показываются.
-let _devBuild = false;
+// Помощник обновления ставит файлы уже после выхода приложения. Если он
+// вернул старую версию, сказать об этом больше некому — показываем причину
+// при следующем старте, один раз на попытку (ключ — время записи).
+function _notifyFailedUpdate(data) {
+  const res = data && data.last_update;
+  if (!res || res.ok !== false || !res.error) return;
+  const stamp = String(res.at || res.version || 'unknown');
+  try {
+    if (localStorage.getItem('yp_update_fail_shown') === stamp) return;
+    localStorage.setItem('yp_update_fail_shown', stamp);
+  } catch (e) { /* приватный режим — не мешает показать сообщение */ }
+  showToast('Обновление не установилось: ' + res.error
+    + (res.log ? ' — журнал: ' + res.log : ''), 'error');
+}
 
 function checkForUpdates(silent) {
   // Frozen build: /update/status also reports latest version + whether the
@@ -1191,11 +1202,7 @@ function checkForUpdates(silent) {
   return fetch('/update/status')
     .then(r => r.json())
     .then(data => {
-      if (data.dev) {
-        _devBuild = true;
-        setUpdateIndicator(false);
-        return { newer: false, dev: true, version: data.current };
-      }
+      _notifyFailedUpdate(data);
       if (data.newer) {
         showUpdateBanner(data.latest, data.changelog || '',
           data.download_url || 'https://github.com/ScarFace11/Yandex-Buisnes-Parser/releases/latest',
@@ -1213,11 +1220,6 @@ function checkForUpdates(silent) {
       return fetch('/check-version')
         .then(r => r.json())
         .then(data => {
-          if (data.dev) {
-            _devBuild = true;
-            setUpdateIndicator(false);
-            return { newer: false, dev: true, version: data.current };
-          }
           if (data.newer) {
             showUpdateBanner(data.remote, data.changelog || '', data.download_url || '');
             setUpdateIndicator(true, data.remote);
@@ -1230,8 +1232,7 @@ function checkForUpdates(silent) {
     })
     .then(res => {
       if (silent) return res;
-      if (res.dev) showToast('DEV-сборка — авто-обновление отключено (только для разработки)', 'info');
-      else if (res.error) showToast('Не удалось связаться с GitHub — проверьте интернет', 'error');
+      if (res.error) showToast('Не удалось связаться с GitHub — проверьте интернет', 'error');
       else if (res.newer) showToast(`Новая версия v${res.version} — обновите через баннер сверху`, 'success');
       else if (res.notice) showToast(res.notice, 'info');
       else showToast('Вы на последней версии ✓', 'success');
@@ -1242,6 +1243,9 @@ function checkForUpdates(silent) {
 // Header button: manual re-check with visual feedback
 function manualUpdateCheck(btn) {
   if (!btn || btn.dataset.busy) return;
+  // Явная проверка возвращает баннер, даже если его закрыли: пользователь
+  // сам попросил показать обновление.
+  _dismissedBannerVersion = '';
   btn.dataset.busy = '1';
   btn.classList.remove('has-update');
   btn.innerHTML = '<span class="spin" style="width:11px;height:11px;border-width:1.5px"></span>'
@@ -1258,8 +1262,7 @@ function manualUpdateCheck(btn) {
 }
 
 // Periodic background check (silent — banner only, no toasts).
-// DEV-сборку не проверяем вовсе: узнав про dev:true, выходим из цикла.
-setInterval(() => { if (!_devBuild) checkForUpdates(true); }, UPDATE_CHECK_INTERVAL);
+setInterval(() => checkForUpdates(true), UPDATE_CHECK_INTERVAL);
 
 // ── Индикация обновления в шапке ──
 // Кнопка «Обновления» живёт в приклеенной шапке, поэтому её видно при любой
@@ -1301,14 +1304,17 @@ function setUpdateIndicator(on, version) {
   renderUpdateIndicator();
 }
 
-// Высоту баннера нельзя зашить в CSS: на узком экране кнопки переносятся на
-// вторую строку, и страницу нужно сдвинуть ровно на его высоту.
-function _syncBannerOffset() {
-  const banner = document.getElementById('update-banner');
-  document.body.classList.toggle('has-update-banner', !!banner);
-  document.body.style.paddingTop = banner ? banner.offsetHeight + 'px' : '';
+// Баннер вставляется в поток правой колонки после вкладок. Ни высота, ни
+// padding страницы больше не нужны: раньше fixed-баннер сдвигал шапку вниз
+// и перекрывал навигацию.
+function _placeUpdateBanner(banner) {
+  const nav = document.querySelector('.tab-bar');
+  if (nav && nav.parentElement) {
+    nav.insertAdjacentElement('afterend', banner);
+  } else {
+    document.body.prepend(banner);
+  }
 }
-window.addEventListener('resize', _syncBannerOffset);
 
 // Закрытый баннер не возвращаем для ТОЙ ЖЕ версии (кнопка в шапке всё равно
 // продолжает сообщать об обновлении), но новую версию показываем снова.
@@ -1318,7 +1324,6 @@ function dismissUpdateBanner() {
   const banner = document.getElementById('update-banner');
   _dismissedBannerVersion = banner ? (banner.dataset.version || '') : '';
   if (banner) banner.remove();
-  _syncBannerOffset();
 }
 
 // `assetName` — файл релиза под текущую систему (windows zip или macos .dmg):
@@ -1339,7 +1344,6 @@ function showUpdateBanner(newVer, changelog, url, assetName) {
   // Пользователь закрыл баннер этой версии — уважаем выбор: индикация
   // остаётся в шапке («⬆ Обновить до vX»), но окно больше не перекрываем.
   if (_dismissedBannerVersion && _dismissedBannerVersion === String(newVer)) {
-    _syncBannerOffset();
     return;
   }
 
@@ -1347,23 +1351,28 @@ function showUpdateBanner(newVer, changelog, url, assetName) {
   // installs and restarts inside the app (no GitHub visit needed).
   // Source run: no in-app updater, so GitHub becomes the primary action.
   fetch('/update/status').then(r => r.json()).then(st => {
-    // Сам обновляет файлы только Windows-сборка; macOS-бандл и исходники
-    // получают ссылку на релиз (auto_apply=false приходит с сервера).
-    const frozen = !!st.frozen && st.auto_apply !== false;
+    // Подписи баннера — из той же папки update_notes (ui.json), что и окно
+    // «Что нового»: сервер отдаёт их в /update/status.
+    const bt = (st && st.texts) || {};
+    const bannerTitle = escapeHtml(bt.banner_new_version || 'Доступна новая версия');
+    const whatsNew = escapeHtml(bt.banner_whats_new || 'Что нового');
+    // Windows ставит файлы сам, macOS скачивает .dmg и открывает установщик:
+    // подменять запущенный .app на месте нельзя — подпись и /Applications.
     const banner = document.createElement('div');
     banner.id = 'update-banner';
     banner.dataset.version = String(newVer);
+    const mac = st.platform === 'darwin';
+    const canSelf = st.frozen && (st.auto_apply !== false || mac);
     banner.innerHTML = `
-      <span class="ub-text">🔄 Доступна новая версия <b>v${newVer}</b>${changelog ? ' — ' + escapeHtml(changelog) : ''}</span>
-      <button class="ub-btn" id="ub-changelog" onclick="showChangelog()" title="Подробнее об изменениях в новой версии">${UI_ICONS.file}Что нового</button>
-      ${frozen
-        ? `<button class="ub-btn ub-primary" id="ub-self-update" onclick="selfUpdate()" title="Скачать и установить прямо из приложения — после установки просто обновите страницу">${UI_ICONS.upload}Обновить сейчас</button>
+      <span class="ub-text">🔄 ${bannerTitle} <b>v${newVer}</b>${changelog ? ' — ' + escapeHtml(changelog) : ''}</span>
+      <button class="ub-btn" id="ub-changelog" onclick="showChangelog()" title="Подробнее об изменениях в новой версии">${UI_ICONS.file}${whatsNew}</button>
+      ${canSelf
+        ? `<button class="ub-btn ub-primary" id="ub-self-update" onclick="selfUpdate()" title="${mac ? 'Скачать установочный образ и открыть его' : 'Скачать и установить прямо из приложения — после установки просто обновите страницу'}">${UI_ICONS.upload}${mac ? 'Скачать и открыть' : 'Обновить сейчас'}</button>
            <a class="ub-btn" href="${url}" target="_blank" rel="noopener noreferrer" title="Страница релизов на GitHub">GitHub ↗</a>`
         : `<a class="ub-btn ub-primary" href="${url}" target="_blank" rel="noopener noreferrer" title="Скачайте сборку для своей системы${assetName ? ': ' + escapeHtml(assetName) : ''}">Скачать v${newVer}${_assetLabel(assetName)} ↗</a>`}
       <button class="ub-close" onclick="dismissUpdateBanner()" title="Скрыть (индикация останется в шапке)">${UI_ICONS.x}</button>
     `;
-    document.body.prepend(banner);
-    _syncBannerOffset();
+    _placeUpdateBanner(banner);
   }).catch(() => {
     // /update/status is dead — render the source-mode banner (GitHub primary)
     const banner = document.createElement('div');
@@ -1374,56 +1383,174 @@ function showUpdateBanner(newVer, changelog, url, assetName) {
       <a class="ub-btn ub-primary" href="${url}" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
       <button class="ub-close" onclick="dismissUpdateBanner()" title="Скрыть (индикация останется в шапке)">${UI_ICONS.x}</button>
     `;
-    document.body.prepend(banner);
-    _syncBannerOffset();
+    _placeUpdateBanner(banner);
   });
 }
 
-// ── Changelog viewer: full version.json (whats-new) in a modal ──
+// ── История изменений: отдельное окно, доступное и без баннера обновления ──
+// Список версий показывает КРАТКОЕ описание; по нажатию на версию окно
+// переключается на полный текст. Кнопки «Проверить обновление» здесь нет:
+// за это отвечает «Обновления» в шапке — две кнопки делали одно и то же.
+// Сами тексты (подписи и описания версий) лежат в папке update_notes и
+// приходят с сервера, поэтому в этом файле их нет.
 let _changelogCache = null;
+let _changelogMeta = null;
+let _changelogError = false;
+let _changelogOpen = '';            // версия, открытая в подробном виде
+
+function _clTexts(meta) {
+  const t = (meta && meta.texts) || {};
+  const pick = (key, fallback) => String(t[key] || fallback);
+  return {
+    title: pick('modal_title', 'История изменений'),
+    subtitle: pick('modal_subtitle', 'Кратко о каждой версии — нажмите на версию, чтобы прочитать полный текст.'),
+    latest: pick('latest', 'новейшая'),
+    yours: pick('yours', 'у вас'),
+    details: pick('details', 'Подробнее'),
+    back: pick('back', 'Назад'),
+    close: pick('close', 'Закрыть'),
+    empty: pick('empty', 'История пока пуста.'),
+    offline: pick('offline', 'Нет связи с GitHub — показана история из самой сборки.'),
+    error: pick('error', 'Не удалось загрузить историю — проверьте интернет.'),
+  };
+}
+
+// Приводим записи к одной форме: старые версии приходят с полем `changelog`.
+function _clVersions(meta) {
+  const list = (meta && Array.isArray(meta.history)) ? meta.history.slice() : [];
+  if (!list.length && meta && (meta.changelog || meta.version)) {
+    list.push({ version: meta.version, summary: meta.changelog });
+  }
+  return list.map(h => {
+    const row = h || {};
+    const items = Array.isArray(row.items) ? row.items : [];
+    return {
+      version: String(row.version || ''),
+      date: String(row.date || ''),
+      title: String(row.title || ''),
+      summary: String(row.summary || row.changelog || ''),
+      items: items.filter(i => i && i.text),
+    };
+  }).filter(e => e.version);
+}
+
+function _renderChangelog(meta, err) {
+  _changelogMeta = meta;
+  _changelogError = !!err;
+  document.getElementById('changelog-overlay')?.remove();
+  const t = _clTexts(meta);
+  const cur = ((document.getElementById('app-version') || {}).textContent || '').trim();
+  const latest = String((meta && meta.version) || '');
+  const entries = _clVersions(meta);
+  const open = _changelogOpen ? entries.find(e => e.version === _changelogOpen) : null;
+
+  let body;
+  if (open) {
+    const items = open.items.length
+      ? open.items.map(i => `
+          <div class="cl-item">
+            ${i.title ? `<div class="cl-item-t">${escapeHtml(i.title)}</div>` : ''}
+            <p class="cl-item-x">${escapeHtml(i.text).replace(/\n/g, '<br>')}</p>
+          </div>`).join('')
+      : `<p class="cl-text">${escapeHtml(open.summary || '—').replace(/\n/g, '<br>')}</p>`;
+    body = `
+      <div class="cl-detail">
+        <div class="cl-head">
+          <span class="cl-ver">v${escapeHtml(open.version)}</span>
+          ${open.date ? `<time class="cl-date" datetime="${escapeHtml(open.date)}">${escapeHtml(open.date)}</time>` : ''}
+        </div>
+        ${open.title ? `<h4 class="cl-dtitle">${escapeHtml(open.title)}</h4>` : ''}
+        ${items}
+      </div>`;
+  } else {
+    const rows = entries.map(e => {
+      const isLatest = e.version === latest;
+      const isYours = !!cur && cur === e.version;
+      const when = e.date ? `<time class="cl-date" datetime="${escapeHtml(e.date)}">${escapeHtml(e.date)}</time>` : '';
+      return `
+        <button type="button" class="cl-entry ${isLatest ? 'cl-latest' : ''}" onclick="openChangelogVersion('${escapeHtml(e.version)}')" title="${escapeHtml(t.details)}">
+          <span class="cl-head">
+            <span class="cl-ver">v${escapeHtml(e.version)}</span>
+            ${isLatest ? `<span class="cl-tag">${escapeHtml(t.latest)}</span>` : ''}
+            ${isYours ? `<span class="cl-tag cl-yours">${escapeHtml(t.yours)}</span>` : ''}
+            ${when}
+          </span>
+          ${e.title ? `<span class="cl-name">${escapeHtml(e.title)}</span>` : ''}
+          <span class="cl-sum">${escapeHtml(e.summary || '—')}</span>
+          <span class="cl-more">${escapeHtml(t.details)} →</span>
+        </button>`;
+    }).join('');
+    body = rows || `<div class="cl-empty">${err
+      ? escapeHtml(t.error) + (cur ? ' Текущая версия: v' + escapeHtml(cur) : '')
+      : escapeHtml(t.empty)}</div>`;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'changelog-overlay';
+  overlay.className = 'ui-modal-overlay';
+  overlay.innerHTML = `
+    <div class="ui-modal changelog-modal" role="dialog" aria-modal="true" aria-labelledby="cl-title">
+      <h3 id="cl-title">${UI_ICONS.file}${escapeHtml(t.title)}</h3>
+      <p class="cl-sub">${escapeHtml(t.subtitle)}${cur ? ' Вы на <b>v' + escapeHtml(cur) + '</b>.' : ''}</p>
+      ${meta && meta.offline ? `<p class="cl-offline">${escapeHtml(t.offline)}</p>` : ''}
+      <div class="cl-list">${body}</div>
+      <div class="ui-modal-btns cl-foot">
+        ${open ? `<button type="button" class="m-cancel" onclick="backToChangelog()">← ${escapeHtml(t.back)}</button>` : ''}
+        <button type="button" class="m-cancel" onclick="document.getElementById('changelog-overlay').remove()">${escapeHtml(t.close)}</button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.remove(); });
+  document.body.appendChild(overlay);
+  modalA11y(overlay);
+}
 
 function showChangelog() {
-  const close = () => document.getElementById('changelog-overlay')?.remove();
-  const render = (meta, err) => {
-    const cur = (document.getElementById('app-version') || {}).textContent || '';
-    const rows = (meta && meta.history ? meta.history : [])
-      .map(h => `
-        <div class="cl-entry ${h.version === (meta.version || '') ? 'cl-latest' : ''}">
-          <div class="cl-ver">v${escapeHtml(h.version || '?')}${h.version === (meta.version || '') ? '<span class="cl-tag">новейшая</span>' : ''}${cur.includes(h.version) ? '<span class="cl-tag cl-yours">у вас</span>' : ''}</div>
-          <div class="cl-text">${escapeHtml(h.changelog || '—')}</div>
-        </div>`).join('')
-      || `<div class="cl-entry"><div class="cl-text">${err ? 'Не удалось загрузить список изменений — проверьте интернет.' : escapeHtml((meta && meta.changelog) || '—')}</div></div>`;
-    const overlay = document.createElement('div');
-    overlay.id = 'changelog-overlay';
-    overlay.className = 'ui-modal-overlay';
-    overlay.innerHTML = `
-      <div class="ui-modal changelog-modal">
-        <h3>${UI_ICONS.file}Что нового</h3>
-        <div class="cl-list">${rows}</div>
-        <div class="ui-modal-btns">
-          <button type="button" class="m-cancel" onclick="document.getElementById('changelog-overlay').remove()">Закрыть</button>
-        </div>
-      </div>`;
-    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-    overlay.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-    document.body.appendChild(overlay);
-    modalA11y(overlay);
-  };
-  if (_changelogCache) { render(_changelogCache); return; }
+  _changelogOpen = '';
+  if (_changelogCache) { _renderChangelog(_changelogCache, false); return; }
   fetch('/update/changelog')
     .then(r => r.json())
-    .then(meta => { _changelogCache = meta; render(meta); })
-    .catch(() => render(null, true));
+    .then(meta => { _changelogCache = meta; _renderChangelog(meta, false); })
+    .catch(() => _renderChangelog(null, true));
+}
+
+// Нажатие на версию — полный текст той же версии, без ухода из окна.
+function openChangelogVersion(version) {
+  _changelogOpen = String(version || '');
+  _renderChangelog(_changelogMeta, _changelogError);
+}
+
+function backToChangelog() {
+  _changelogOpen = '';
+  _renderChangelog(_changelogMeta, _changelogError);
 }
 
 // ── Self-update: download → apply → the app restarts itself ──
 let _selfUpdating = false;
 
+function _updateErrorBox(message) {
+  const banner = document.getElementById('update-banner');
+  if (!banner) return;
+  let box = document.getElementById('ub-error');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'ub-error';
+    box.className = 'ub-error';
+    box.setAttribute('role', 'alert');
+    banner.appendChild(box);
+  }
+  box.textContent = message || '';
+  box.hidden = !message;
+}
+
 async function selfUpdate() {
   if (_selfUpdating) return;
   const btn = document.getElementById('ub-self-update');
+  const labelHTML = btn ? btn.innerHTML : 'Обновить сейчас';
   const txt = el => { if (btn) btn.textContent = el; };
   _selfUpdating = true;
+  _updateErrorBox('');
+  if (btn) btn.disabled = true;
   try {
     txt('⏳ Скачиваю…');
     const dl = await fetch('/update/download', { method: 'POST' })
@@ -1435,22 +1562,35 @@ async function selfUpdate() {
       .then(r => r.json());
     if (!ap.ok) throw new Error(ap.error || 'Ошибка установки');
 
+    // macOS: сервер скачал .dmg и открыл его. Подменять запущенный .app
+    // нельзя, поэтому дальше пользователь перетаскивает приложение сам.
+    if (ap.manual) {
+      _selfUpdating = false;
+      if (btn) { btn.innerHTML = labelHTML; btn.disabled = false; }
+      if (typeof showToast === 'function') showToast(ap.message || 'Образ открыт — перетащите приложение в «Программы»', 'success');
+      return;
+    }
+
     if (typeof showToast === 'function') showToast(ap.message || 'Обновление установлено, перезапускаюсь…', 'success');
     txt('✓ Перезапуск…');
-    // The backend stops itself and the updater .bat restarts the exe.
-    // Poll /update/status — as soon as the server answers again with a
-    // fresh version, reload the page.
-    const deadline = Date.now() + 60000;
+    // Backend остановит себя и запустит новый exe. Ждём, пока /update/status
+    // снова ответит, и перезагружаем страницу. Если новая версия не поднялась
+    // за минуту — перезагружаемся принудительно: пользователь увидит страницу
+    // и сможет нажать «Обновления» ещё раз.
+    const deadline = Date.now() + 90000;
     const poll = setInterval(async () => {
       try {
-        const s = await fetch('/update/status', { cache: 'no-store' }).then(r => r.json());
-        clearInterval(poll);
-        location.reload();
+        const st = await fetch('/update/status', { cache: 'no-store' }).then(r => r.json());
+        if (st && st.current) { clearInterval(poll); location.reload(); }
       } catch (e) { if (Date.now() > deadline) { clearInterval(poll); location.reload(); } }
     }, 1500);
   } catch (e) {
     _selfUpdating = false;
-    txt('⬆ Обновить сейчас');
+    if (btn) { btn.innerHTML = labelHTML; btn.disabled = false; }
+    // Баннер не прячем: после ошибки пользователь должен видеть причину
+    // и повторить попытку, а не искать её в исчезающем тосте.
+    _dismissedBannerVersion = '';
+    _updateErrorBox(e.message || 'Не удалось обновиться');
     if (typeof showToast === 'function') showToast('Не удалось обновиться: ' + e.message, 'error');
   }
 }
@@ -1550,6 +1690,11 @@ const REPORT_CTX_PARTS = [
 let _reportServerCtx = '';   // текст с сервера (env/runs/лог), по запросу
 let _reportShot = '';        // dataURL последнего скриншота (только превью)
 let _reportShotInClipboard = false;  // лежит ли картинка в буфере обмена
+let _reportPasteBound = null;        // слушатель Ctrl+V на время открытого окна
+// Подсказка области скриншота: возвращается, когда снимок убрали или не выбрали.
+const REPORT_SHOT_HINT = 'Нажмите сюда и вставьте скриншот из буфера: <b>Ctrl+V</b>'
+  + ' (снимок экрана кладётся туда же — Win+Shift+S на Windows).'
+  + ' На GitHub он вставляется туда же — после открытия формы.';
 let _reportInitial = '';     // снимок формы при открытии — для «Отменить»
 let _ghDeviceTimer = null;   // поллинг device flow (setInterval)
 // Выбор меток и кусков контекста запоминается между открытиями окна:
@@ -1704,17 +1849,15 @@ function openReportModal() {
       </details>
       <div class="rep-sec-lbl">Скриншот</div>
       <div class="rep-shot" id="rep-shot" tabindex="0" role="button"
-           aria-label="Область для вставки скриншота">
-        Нажмите сюда и вставьте скриншот из буфера: <b>Ctrl+V</b>
-        (снимок экрана кладётся туда же — Win+Shift+S на Windows).
-        На GitHub он вставляется туда же — после открытия формы.
-      </div>
+           aria-label="Область для вставки скриншота">${REPORT_SHOT_HINT}</div>
       <!-- Кнопка вне rep-shot: тот имеет роль button, и кнопка внутри была бы
            вложенным элементом управления — клик дошёл бы и до выбора файла. -->
       <div class="rep-shot-actions" id="rep-shot-actions" hidden>
         <button type="button" class="btn-sm" onclick="copyReportShot(this)"
                 title="Положить показанный скриншот в буфер обмена — затем Ctrl+V в форме GitHub">
           ${UI_ICONS.copy}Скопировать скриншот в буфер</button>
+          <button type="button" class="btn-sm rep-shot-del" onclick="clearReportShot()"
+                title="Убрать скриншот из окна">${UI_ICONS.x}Убрать скриншот</button>
       </div>
       <div class="ui-modal-btns">
         <button type="button" class="btn-sm rep-form-btn" onclick="openGitHubIssue()"
@@ -1772,8 +1915,10 @@ function openReportModal() {
   // Исходное состояние — чтобы «Отменить» понял, есть ли что терять.
   _reportInitial = _reportSnapshot();
   // Скриншот: вставка из буфера и выбор файла — оба пути дают превью.
+  // Ctrl+V слушаем на документе, а не на области скриншота: окно открыто —
+  // вставка работает сразу, даже если фокус в поле описания или на кнопке.
+  _reportBindPaste();
   const shot = document.getElementById('rep-shot');
-  shot.addEventListener('paste', _reportShotPasted);
   shot.addEventListener('click', () => {
     const inp = document.createElement('input');
     inp.type = 'file'; inp.accept = 'image/*';
@@ -1781,6 +1926,25 @@ function openReportModal() {
     inp.click();
   });
   _renderReportPreview();
+}
+
+function _reportBindPaste() {
+  if (_reportPasteBound) document.removeEventListener('paste', _reportPasteBound);
+  _reportPasteBound = (e) => {
+    if (!document.getElementById('report-overlay')) return;
+    _reportShotPasted(e);
+  };
+  document.addEventListener('paste', _reportPasteBound);
+}
+
+function clearReportShot() {
+  _reportShot = '';
+  _reportShotInClipboard = false;
+  const box = document.getElementById('rep-shot');
+  if (box) { box.innerHTML = REPORT_SHOT_HINT; box.focus(); }
+  const actions = document.getElementById('rep-shot-actions');
+  if (actions) actions.hidden = true;
+  if (typeof _renderReportPreview === 'function') _renderReportPreview();
 }
 
 function _reportShotPasted(e) {
@@ -2215,6 +2379,10 @@ function cancelReportModal() {
 function closeReportModal() {
   const overlay = document.getElementById('report-overlay');
   if (overlay) overlay.remove();
+  if (_reportPasteBound) {
+    document.removeEventListener('paste', _reportPasteBound);
+    _reportPasteBound = null;
+  }
   _reportShot = '';
   _reportShotInClipboard = false;
   _reportInitial = '';

@@ -10,8 +10,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from release_notes import extract_section  # noqa: E402
+import update_notes  # noqa: E402
 
 ZIP_ASSET = "YandexBusinessParser-windows-x64.zip"
 BULLET_RE = re.compile(r"^[-*•]\s+")
@@ -67,8 +69,14 @@ def apply_version(path, version: str, *, changelog_file=None,
     if str(min_version or "").strip():
         data["min_version"] = strip_tag(min_version)
 
-    summary = ""
-    if changelog_file:
+    # Заметка версии в update_notes главнее CHANGELOG: в ней уже готовы и
+    # краткое описание, и полный текст для окна «Что нового».
+    try:
+        note = update_notes.find(version)
+    except Exception:
+        note = {}
+    summary = str(note.get("summary") or "")
+    if not summary and changelog_file:
         cl = Path(changelog_file)
         if cl.exists():
             found = extract_section(cl.read_text(encoding="utf-8-sig"), version)
@@ -82,7 +90,13 @@ def apply_version(path, version: str, *, changelog_file=None,
         data["download_url"] = url
 
     if bump_history:
-        entry = {"version": version, "changelog": summary or data.get("changelog", "")}
+        if note:
+            entry = {key: note.get(key) for key in
+                     ("version", "date", "title", "summary", "items")}
+            entry["version"] = version
+        else:
+            entry = {"version": version,
+                     "changelog": summary or data.get("changelog", "")}
         history = [h for h in (data.get("history") or [])
                    if str((h or {}).get("version")) != version]
         data["history"] = [entry] + history

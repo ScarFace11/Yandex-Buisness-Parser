@@ -55,8 +55,7 @@ jobs:
       # .dmg обязателен: без него на macOS нечего ставить.
       REQUIRED_ASSETS: >-
         YandexBusinessParser-windows-x64.zip
-        YandexBusinessParser-macos-arm64.zip
-        YandexBusinessParser-macos-x64.zip
+        YandexBusinessParser-windows-x64-setup.exe
         YandexBusinessParser-macos-arm64.dmg
         YandexBusinessParser-macos-x64.dmg
         CHANGELOG.md

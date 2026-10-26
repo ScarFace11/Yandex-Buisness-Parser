@@ -6,8 +6,9 @@
 //  Каталог приходит с сервера (/spheres), история — оттуда же: она собрана
 //  из общей истории поиска, поэтому очистка «Истории» очищает и подписи.
 //
-//  Список открывается при фокусе в поле «Кого будем искать?» и по кнопке
-//  «Сферы». Показываем сразу: когда сферу парсили и по каким городам —
+//  Список открывается при фокусе в поле «Кого будем искать?». Кнопка
+//  «Сферы» открывает редактор каталога: добавить сферу, поменять название
+//  и слова. Показываем сразу, когда сферу парсили и по каким городам —
 //  чтобы не гонять один и тот же город дважды.
 // ═══════════════════════════════════════════
 
@@ -109,42 +110,183 @@ function positionSphereDropdown() {
   dd.style.zIndex = '9999';
 }
 
+// Кнопка «Сферы» больше не открывает тот же список, что и фокус в поле:
+// она открывает редактор (добавить сферу, изменить название и слова).
 function openSphereDropdown() {
   const dd = document.getElementById('sphere-dropdown');
-  const btn = document.getElementById('spheres-btn');
   if (!dd) return;
   renderSphereDropdown();
   dd.classList.add('open');
   positionSphereDropdown();
-  if (btn) btn.setAttribute('aria-expanded', 'true');
 }
 
 function closeSphereDropdown() {
   const dd = document.getElementById('sphere-dropdown');
-  const btn = document.getElementById('spheres-btn');
+
   if (!dd) return;
   dd.classList.remove('open');
-  if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
-function toggleSphereDropdown() {
-  const dd = document.getElementById('sphere-dropdown');
-  if (!dd) return;
-  if (dd.classList.contains('open')) closeSphereDropdown();
-  else openSphereDropdown();
+// Слова сферы, которых ещё нет в поле: «кафе» + сфера «кафе, кофейня» →
+// добавляем только «кофейня», чтобы ручной список не терялся.
+function sphereWordsToAdd(sphere, current) {
+  const norm = s => String(s || '').toLowerCase().replace(/ё/g, 'е')
+    .replace(/\s+/g, ' ').trim();
+  const have = new Set(String(current || '').split('\n').map(norm).filter(Boolean));
+  return (sphere && sphere.queries || []).filter(q => q && !have.has(norm(q)));
 }
 
-// Выбор сферы: заменяем запросы её набором. Дальше обычный input-евент —
-// счётчик запросов, сводка настройки и кнопка запуска обновляются сами.
+// Выбор сферы: ДОПИСЫВАЕМ её слова, а не заменяем поле. Дальше обычный
+// input-евент — счётчик запросов, сводка настройки и кнопка запуска сами.
 function applySphere(id) {
   const sphere = (_spheresCatalog || []).find(s => s.id === id);
   const ta = document.getElementById('f-queries');
   if (!sphere || !ta) return;
-  ta.value = (sphere.queries || []).join('\n');
+  const add = sphereWordsToAdd(sphere, ta.value);
+  if (!add.length) {
+    closeSphereDropdown();
+    ta.focus();
+    if (typeof showToast === 'function') showToast('Слова этой сферы уже в поле', 'ok');
+    return;
+  }
+  const head = String(ta.value || '').replace(/\s+$/, '');
+  ta.value = (head ? head + '\n' : '') + add.join('\n');
   ta.dispatchEvent(new Event('input', { bubbles: true }));
   closeSphereDropdown();
   ta.focus();
   if (typeof saveSettings === 'function') saveSettings();
+}
+
+// ── Редактор сфер ────────────────────────────
+function _sphereEditorRow(s) {
+  const name = escapeHtml(s.name || '');
+  const words = escapeHtml((s.queries || []).join(', '));
+  return `<div class="sphere-edit-row" data-id="${escapeHtml(s.id || '')}"
+      data-icon="${escapeHtml(s.icon || '')}">
+    <input class="sphere-edit-name" type="text" value="${name}"
+           placeholder="Название сферы" aria-label="Название сферы">
+    <input class="sphere-edit-words" type="text" value="${words}"
+           placeholder="слова через запятую" aria-label="Слова для поиска">
+    <button type="button" class="sphere-edit-del" title="Удалить сферу"
+            aria-label="Удалить сферу ${name}">${UI_ICONS.x}</button>
+  </div>`;
+}
+
+function _collectSphereRows() {
+  const list = document.getElementById('spheres-list');
+  if (!list) return [];
+  return [...list.querySelectorAll('.sphere-edit-row')].map(row => ({
+    id: row.dataset.id || '',
+    icon: row.dataset.icon || '',
+    name: (row.querySelector('.sphere-edit-name') || {}).value || '',
+    queries: String((row.querySelector('.sphere-edit-words') || {}).value || '')
+      .split(/[,;\n]/).map(s => s.trim()).filter(Boolean),
+  }));
+}
+
+function closeSpheresEditor() {
+  const overlay = document.getElementById('spheres-overlay');
+  if (overlay) overlay.remove();
+}
+
+function openSpheresEditor() {
+  closeSphereDropdown();   // список и редактор не показываем одновременно
+  const existing = document.getElementById('spheres-overlay');
+  if (existing) existing.remove();
+  loadSpheres().then(() => {
+    const overlay = document.createElement('div');
+    overlay.id = 'spheres-overlay';
+    overlay.className = 'ui-modal-overlay';
+    overlay.innerHTML = `
+      <div class="ui-modal spheres-modal" role="dialog" aria-modal="true"
+           aria-labelledby="spheres-title">
+        <h3 class="ui-modal-title" id="spheres-title">Сферы бизнеса</h3>
+        <div class="spheres-hint">Название — как сфера называется в списке,
+          слова — что именно искать (через запятую). Выбор сферы в поле
+          запросов дописывает её слова, не стирая введённое.</div>
+        <div class="spheres-list" id="spheres-list">
+          ${(_spheresCatalog || []).map(_sphereEditorRow).join('')}
+        </div>
+        <button type="button" class="btn-sm spheres-add" id="spheres-add">${UI_ICONS.plus}Добавить сферу</button>
+        <div class="ui-modal-btns">
+          <button type="button" class="btn-sm spheres-reset" onclick="resetSpheresCatalog()"
+                  title="Вернуть встроенный набор сфер">Сбросить</button>
+          <button type="button" class="m-cancel" onclick="closeSpheresEditor()">Отмена</button>
+          <button type="button" class="m-ok" id="spheres-save"
+                  onclick="saveSpheresFromEditor()">Сохранить</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const list = overlay.querySelector('#spheres-list');
+    overlay.querySelector('#spheres-add').addEventListener('click', () => {
+      list.insertAdjacentHTML('beforeend', _sphereEditorRow({ name: '', queries: [] }));
+      const rows = list.querySelectorAll('.sphere-edit-row');
+      const last = rows[rows.length - 1];
+      if (last) last.querySelector('.sphere-edit-name').focus();
+    });
+    list.addEventListener('click', e => {
+      const del = e.target.closest('.sphere-edit-del');
+      if (!del) return;
+      const row = del.closest('.sphere-edit-row');
+      if (row) row.remove();
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeSpheresEditor(); });
+    overlay.addEventListener('keydown', e => { if (e.key === 'Escape') closeSpheresEditor(); });
+    if (typeof modalA11y === 'function') modalA11y(overlay);
+  });
+}
+
+function saveSpheresFromEditor() {
+  const items = _collectSphereRows();
+  if (!items.length) {
+    if (typeof showToast === 'function') showToast('Оставьте хотя бы одну сферу', 'warn');
+    return;
+  }
+  const btn = document.getElementById('spheres-save');
+  if (btn) btn.disabled = true;
+  fetch('/spheres', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ spheres: items }),
+  })
+    .then(r => r.json().catch(() => ({})))
+    .then(d => {
+      if (!d || !d.ok) {
+        if (typeof showToast === 'function') {
+          showToast('Не сохранилось: ' + ((d && d.error) || 'сервер не ответил'), 'warn');
+        }
+        return;
+      }
+      _spheresCatalog = d.spheres || [];
+      _spheresLoadedAt = Date.now();
+      closeSpheresEditor();
+      const dd = document.getElementById('sphere-dropdown');
+      if (dd && dd.classList.contains('open')) renderSphereDropdown();
+      if (typeof showToast === 'function') showToast('Сферы сохранены', 'ok');
+    })
+    .catch(() => {
+      if (typeof showToast === 'function') showToast('Не сохранилось: нет связи с приложением', 'warn');
+    })
+    .finally(() => { if (btn) btn.disabled = false; });
+}
+
+function resetSpheresCatalog() {
+  fetch('/spheres/reset', { method: 'POST' })
+    .then(r => r.json().catch(() => ({})))
+    .then(d => {
+      if (!d || !d.ok) {
+        if (typeof showToast === 'function') showToast('Не удалось сбросить сферы', 'warn');
+        return;
+      }
+      _spheresCatalog = d.spheres || [];
+      _spheresLoadedAt = Date.now();
+      const list = document.getElementById('spheres-list');
+      if (list) list.innerHTML = (_spheresCatalog).map(_sphereEditorRow).join('');
+      if (typeof showToast === 'function') showToast('Вернули встроенный набор сфер', 'ok');
+    })
+    .catch(() => {
+      if (typeof showToast === 'function') showToast('Не удалось сбросить сферы', 'warn');
+    });
 }
 
 function initSpheres() {
@@ -152,9 +294,8 @@ function initSpheres() {
   if (!ta || ta.dataset.spheresInit) return;
   ta.dataset.spheresInit = '1';
 
-  // Элемент есть в разметке (на него ссылается aria-controls у кнопки),
-  // но переносим его в <body> и позиционируем fixed — аккордеон обрезает
-  // вложенные списки, как было и с городами.
+  // Элемент есть в разметке, но переносим его в <body> и позиционируем
+  // fixed — аккордеон обрезает вложенные списки, как было и с городами.
   const dd = document.getElementById('sphere-dropdown');
   if (!dd) return;
   document.body.appendChild(dd);
@@ -168,12 +309,11 @@ function initSpheres() {
     if (e.key === 'Escape') closeSphereDropdown();
   });
 
-  const btn = document.getElementById('spheres-btn');
   if (btn) {
     btn.addEventListener('mousedown', e => e.preventDefault());  // не уводим фокус
     btn.addEventListener('click', e => {
       e.preventDefault();
-      loadSpheres().then(() => toggleSphereDropdown());
+      openSpheresEditor();
     });
   }
 

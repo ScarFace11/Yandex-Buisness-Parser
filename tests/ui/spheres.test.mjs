@@ -85,3 +85,28 @@ test('пустой каталог объясняет причину, а не м�
   globalThis.renderSphereDropdown();
   assert.match(dd.innerHTML, /Сферы не загрузились/);
 });
+
+// ── Выбор сферы: слова дописываются, а не заменяют поле ────────────
+(0, eval)(grab('sphereWordsToAdd'));
+
+test('сфера дописывает только те слова, которых в поле ещё нет', () => {
+  assert.deepEqual(
+    globalThis.sphereWordsToAdd({ queries: ['кафе', 'кофейня'] }, 'кафе\nбар'),
+    ['кофейня'],
+  );
+  assert.deepEqual(globalThis.sphereWordsToAdd({ queries: ['кафе'] }, ''), ['кафе']);
+});
+
+test('регистр и «ё» не создают дублей', () => {
+  assert.deepEqual(globalThis.sphereWordsToAdd({ queries: ['кафе'] }, 'КАФЕ'), []);
+  assert.deepEqual(
+    globalThis.sphereWordsToAdd({ queries: ['тренажёрный зал'] }, 'тренажерный  зал'),
+    [],
+  );
+});
+
+test('повторный выбор той же сферы ничего не добавляет', () => {
+  const sphere = { queries: ['кафе', 'кофейня'] };
+  const afterFirst = 'кафе\nкофейня';
+  assert.deepEqual(globalThis.sphereWordsToAdd(sphere, afterFirst), []);
+});

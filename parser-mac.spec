@@ -29,11 +29,8 @@ try:
 except Exception:
     pass
 
-# YP_DEV=1 → внутреннее имя бандла (для локальных сборок разработчика).
-DEV_BUILD = os.environ.get("YP_DEV", "").strip().lower() not in ("", "0", "false", "no")
-APP_NAME = "YandexBusinessParserDev" if DEV_BUILD else "YandexBusinessParser"
-BUNDLE_ID = ("com.yandexparser.desktop.dev" if DEV_BUILD
-             else "com.yandexparser.desktop")
+APP_NAME = "YandexBusinessParser"
+BUNDLE_ID = "com.yandexparser.desktop"
 # Arch of the produced binary: arm64 / x86_64 / universal2 (empty → native).
 TARGET_ARCH = os.environ.get("YP_ARCH", "").strip() or None
 ICON = os.environ.get("YP_ICON", "static/icon.icns")
@@ -57,6 +54,9 @@ a = Analysis(
         # Read-only resources served by Flask
         ('templates', 'templates'),
         ('static', 'static'),
+        # Тексты обновлений: «Что нового» и подпись баннера читаются с диска.
+        ('update_notes/notes', 'update_notes/notes'),
+        ('update_notes/ui.json', 'update_notes'),
     ],
     hiddenimports=(
         # Search/enrichment pipeline modules are imported dynamically
@@ -74,6 +74,8 @@ a = Analysis(
             'presets_store',
             'paths',
             'console_io',
+            'updater_helper',
+            'update_notes',
             # multiprocessing children re-import the entry module. On macOS
             # the default start method is spawn, so this import is mandatory.
             '__main__',

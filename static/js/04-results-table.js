@@ -295,6 +295,60 @@ function toggleScopeAll() {
   setResultsView(_resultsView);
 }
 
+// ── «Только новые» ──────────────────────────────────────────────
+// Повторный парсинг того же города даёт дубли: в новом файле лежат и старые
+// организации. Сервер помечает каждую запись флагом `_is_new` (не было её
+// в файлах, написанных до старта текущего поиска — сравнение по ссылке на
+// карточку), а фильтр прячет строки без этого флага.
+// Не путать с «🎯 Тип компании → только новые за N месяцев»: тот фильтр
+// смотрит на дату добавления организации на Картах, этот — на историю парсинга.
+const ONLY_NEW_KEY = 'yp_only_new';
+let onlyNewFilter = false;
+
+// Сколько новых записей в загруженном наборе и известен ли признак вообще:
+// без маркера старта `_is_new` — null, и «0» на кнопке читался бы как
+// «новых нет», хотя мы просто не с чем сравнивать.
+function onlyNewStats() {
+  let known = false, count = 0;
+  for (const r of allResults || []) {
+    if (!r) continue;
+    if (r._is_new === true) { count += 1; known = true; }
+    else if (r._is_new === false) known = true;
+  }
+  return { known, count };
+}
+
+function updateOnlyNewButton() {
+  const b = document.getElementById('btn-only-new');
+  if (!b) return;
+  b.classList.toggle('active', onlyNewFilter);
+  b.setAttribute('aria-pressed', onlyNewFilter ? 'true' : 'false');
+  // Цифра на кнопке: сколько новых нашлось. Во время сбора её обновляет
+  // renderPage после каждой порции живых записей.
+  const { known, count } = onlyNewStats();
+  const chip = document.getElementById('btn-only-new-count');
+  if (chip) {
+    chip.textContent = known ? String(count) : '';
+    chip.hidden = !known;
+  }
+  b.setAttribute('aria-label', known
+    ? `Только новые: ${count} ${pluralRecords(count)}`
+    : 'Только новые');
+  b.title = known
+    ? `Только те организации, которых не было в прошлых прогонах: ${count} ${pluralRecords(count)}. Сравнение по ссылке на карточку.`
+    : 'Только те организации, которых не было в прошлых прогонах (сравнение по ссылке на карточку). Помогает отсеять дубли при повторном парсинге того же города.';
+}
+
+function toggleOnlyNewFilter() {
+  onlyNewFilter = !onlyNewFilter;
+  try { localStorage.setItem(ONLY_NEW_KEY, onlyNewFilter ? '1' : '0'); } catch (e) {}
+  updateOnlyNewButton();
+  curPage = 1;
+  filterTable();
+}
+
+function onlyNewNote() { return onlyNewFilter ? ' · только новые' : ''; }
+
 function setResultsView(view) {
   // Кнопка «Все» убрана из интерфейса: режим объединял два источника, но по
   // факту показывал обработанные — непонятный дубль. Значение 'all' из
@@ -794,15 +848,162 @@ function scoreWhyText(r, v) {
 
 // Lead score badge: green ≥ 70 (горячий), amber ≥ 45, grey below. «—» means
 // the score was never computed (file written before this feature).
+// Бейдж — кнопка: по клику открывается мини-окно с разбором балла
+// (те же критерии, что в подсказке, только читабельным списком).
 function scoreHTML(r) {
   const raw = r.lead_score;
   if (raw == null || raw === '') return '<span class="score-na">—</span>';
   const v = +raw || 0;
   const cls = v >= 70 ? 'hot' : v >= 45 ? 'warm' : 'cold';
-  return `<span class="score-badge ${cls}" title="${escapeHtml(scoreWhyText(r, v))}">${v}</span>`;
+  const key = reviewKey(r);
+  // Ключа нет (ни ссылки, ни названия с адресом) — искать запись по пустому
+  // ключу нечем: окно показало бы разбор чужой строки. Тогда бейдж не кнопка.
+  if (!key) {
+    return `<span class="score-badge ${cls}" title="${escapeHtml(scoreWhyText(r, v))}">${v}</span>`;
+  }
+  return `<button type="button" class="score-badge ${cls}"`
+    + ` data-review-url="${escapeHtml(key)}"`
+    + ` aria-haspopup="dialog" aria-expanded="false"`
+    + ` title="${escapeHtml(scoreWhyText(r, v))}"`
+    + ` onclick="toggleScorePopover(this)">${v}</button>`;
+}
+
+// ═════════════════════════════════════
+//  Мини-окно «почему столько баллов»
+// ═════════════════════════════════════
+// Открывается кликом по оценке, закрывается по Esc, кнопке ✕ или клику мимо.
+// Не модальное: фокус уходит в окно, ловушка фокуса не нужна — за строкой
+// таблицы всё ещё можно работать.
+let _scorePopKey = '';       // ключ записи — по нему окно находит новый бейдж
+
+function _scorePopEl() {
+  if (_scorePop && document.body.contains(_scorePop)) return _scorePop;
+  const el = document.createElement('div');
+  el.id = 'score-pop';
+  el.className = 'score-pop';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', 'Разбор оценки лида');
+  el.setAttribute('tabindex', '-1');
+  el.hidden = true;
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); closeScorePopover(true); }
+  });
+  // Клик мимо — закрыть (mousedown, чтобы сработало до клика по новому бейджу).
+  document.addEventListener('mousedown', e => {
+    if (!el.hidden && !e.target.closest('#score-pop')
+        && !e.target.closest('.score-badge')) closeScorePopover(false);
+  });
+  // Прокрутка таблицы и изменение размера окна: бейдж уезжает — окно едет
+  // за ним (закрывать на прокрутке нельзя: focus() сам прокручивает страницу).
+  const follow = () => {
+    if (el.hidden) return;
+    if (!_scorePopAnchor || !document.body.contains(_scorePopAnchor)) {
+      closeScorePopover(false);
+      return;
+    }
+    _placeScorePop(_scorePopAnchor);
+  };
+  document.addEventListener('scroll', follow, true);
+  window.addEventListener('resize', follow);
+  document.body.appendChild(el);
+  _scorePop = el;
+  return el;
+}
+
+// Запись ищем среди строк таблицы — бейдж хранит только ключ, а не данные.
+function _scoreRecByKey(key) {
+  return (filteredRows || []).find(r => reviewKey(r) === key)
+      || (allResults || []).find(r => reviewKey(r) === key)
+      || null;
+}
+
+function toggleScorePopover(btn) {
+  if (_scorePopAnchor === btn && _scorePop && !_scorePop.hidden) {
+    closeScorePopover(true);
+    return;
+  }
+  const key = btn.dataset.reviewUrl || '';
+  if (!key) return;                 // бейдж без ключа — не кнопка, но на всякий случай
+  const rec = _scoreRecByKey(key);
+  if (!rec) return;
+  const v = +rec.lead_score || 0;
+  const cls = v >= 70 ? 'hot' : v >= 45 ? 'warm' : 'cold';
+  const { sum, lines } = scoreBreakdown(rec);
+  const pop = _scorePopEl();
+  const name = escapeHtml(rec.name || rec.address || 'Организация');
+  const items = lines.length
+    ? lines.map(t => `<li class="${t.startsWith('✅') ? 'hit' : 'miss'}">${escapeHtml(t)}</li>`).join('')
+    : '<li class="miss">Ни один критерий не сработал</li>';
+  pop.innerHTML =
+      `<div class="score-pop-head">`
+    + `<span class="score-pop-name">${name}</span>`
+    + `<button type="button" class="score-pop-x" aria-label="Закрыть разбор оценки" onclick="closeScorePopover(true)">×</button>`
+    + `</div>`
+    + `<div class="score-pop-sum">Оценка: <span class="score-badge ${cls}">${v}</span>`
+    + `<span class="score-pop-max"> из ${SCORE_MAX} · по текущим данным ${sum}</span></div>`
+    + `<ul class="score-pop-list">${items}</ul>`;
+  pop.hidden = false;
+  _scorePopKey = btn.dataset.reviewUrl || '';
+  _placeScorePop(btn);
+  // Открыли разбор у соседней строки — прошлый бейдж больше не раскрыт.
+  if (_scorePopAnchor && _scorePopAnchor !== btn) {
+    _scorePopAnchor.setAttribute('aria-expanded', 'false');
+  }
+  _scorePopAnchor = btn;
+  btn.setAttribute('aria-expanded', 'true');
+  // preventScroll: иначе браузер «доскроллит» до окна и таблица прыгнет.
+  pop.focus({ preventScroll: true });
+}
+
+// Позиция — под бейджем, но не за краем окна; выше, если снизу не влезает.
+function _placeScorePop(btn) {
+  const pop = _scorePop;
+  if (!pop) return;
+  const rect = btn.getBoundingClientRect();
+  const box = pop.getBoundingClientRect();
+  pop.style.left = Math.min(Math.max(8, rect.left),
+                            Math.max(8, window.innerWidth - box.width - 8)) + 'px';
+  const below = rect.bottom + 6;
+  pop.style.top = (below + box.height > window.innerHeight - 8
+                   ? Math.max(8, rect.top - box.height - 6) : below) + 'px';
+}
+
+// Таблица перерисовалась (живой поток, сортировка, фильтр): бейджи заменены
+// новыми элементами. Окно не закрываем, а сажаем на бейдж той же записи —
+// иначе оно захлопывалось бы каждые 250 мс, пока идёт сбор.
+function _reanchorScorePopover() {
+  if (!_scorePop || _scorePop.hidden) return;
+  let next = null;
+  if (_scorePopKey) {
+    for (const b of document.querySelectorAll('td[data-col="score"] .score-badge')) {
+      if (b.dataset.reviewUrl === _scorePopKey) { next = b; break; }
+    }
+  }
+  if (!next) { closeScorePopover(false); return; }   // строку спрятал фильтр
+  if (_scorePopAnchor && _scorePopAnchor !== next) {
+    _scorePopAnchor.setAttribute('aria-expanded', 'false');
+  }
+  _scorePopAnchor = next;
+  next.setAttribute('aria-expanded', 'true');
+  _placeScorePop(next);
+}
+
+function closeScorePopover(returnFocus) {
+  const pop = _scorePop;
+  const anchor = _scorePopAnchor;
+  _scorePopAnchor = null;
+  _scorePopKey = '';
+  if (pop) pop.hidden = true;
+  if (!anchor) return;
+  anchor.setAttribute('aria-expanded', 'false');
+  // Таблица могла перерисоваться — тогда фокус возвращать некуда.
+  if (returnFocus && document.body.contains(anchor)) anchor.focus({ preventScroll: true });
 }
 
 function renderTable(data) {
+  // Мини-окно оценки живёт вне tbody: после перерисовки его бейджа больше
+  // нет, и окно висело бы в пустоте со старой записью.
+  closeScorePopover(false);
   activeSocialFilters.clear();
   document.querySelectorAll('.sf-tag').forEach(b => b.classList.remove('active'));
   document.getElementById('sf-clear-btn').classList.remove('visible');
@@ -887,6 +1088,11 @@ function _applyRowFilters(source) {
     // только непросмотренные / только просмотренные / всё.
     if (reviewedFilter === 'unviewed' && isReviewed(r)) return false;
     if (reviewedFilter === 'viewed' && !isReviewed(r)) return false;
+    // «Только новые»: организация не встречалась в прошлых прогонах.
+    // `null` — сравнивать было не с чем (нет маркера старта или не удалось
+    // прочитать прошлые файлы): такие строки не прячем — иначе фильтр молча
+    // спрятал бы всё.
+    if (onlyNewFilter && r._is_new === false) return false;
     // Search every visible/data field
     const searchable = Object.values(r).some(value =>
       String(value ?? '').toLocaleLowerCase('ru-RU').includes(q)
@@ -1135,6 +1341,15 @@ function _groupRowsByCity(rows) {
   return fav.concat(rest);
 }
 
+// «новая» — организация не встречалась в прошлых поисках (признак `_is_new`
+// ставит сервер: и в /results-view, и в живом потоке). Фильтр «Только новые»
+// показывает, что новых — все строки, поэтому под ним метку не дублируем.
+// `false` и `null` (сравнивать было не с чем) — без метки.
+function newTagHTML(r) {
+  if (!r || r._is_new !== true || onlyNewFilter) return '';
+  return '<span class="new-tag" title="Новая организация: её не было в прошлых поисках">новая</span>';
+}
+
 // Одна строка организации. Вынесено из renderPage: при группировке по городам
 // строки идут между полосами городов, а нумерация («#») — сквозная по таблице.
 function _resultRowHtml(r, n) {
@@ -1157,7 +1372,7 @@ function _resultRowHtml(r, n) {
         data-review-url="${reviewUrl}"
         onchange="toggleReviewed(this.dataset.reviewUrl, this)"></td>
       <td data-col="num">${n}</td>
-      <td data-col="name"><a class="tbl-link" href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.name || '—')}</a></td>
+      <td data-col="name"><a class="tbl-link" href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.name || '—')}</a>${newTagHTML(r)}</td>
       <td data-col="category" class="tbl-cat">${escapeHtml(r.category || '—')}</td>
       <td data-col="address">${escapeHtml(r.address || '—')}</td>
       <td data-col="phone">${phoneHTML(r)}</td>
@@ -1174,14 +1389,27 @@ function renderPage() {
   const slice = filteredRows;
 
   document.getElementById('tbl-count').textContent = total
-    ? `${total} записей${currentFileNote}${reviewedFilterNote()}` : '';
+    ? `${total} записей${currentFileNote}${reviewedFilterNote()}${onlyNewNote()}` : '';
   const exportWrap = document.getElementById('export-sel-wrap');
   if (exportWrap) exportWrap.style.display = total ? 'flex' : 'none';
+  // Счётчики выборки: сколько строк уедет в Excel/CSV и сколько откроется
+  // при включённом «Только под фильтром» в «Массовом обходе». Инлайном, а
+  // не отдельной функцией — в тестах renderPage вызывается без модуля обхода.
+  const expCount = document.getElementById('export-sel-count');
+  if (expCount) expCount.textContent = total ? String(total) : '';
+  const onlyWrap = document.getElementById('bulk-only-filtered-wrap');
+  if (onlyWrap) onlyWrap.hidden = !total;
+  const onlyTxt = document.getElementById('bulk-only-filtered-txt');
+  if (onlyTxt) onlyTxt.textContent = `Только под фильтром (${total})`;
+  // Счётчик на кнопке «Только новые»: живые записи прибавляются к нему сразу,
+  // а не только после перечитывания /results-view по завершении прогона.
+  updateOnlyNewButton();
 
   const tbody = document.getElementById('tbl-body');
   if (!total) {
     tbody.innerHTML = '<tr><td colspan="9" class="no-data">Ничего не найдено</td></tr>';   // плейсхолдер: столбцов у него нет
 
+    closeScorePopover(false);       // разбирать больше нечего — строки ушли
     document.getElementById('pager').style.display = 'none';
     return;
   }
@@ -1208,6 +1436,8 @@ function renderPage() {
   // Новые строки — в пользовательском порядке столбцов (если он задан).
   applyColOrder();
 
+  // Открытый разбор оценки переезжает на новый бейдж той же записи.
+  _reanchorScorePopover();
   // Пагинация больше не нужна — таблицы нет. Счётчик записей остаётся.
   const pager = document.getElementById('pager');
   pager.style.display = 'none';

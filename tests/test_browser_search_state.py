@@ -40,6 +40,12 @@ class TestStateHarvestJs:
         # Следующие страницы берутся из самой страницы, с её cookie.
         assert "{credentials: 'include'}" in js
 
+    def test_coords_keep_yandex_geo_order(self):
+        """Яндекс отдаёт [долгота, широта] — перестановка ставила точки не туда."""
+        js = bs._state_harvest_js(10)
+        assert "String(coords[0]) + ',' + String(coords[1])" in js
+        assert "String(coords[1]) + ',' + String(coords[0])" not in js
+
     def test_wait_expr_waits_for_state(self):
         expr = bs._state_wait_expr()
         assert "application/json" in expr
@@ -66,6 +72,20 @@ class TestItemsToCards:
         assert card["rating"] == "5.0"
         assert card["reviews_count"] == "807"
         assert (card["lat"], card["lon"]) == ("54.732742", "55.958730")
+
+    def test_state_coords_round_trip_to_the_same_point(self):
+        """Живой ответ Яндекса (Уфа): [55.937798, 54.725186] — [долгота, широта].
+
+        Регрессия: раньше конвейер менял их местами, и маркер ложился в другую
+        точку (55.9° «широты» вместо 54.7°).
+        """
+        lon, lat = 55.937798, 54.725186
+        card = bs._items_to_cards([{
+            "id": "1", "name": "Дуть", "coords": f"{lon},{lat}",
+        }])[0]
+        assert float(card["lat"]) == lat
+        assert float(card["lon"]) == lon
+        assert 54.6 < float(card["lat"]) < 54.9      # Уфа, а не 55.9° «широты»
 
     def test_normalizes_dom_style_numbers(self):
         """Разбор вёрстки отдаёт «4,9» и «(1 490 оценок)» — чистим так же."""

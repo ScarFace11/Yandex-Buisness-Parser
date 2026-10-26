@@ -48,21 +48,6 @@ def _platform_refusal() -> dict:
                      "Скачайте новую версию со страницы релизов."}
 
 
-def _is_dev() -> bool:
-    """Сборка разработчика: авто-обновление отключено целиком."""
-    try:
-        from config import is_dev_build
-        return bool(is_dev_build())
-    except Exception:
-        return False
-
-
-def _dev_refusal() -> dict:
-    return {"ok": False,
-            "error": "Это DEV-сборка: авто-обновление отключено. "
-                     "Публичный релиз ставится из обычной сборки."}
-
-
 def _user_dir() -> Path:
     return Path(paths.user_dir()) if paths else Path.cwd()
 
@@ -241,9 +226,7 @@ def minimum_state() -> dict:
     out = {"current": APP_VERSION, "minimum": "", "blocked": False,
            "download_url": _releases_page(),
            "auto_apply": _is_frozen() and _self_update_supported(),
-           "dev": _is_dev(), "bypass": False, "notice": ""}
-    if out["dev"]:
-        return out
+           "bypass": False, "notice": ""}
     if _is_local_build():
         # Своя сборка: порог не мешает — так автор запускает и старые версии.
         out["bypass"] = True
@@ -285,14 +268,43 @@ def version_minimum():
     """Минимально допустимая версия: окно «нужно обновить»."""
     return jsonify(minimum_state())
 
+def _last_update_result() -> dict:
+    """Результат последней установки, который помощник пишет вне приложения.
+
+    Сбой после выхода приложения иначе выглядел бы как «нажал Обновить,
+    окно закрылось, версия та же»: помощник вернул старую версию на место,
+    но сказать об этом уже некому. Показываем причину при следующем старте.
+    """
+    from config import APP_VERSION
+    path = _work_dir() / "update_result.json"
+    if not path.exists():
+        return {}
+    try:
+        data = _json_load(path)
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    # Успешная установка той версии, которая сейчас запущена, — не новость.
+    if data.get("ok") and str(data.get("version") or "") == APP_VERSION:
+        return {}
+    data["log"] = str(_work_dir() / LOG_FILE)
+    return data
+
 
 @bp.route("/update/status")
 def update_status():
     from config import APP_VERSION
     import sys
+    try:
+        import update_notes
+        texts = update_notes.texts()
+    except Exception:
+        texts = {}
     out = {
+        "texts": texts,
+        "last_update": _last_update_result(),
         "frozen": _is_frozen(),
-        "dev": _is_dev(),
         "current": APP_VERSION,
         "latest": None,
         "newer": False,
@@ -305,8 +317,8 @@ def update_status():
         "platform": sys.platform,
         "state": _state(),
     }
-    # DEV-сборка: за версией не ходим — обновление ей не предлагается.
-    if out["dev"] or not _is_frozen():
+    # Из исходников за версией не ходим: обновление предлагается только сборке.
+    if not _is_frozen():
         return jsonify(out)
     try:
         meta = _remote_meta()
@@ -342,34 +354,88 @@ def update_status():
     return jsonify(out)
 
 
+def _history_row(raw: dict) -> dict:
+    """Запись истории к одной форме: version/date/title/summary/items."""
+    if not isinstance(raw, dict):
+        return {}
+    items = []
+    for item in raw.get("items") or []:
+        if isinstance(item, str):
+            items.append({"title": "", "text": item})
+            continue
+        if not isinstance(item, dict):
+            continue
+        items.append({"title": str(item.get("title") or ""),
+                      "text": str(item.get("text") or "")})
+    return {
+        "version": str(raw.get("version") or ""),
+        "date": str(raw.get("date") or ""),
+        "title": str(raw.get("title") or ""),
+        "summary": str(raw.get("summary") or raw.get("changelog") or ""),
+        "items": [i for i in items if i["text"]],
+    }
+
+
 @bp.route("/update/changelog")
 def update_changelog():
-    """version.json from GitHub (version, changelog, history) for the «Что нового» modal."""
+    """История версий для окна «Что нового»: сеть плюс заметки самой сборки."""
     from config import APP_VERSION
+    import update_notes
+
+    bundled = {}
+    try:
+        import json as _json
+        path = (paths.resource_dir() if paths else Path(__file__).resolve().parent.parent) / "static" / "version.json"
+        bundled = _json.loads(path.read_text(encoding="utf-8-sig"))
+    except Exception:
+        bundled = {}
+    if not isinstance(bundled, dict):
+        bundled = {}
+
     try:
         meta = _remote_meta()
+        if not isinstance(meta, dict):
+            raise ValueError("version.json: ожидался объект")
     except Exception:
-        # Offline: serve the bundled static/version.json so the modal still opens and shows at least the current version's notes.
-        try:
-            import json as _json
-            bundled = (paths.resource_dir() if paths else Path(__file__).resolve().parent.parent) / "static" / "version.json"
-            meta = _json.loads(bundled.read_text(encoding="utf-8-sig"))
-            meta["offline"] = True
-        except Exception:
-            meta = {"version": APP_VERSION, "changelog": ""}
-    meta.setdefault("version", APP_VERSION)
-    meta["current"] = APP_VERSION
-    return jsonify(meta)
+        # Офлайн: история из version.json самой сборки — окно всё равно открывается.
+        meta = dict(bundled)
+        meta["offline"] = True
+
+    # Собираем все известные версии: старые — из сети и из version.json,
+    # заметки сборки главнее — в них краткое описание и полный текст.
+    rows: dict[str, dict] = {}
+    for source in (bundled.get("history") or [], meta.get("history") or []):
+        for raw in source:
+            row = _history_row(raw)
+            if row["version"]:
+                rows[row["version"]] = row
+    top = _history_row(meta)
+    if top["version"]:
+        rows.setdefault(top["version"], top)
+    for note in update_notes.releases():
+        if note.get("version"):
+            rows[note["version"]] = note
+
+    history = sorted(rows.values(), key=lambda r: _ver_tuple(r["version"]),
+                     reverse=True)[:update_notes.HISTORY_LIMIT]
+    newest = history[0] if history else _history_row({"version": APP_VERSION})
+    out = dict(meta)
+    out["version"] = newest.get("version") or APP_VERSION
+    out["changelog"] = newest.get("summary", "")
+    out["history"] = history
+    out["texts"] = update_notes.texts()
+    out["current"] = APP_VERSION
+    return jsonify(out)
 
 
 @bp.route("/update/download", methods=["POST"])
 def update_download():
-    """Stream the release zip to _update/update.zip."""
-    if _is_dev():
-        return jsonify(_dev_refusal()), 400
+    """Скачать файл обновления: zip для Windows, dmg для macOS."""
     if not _is_frozen():
-        return jsonify({"ok": False, "error": "Доступно только в сборке .exe"}), 400
-    if not _self_update_supported():
+        return jsonify({"ok": False, "error": "Доступно только в собранном приложении"}), 400
+    import sys as _sys
+    mac = _sys.platform == "darwin"
+    if not mac and not _self_update_supported():
         return jsonify(_platform_refusal()), 400
 
     state = _state()
@@ -397,7 +463,7 @@ def update_download():
                          headers={"User-Agent": "YandexParser-Updater/1.0"})
         r.raise_for_status()
         total = int(r.headers.get("Content-Length") or 0)
-        target = _work_dir() / "update.zip"
+        target = _work_dir() / ("update.dmg" if mac else "update.zip")
         done = 0
         with open(target, "wb") as f:
             for chunk in r.iter_content(chunk_size=256 * 1024):
@@ -417,10 +483,25 @@ def update_download():
 @bp.route("/update/apply", methods=["POST"])
 def update_apply():
     """Extract the downloaded zip, verify it, schedule the swap, restart."""
-    if _is_dev():
-        return jsonify(_dev_refusal()), 400
     if not _is_frozen():
-        return jsonify({"ok": False, "error": "Доступно только в сборке .exe"}), 400
+        return jsonify({"ok": False, "error": "Доступно только в собранном приложении"}), 400
+
+    # macOS: подменять запущенный .app нельзя — скачанный .dmg открывается,
+    # пользователь перетаскивает приложение в «Программы» сам.
+    import sys as _sys
+    if _sys.platform == "darwin":
+        st = _state()
+        dmg = Path(st.get("download", {}).get("file") or (_work_dir() / "update.dmg"))
+        if not dmg.exists():
+            return jsonify({"ok": False, "error": "Обновление ещё не скачано"}), 400
+        try:
+            subprocess.Popen(["open", str(dmg)])
+        except OSError as exc:
+            return jsonify({"ok": False,
+                            "error": f"Не удалось открыть образ: {exc}"}), 500
+        return jsonify({"ok": True, "manual": True,
+                        "message": "Образ открыт — перетащите приложение в «Программы»."})
+
     if not _self_update_supported():
         return jsonify(_platform_refusal()), 400
 
@@ -433,7 +514,9 @@ def update_apply():
     extract = work / "extracted"
     if extract.exists():
         shutil.rmtree(extract, ignore_errors=True)
-    extract.mkdir(parents=True)
+        # exist_ok: помощник прошлого обновления ещё мог держать свои файлы в
+    # распакованной папке, и rmtree не удалил её целиком.
+    extract.mkdir(parents=True, exist_ok=True)
 
     # 1. Extract
     try:
@@ -479,111 +562,54 @@ def update_apply():
 
     app_root = _app_root()
 
-    # 4. Build the updater script: it runs AFTER this process exits.
+    # 4. Задание для помощника: его запускает НОВАЯ сборка уже после выхода
+    # приложения. Пути передаются JSON-файлом, а не через cmd.exe: кириллица
+    # и пробелы в пути не теряются.
+    work = _work_dir()
     backup = work / "_backup"
-    bat = work / "updater.bat"
     marker = work / EXIT_MARKER
-
-    def _mov_block(idx: int, name: str, is_dir: bool) -> list[str]:
-        """Retry-loop that moves one app entry into the backup folder."""
-        pre = [f'if exist "%BAK%\\{name}" rmdir /s /q "%BAK%\\{name}"'] if is_dir else []
-        return [
-            f'rem -- swap entry: {name} ({"dir" if is_dir else "file"})',
-            "set /a TRY=0",
-            f":mov_{idx}",
-            f'if not exist "%APP%\\{name}" goto done_{idx}',
-            *pre,
-            f'move /y "%APP%\\{name}" "%BAK%\\{name}" >nul 2>>"%LOG%"',
-            f'if not exist "%APP%\\{name}" goto done_{idx}',
-            "set /a TRY+=1",
-            "if %TRY% GEQ 10 goto rollback",
-            "ping -n 2 127.0.0.1 >nul",
-            f"goto mov_{idx}",
-            f":done_{idx}",
-            "",
-        ]
-
-    lines = [
-        "@echo off",
-        "setlocal EnableExtensions",
-        "rem Auto-generated by YandexBusinessParser updater - do not edit",
-        f'set "LOG={work / LOG_FILE}"',
-        f'set "APP={app_root}"',
-        f'set "SRC={src}"',
-        f'set "BAK={backup}"',
-        f'set "MARK={marker}"',
-        f'set "WORK={work}"',
-        'echo [%date% %time%] updater started >> "%LOG%"',
-        "",
-        "rem -- 1. Wait for the app.exit marker (the app writes it on exit)",
-        "set /a N=0",
-        ":waitmark",
-        'if exist "%MARK%" goto waited',
-        "ping -n 2 127.0.0.1 >nul",
-        "set /a N+=1",
-        "if %N% LSS 40 goto waitmark",
-        'echo [%time%] no exit marker after ~40s, proceeding anyway >> "%LOG%"',
-        ":waited",
-        "ping -n 3 127.0.0.1 >nul",
-        "",
-        "rem -- 2. Back up ONLY the app files (user data is not touched)",
-        'if not exist "%BAK%" mkdir "%BAK%"',
-    ]
-    for i, entry in enumerate(sorted(src.iterdir())):
-        lines += _mov_block(i, entry.name, entry.is_dir())
-    lines += [
-        "rem -- 3. Copy the new files in",
-        'xcopy "%SRC%\\*" "%APP%\\" /e /i /y >>"%LOG%" 2>&1',
-        "if errorlevel 1 goto rollback",
-        f'if not exist "%APP%\\{EXE_NAME}" goto rollback',
-        'echo [%time%] swap done, starting the new version >> "%LOG%"',
-        'cd /d "%APP%"',
-        f'start "" "%APP%\\{EXE_NAME}"',
-        'echo [%date% %time%] update completed >> "%LOG%"',
-        'if exist "%SRC%" rmdir /s /q "%SRC%"',
-        'if exist "%MARK%" del /q "%MARK%" >nul 2>&1',
-        'if exist "%WORK%\\update.zip" del /q "%WORK%\\update.zip" >nul 2>&1',
-        "exit /b 0",
-        "",
-        ":rollback",
-        'echo [%time%] FAILED - restoring the previous version >> "%LOG%"',
-    ]
-    for i, entry in enumerate(sorted(src.iterdir())):
-        name = entry.name
-        lines += [
-            f'if not exist "%APP%\\{name}" if exist "%BAK%\\{name}" '
-            f'move /y "%BAK%\\{name}" "%APP%\\{name}" >nul 2>>"%LOG%"',
-        ]
-    lines += [
-        'echo [%date% %time%] rollback finished, old version kept >> "%LOG%"',
-        "exit /b 1",
-    ]
-    # newline="" keeps the explicit CR-LF line endings exactly as written. v2.3.0 wrote the same script in text mode, so every line ended with CR CR LF and cmd.exe aborted it before the first swap command: the app restarted, nothing was replaced and the version stayed the same.
-    with open(bat, "w", encoding="cp866", errors="replace", newline="") as fh:
-        fh.write("\r\n".join(lines))
-    raw = bat.read_bytes()
-    if b"\r\r" in raw or not raw.startswith(b"@echo off\r\n"):
+    log = work / LOG_FILE
+    job = work / "update_job.json"
+    try:
+        import json as _json
+        job.write_text(_json.dumps({
+            "app_root": str(app_root),
+            "src": str(src),
+            "backup": str(backup),
+            "marker": str(marker),
+            "log": str(log),
+            "zip_path": str(zip_path),
+            "version": new_version,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError as exc:
         return jsonify({"ok": False,
-                        "error": "Скрипт установки записался с ошибкой — "
-                                 "обновление отменено, приложение не тронуто."}), 500
+                        "error": f"Не удалось записать задание обновления: {exc}"}), 500
 
     _save_state(applied=True, new_version=new_version,
                 previous_version=st.get("current", ""), error="",
-                bat=str(bat))
+                job=str(job))
 
-    # 5. Launch detached, signal exit, then stop the app so the .bat can take over.
+    # 5. Запускаем помощника из распакованной сборки и сигналим выход.
     if marker.exists():
         try:
             marker.unlink()
         except OSError:
             pass
-    subprocess.Popen(["cmd", "/c", str(bat)], cwd=str(work), **_DETACHED)
+    helper = src / EXE_NAME
+    try:
+        subprocess.Popen([str(helper), "--apply-update", str(job)],
+                         cwd=str(src), **_DETACHED)
+    except OSError as exc:
+        return jsonify({"ok": False,
+                        "error": f"Не удалось запустить помощник обновления: {exc}"}), 500
     try:
         marker.write_text("exit", encoding="ascii")
     except OSError:
         pass
 
-    # 6. Give the response a moment to flush, then hard-exit: the running exe locks itself, and the .bat can only swap files once this process is gone (the marker + the bat's retry loops cover the gap).
+    # 6. Дать ответу уйти и жёстко завершиться: запущенный exe держит сам
+    # себя, а помощник меняет файлы только после выхода процесса (маркер и
+    # повторы помощника закрывают этот промежуток).
     def _bye():
         import time as _t
         _t.sleep(1.0)

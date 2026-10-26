@@ -60,19 +60,15 @@ def create_app() -> Flask:
         static_folder=paths.static_dir(),
     )
     try:
-        from config import APP_VERSION, is_dev_build
+        from config import APP_VERSION
     except ImportError:
-        APP_VERSION = "dev"
-        is_dev_build = lambda: True
+        APP_VERSION = "0.0.0"
     app.config["APP_VERSION"] = APP_VERSION
     # Из исходников шаблоны читаются заново на каждый запрос: во время работы над интерфейсом правка templates/index.html должна быть видна после обновления страницы, а не после перезапуска сервера (Jinja кеширует скомпилированные шаблоны при debug=False).
     if not getattr(sys, "frozen", False):
         app.config["TEMPLATES_AUTO_RELOAD"] = True
         app.jinja_env.auto_reload = True
-    # Сборка разработчика: в шапке горит метка DEV (другой exe, другой порт, без авто-обновления — см. config.is_dev_build).
-    app.config["DEV_BUILD"] = bool(is_dev_build())
     app.jinja_env.globals["APP_VERSION"] = APP_VERSION
-    app.jinja_env.globals["DEV_BUILD"] = bool(is_dev_build())
     app.register_blueprint(parser_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(public_api_bp)
@@ -124,7 +120,7 @@ except Exception:
     pass
 
 def _startup_port() -> int:
-    """Порт: YP_PORT → dev 5010 → 5000 (см. config.app_port)."""
+    """Порт: YP_PORT → macOS 5050 → 5000 (см. config.app_port)."""
     try:
         from config import app_port
         return app_port()
@@ -300,25 +296,64 @@ def _set_windows_console_icon() -> None:
         if not os.path.exists(ico):
             return
         user32 = ctypes.windll.user32
+        # GetConsoleWindow живёт в kernel32, а не в user32: обращение к
+        # user32.GetConsoleWindow падало с AttributeError, и функция молча
+        # ничего не делала — в панели задач оставался значок Python.
+        kernel32 = ctypes.windll.kernel32
         user32.LoadImageW.restype = ctypes.c_void_p
         user32.LoadImageW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p,
                                       ctypes.c_uint, ctypes.c_int, ctypes.c_int,
                                       ctypes.c_uint]
-        user32.GetConsoleWindow.restype = ctypes.c_void_p
-        hwnd = user32.GetConsoleWindow()
+        kernel32.GetConsoleWindow.restype = ctypes.c_void_p
+        hwnd = kernel32.GetConsoleWindow()
         if not hwnd:
             return
+        # Без argtypes ctypes передаёт HICON как 32-битный int и обрезает
+        # указатель на 64-битной Windows — WM_SETICON с таким «хэндлом»
+        # ничего не ставит.
+        user32.SendMessageW.restype = ctypes.c_void_p
+        user32.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint,
+                                        ctypes.c_uint, ctypes.c_void_p]
         image_icon, load_from_file, wm_seticon = 1, 0x10, 0x80
         for size, kind in ((16, 0), (32, 1)):
             handle = user32.LoadImageW(None, ico, image_icon, size, size,
                                        load_from_file)
             if handle:
-                user32.SendMessageW(ctypes.c_void_p(hwnd), wm_seticon, kind, handle)
+                user32.SendMessageW(ctypes.c_void_p(hwnd), wm_seticon, kind,
+                                    ctypes.c_void_p(handle))
     except Exception:
         pass
 
 
+def _maybe_apply_update() -> None:
+    """--apply-update <job>: помощник обновления, запущенный новой сборкой.
+
+    Работает ДО Flask и проверок браузера: приложение в этот момент уже
+    закрыто, и помощнику нельзя тянуть за собой сервер, порт и окно.
+    """
+    flag = "--apply-update"
+    if flag not in sys.argv:
+        return
+    try:
+        idx = sys.argv.index(flag)
+        job = sys.argv[idx + 1] if idx + 1 < len(sys.argv) else ""
+    except ValueError:
+        job = ""
+    if not job:
+        print("не указан файл задания обновления", file=sys.stderr)
+        sys.exit(2)
+    try:
+        from updater_helper import run
+        sys.exit(run(job))
+    except SystemExit:
+        raise
+    except Exception as exc:
+        print(f"помощник обновления: {exc}", file=sys.stderr)
+        sys.exit(1)
+
 if __name__ == "__main__":
+    # Помощник обновления — самый первый режим: сервер и браузер ему не нужны.
+    _maybe_apply_update()
     # Probe-режим: молча проверить Chromium и выйти (используется .exe-сборкой для сабпроцесс-теста — см. _maybe_run_browser_probe в этом файле).
     _maybe_run_browser_probe()
     # --check: те же проверки, что и в окне «Диагностика», но без сервера.
@@ -327,17 +362,6 @@ if __name__ == "__main__":
     _maybe_run_headless()
     _set_windows_console_icon()
     _port = _available_port(_startup_port())
-    try:
-        from config import APP_VERSION, is_dev_build
-        if is_dev_build():
-            print("═" * 62)
-            print(f"  DEV-СБОРКА {APP_VERSION} — только для разработки")
-            print("  Авто-обновление выключено, чтобы публичный релиз не затёр")
-            print("  локальные изменения. Приложение: "
-                  f"http://127.0.0.1:{_port}")
-            print("═" * 62)
-    except Exception:
-        pass
     if _should_open_browser():
         _open_browser_later(f"http://127.0.0.1:{_port}/")
     if _should_open_cdp_window():

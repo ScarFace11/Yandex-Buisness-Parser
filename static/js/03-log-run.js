@@ -740,7 +740,9 @@ function getParams() {
     pipeline:        'raw',
     raw_mode:        (document.getElementById('f-raw-mode') || {}).value || 'keep',
     continue_cities: document.getElementById('f-continue')?.checked || false,
-    continue_limit:  parseInt((document.getElementById('f-continue-limit')||{}).value, 10) || 0,    // Соцсети выключены — фильтр по соцсетям и обязательные сети бессмысленны.    social_mode:     socialsEnabled() ? socialMode : 'all',    required_socials: socialsEnabled() ? [...requiredSocials] : [],
+    continue_limit:  parseInt((document.getElementById('f-continue-limit')||{}).value, 10) || 0,    // Соцсети выключены — фильтр по соцсетям и обязательные сети бессмысленны.
+    social_mode:     socialsEnabled() ? socialMode : 'all',
+    required_socials: socialsEnabled() ? [...requiredSocials] : [],
     // Stage-2 lead scoring / VK activity (accordion «Фильтрация результата»).
     vk_check:         socialsEnabled() && vkTokenReady && !!(document.getElementById('f-vk-check')||{}).checked,
     vk_mode:          vkMode,
@@ -827,6 +829,9 @@ function startRun() {
     </div>`);
   allResults = []; filteredRows = [];
   if (_liveRenderTimer) { clearTimeout(_liveRenderTimer); _liveRenderTimer = null; }
+  // Счётчик новых на кнопке фильтра — от нового прогона, а не от прошлого:
+  // в allResults уже пусто, значит цифра должна исчезнуть до первой записи.
+  if (typeof updateOnlyNewButton === 'function') updateOnlyNewButton();
   _resetTableBadge();
   document.getElementById('tbl-body').innerHTML =
     '<tr><td colspan="9" class="no-data">Ожидание результатов…</td></tr>';

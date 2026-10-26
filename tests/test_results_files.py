@@ -234,6 +234,157 @@ class TestResultsView:
 
 # ── Path safety ───────────────────────────────────────────────
 
+# ── «Только новые»: записи, которых не было в прошлых прогонах ──
+
+class TestNewFlags:
+    """Флаг `_is_new` отвечает на вопрос «повторный парсинг того же города даёт дубли?».
+
+    Запись новая, если её ключ (ссылка на карточку) не встречался в файлах,
+    написанных ДО старта текущего поиска — зеркало среза scope=current.
+    """
+
+    def test_records_from_previous_searches_are_not_new(self, client):
+        old = _make_raw(client, "raw_old.xlsx", SAMPLE[:2])
+        new = _make_raw(client, "raw_new.xlsx", SAMPLE[1:])
+        os.utime(old, (1_000, 1_000))
+        os.utime(new, (2_000, 2_000))
+        _mark_current_search(client, started_at=1_500)
+        d = client.get("/results-view?view=raw").get_json()
+        assert d["scope"] == "current"
+        assert d["count"] == 3            # Б повторно попала в новый файл
+        assert d["new_count"] == 2
+        flags = {r["yandex_maps_url"]: r["_is_new"] for r in d["records"]}
+        assert flags["https://yandex.ru/maps/org/b"] is False
+        assert flags["https://yandex.ru/maps/org/v"] is True
+        assert flags["https://yandex.ru/maps/org/c"] is True
+
+    def test_marker_scope_all_still_compares_with_past_runs(self, client):
+        """Срез «Все поиски» не отменяет сравнение: прошлое — это файлы до старта."""
+        old = _make_raw(client, "raw_old.xlsx", SAMPLE[:2])
+        _make_raw(client, "raw_new.xlsx", SAMPLE[1:])
+        os.utime(old, (1_000, 1_000))
+        _mark_current_search(client, started_at=1_500)
+        d = client.get("/results-view?view=raw&scope=all").get_json()
+        assert d["count"] == 5            # оба файла целиком, Б — дважды
+        assert d["new_count"] == 2        # новые — только v и c из свежего файла
+
+    def test_without_a_marker_the_flag_is_unknown(self, client):
+        """Нечего считать «прошлым» — признак None, а не повальное «новая».
+
+        Без маркера в папке могли остаться файлы старых сборок: объявить всё
+        новым значило бы наврать и в метке строки, и в фильтре.
+        """
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+        d = client.get("/results-view?view=raw").get_json()
+        assert d["new_count"] == 0
+        assert all(r["_is_new"] is None for r in d["records"])
+
+    def test_record_without_a_key_is_not_new(self, client):
+        """Ключа нет — сравнивать не с чем, значит и «новой» назвать нельзя."""
+        from routes import api as api_mod
+        old = _make_raw(client, "raw_old.xlsx", SAMPLE[:1])
+        os.utime(old, (1_000, 1_000))
+        _mark_current_search(client, started_at=1_500)
+        recs = api_mod._mark_new_flags([{"name": "", "address": ""}], "raw")
+        assert recs[0]["_is_new"] is False
+        assert api_mod._new_count(recs) == 0
+
+    def test_a_broken_comparison_leaves_the_flag_unknown(self, client, monkeypatch):
+        """Не удалось прочитать прошлые файлы — не врём ни «да», ни «нет»."""
+        from routes import api as api_mod
+        _make_raw(client, "raw_old.xlsx", SAMPLE[:1])
+        _mark_current_search(client, started_at=1_500)
+
+        def boom(view):
+            raise OSError("диск недоступен")
+
+        monkeypatch.setattr(api_mod, "_previous_run_keys", boom)
+        recs = api_mod._mark_new_flags([dict(SAMPLE[1])], "raw")
+        assert recs[0]["_is_new"] is None
+
+    def test_keys_are_cached_until_the_files_change(self, client, monkeypatch):
+        """Прошлые файлы читаются один раз, а не на каждый запрос таблицы."""
+        from routes import api as api_mod
+        old = _make_raw(client, "raw_old.xlsx", SAMPLE[:2])
+        os.utime(old, (1_000, 1_000))
+        _make_raw(client, "raw_new.xlsx", SAMPLE[2:])
+        _mark_current_search(client, started_at=1_500)
+        reads = []
+        real = api_mod._read_records_cached
+        monkeypatch.setattr(api_mod, "_read_records_cached",
+                            lambda p: (reads.append(os.path.basename(p)), real(p))[1])
+        client.get("/results-view?view=raw")
+        client.get("/results-view?view=raw")
+        assert reads.count("raw_old.xlsx") == 1, reads
+
+# ── «Только новые» на лету: признак приходит прямо в потоке /logs ──
+
+class TestLiveNewFlags:
+    """Живая выдача /logs несёт тот же `_is_new`, что и таблица после прогона.
+
+    Раньше признак знал только /results-view: пока шёл сбор, таблица получала
+    записи из SSE без флагов, и фильтр «Только новые» молча показывал всё.
+    """
+
+    def _stream(self, recs):
+        """Прочитать поток /logs до done и вернуть записи result."""
+        import queue as _queue
+        import run_manager as rm
+        from routes import parser as parser_mod
+
+        app = Flask(__name__)
+        app.register_blueprint(parser_mod.bp)
+        run_id = "live-run-1"
+        q = _queue.Queue()
+        for r in recs:
+            q.put({"type": "result", "data": dict(r)})
+        q.put({"type": "done", "files": [], "count": len(recs)})
+        with rm.run_manager._lock:
+            rm.run_manager._runs[run_id] = {"id": run_id, "log_queue": q, "active": True}
+        try:
+            resp = app.test_client().get(f"/logs?run_id={run_id}", buffered=False)
+            out = []
+            for chunk in resp.response:
+                line = chunk.decode("utf-8") if isinstance(chunk, bytes) else chunk
+                if not line.startswith("data: "):
+                    continue
+                msg = json.loads(line[6:])
+                if msg.get("type") == "result":
+                    out.append(msg["data"])
+                elif msg.get("type") == "done":
+                    break
+            return out
+        finally:
+            with rm.run_manager._lock:
+                rm.run_manager._runs.pop(run_id, None)
+
+    def test_streamed_records_carry_the_flag(self, client):
+        old = _make_raw(client, "raw_old.xlsx", SAMPLE[:1])
+        os.utime(old, (1_000, 1_000))
+        _mark_current_search(client, started_at=1_500)
+        got = self._stream(SAMPLE[:2])
+        assert [r["_is_new"] for r in got] == [False, True]
+
+    def test_without_a_marker_live_records_are_unknown(self, client):
+        # Сравнивать не с чем — метка не ставится, строка не прячется фильтром.
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+        got = self._stream(SAMPLE[:1])
+        assert got[0]["_is_new"] is None
+
+    def test_a_broken_key_cache_does_not_stop_the_stream(self, client, monkeypatch):
+        from routes import api as api_mod
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+
+        def boom(view):
+            raise RuntimeError("каталог недоступен")
+
+        monkeypatch.setattr(api_mod, "_previous_run_keys", boom)
+        got = self._stream(SAMPLE[:1])
+        assert len(got) == 1, "запись обязана дойти до интерфейса"
+        assert got[0]["_is_new"] is None, "без сравнения — «неизвестно», а не глушилка"
+
+
+
 class TestPathSafety:
     @pytest.mark.parametrize("bad", [
         "../config.py",
@@ -340,6 +491,39 @@ class TestBulkUrls:
         d = client.post("/bulk/urls", json={"view": "raw", "social": "vk"}).get_json()
         assert d["total"] == 0
 
+    def test_only_keys_limits_the_crawl_to_the_visible_rows(self, client):
+        """«Только под фильтром»: таблица фильтрует на клиенте, сервер верит ключам."""
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+        d = client.post("/bulk/urls", json={"view": "raw", "social": "vk", "count": 10,
+                                            "only_keys": ["https://yandex.ru/maps/org/v"]}).get_json()
+        assert {u["name"] for u in d["urls"]} == {"Бар В"}
+        assert d["total"] == 1
+        assert d["remaining"] == 0
+
+    def test_an_empty_selection_crawls_nothing(self, client):
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+        d = client.post("/bulk/urls", json={"view": "raw", "social": "vk", "count": 10,
+                                            "only_keys": []}).get_json()
+        assert d["total"] == 0
+        assert d["urls"] == []
+
+    def test_only_keys_wins_over_the_city_filter(self, client):
+        """Город уже учтён фильтрами клиента — второй раз резать по нему не надо."""
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+        d = client.post("/bulk/urls", json={"view": "raw", "city": "Москва", "social": "vk",
+                                            "count": 10,
+                                            "only_keys": ["https://yandex.ru/maps/org/a"]}).get_json()
+        assert d["urls"] == []
+
+    def test_garbage_only_keys_is_ignored(self, client):
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+        for junk in (None, "https://ya.ru/a", 5):
+            d = client.post("/bulk/urls", json={"view": "raw", "social": "vk", "count": 10,
+                                                "only_keys": junk}).get_json()
+            assert d["total"] == 3, junk   # не список — фильтра нет
+        d = client.post("/bulk/urls", json={"view": "raw", "social": "vk", "count": 10,
+                                            "only_keys": [None, ""]}).get_json()
+        assert d["total"] == 0              # пустые ключи ничего не выбирают
 
 # ── Порядок обхода: как строки в таблице ──────────────────────
 
@@ -844,6 +1028,17 @@ class TestHelpers:
         assert len(api_mod._collect_records("raw")) == 5
         assert calls["n"] == 2
 
+    def test_previous_version_of_one_file_is_evicted(self, client):
+        """Перезаписанный файл не должен держать в кэше свою старую версию."""
+        from routes import api as api_mod
+        api_mod._clear_file_caches()
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+        api_mod._collect_records("raw")
+        _make_raw(client, "raw_a.xlsx",
+                  SAMPLE + [_rec("Новый", "Уфа", "https://ya.ru/new")])
+        api_mod._collect_records("raw")
+        assert len(api_mod._RECORDS_CACHE) == 1, list(api_mod._RECORDS_CACHE)
+
     def test_records_cache_is_cleared_when_files_move(self, client):
         from routes import api as api_mod
         api_mod._clear_file_caches()
@@ -887,6 +1082,30 @@ class TestHelpers:
         for t in threads:
             t.join()
         assert not errors, errors
+
+    def test_swapped_coords_of_an_old_file_are_repaired(self, client):
+        """Старые файлы хранят перепутанные координаты — показываем правильно."""
+        import json as _json
+        from routes import api as api_mod
+        api_mod._clear_file_caches()
+        (client.dirs["raw"] / "old.json").write_text(_json.dumps([{
+            "name": "Кафе", "city": "Уфа", "yandex_maps_url": "https://ya.ru/1",
+            "lat": "55.937798", "lon": "54.725186",   # перепутано местами
+        }], ensure_ascii=False), encoding="utf-8")
+        rec = api_mod._collect_records("raw")[0]
+        assert float(rec["lat"]) == 54.725186
+        assert float(rec["lon"]) == 55.937798
+
+    def test_correct_coords_are_left_alone(self, client):
+        import json as _json
+        from routes import api as api_mod
+        api_mod._clear_file_caches()
+        (client.dirs["raw"] / "new.json").write_text(_json.dumps([{
+            "name": "Кафе", "city": "Уфа", "yandex_maps_url": "https://ya.ru/2",
+            "lat": "54.725186", "lon": "55.937798",
+        }], ensure_ascii=False), encoding="utf-8")
+        rec = api_mod._collect_records("raw")[0]
+        assert (float(rec["lat"]), float(rec["lon"])) == (54.725186, 55.937798)
 
     def test_cities_of_sorted_by_count_then_name(self):
         from routes.api import _cities_of

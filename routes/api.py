@@ -3,6 +3,7 @@ import os
 import io
 import csv
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -196,13 +197,6 @@ def check_version():
     """Check if a newer version is available on GitHub."""
     import requests as req_lib
     from config import APP_VERSION
-    # DEV-сборка не обновляется публичными релизами — баннер не показываем.
-    try:
-        from config import is_dev_build
-        if is_dev_build():
-            return jsonify({"current": APP_VERSION, "newer": False, "dev": True})
-    except Exception:
-        pass
     try:
         r = req_lib.get(GITHUB_RAW_URL, timeout=8,
                         headers={"User-Agent": "YandexParser/2.0"})
@@ -240,7 +234,10 @@ def set_reviewed():
         return jsonify({"error": "url required"}), 400
     reviewed = _load_reviewed()
     _set_mark(reviewed, url, state_val)
-    _save_reviewed(reviewed)
+    try:
+        _save_reviewed(reviewed)
+    except Exception as exc:
+        return _fail(exc)          # клиент ждёт JSON, а не HTML-страницу ошибки
     return jsonify({"ok": True})
 
 
@@ -302,6 +299,10 @@ def data_import():
             reviewed[k] = value
             imported["marks"] += 1
         _save_reviewed(reviewed)
+        try:
+            _save_reviewed(reviewed)
+        except Exception as exc:
+            return _fail(exc)
 
     if "settings.json" in names:
         try:
@@ -907,6 +908,12 @@ def _read_records_cached(path: str) -> list:
         hit = _RECORDS_CACHE.get(key)
         if hit is not None:
             return hit
+        # Пока прогон идёт, файл города перезаписывается после каждой порции.
+        # Старая версия того же файла больше не нужна: без этого кэш набивался
+        # 24 копиями одного xlsx, прежде чем включится лимит по записям.
+        stale = [k for k in _RECORDS_CACHE if k[0] == key[0]]
+        for old in stale:
+            del _RECORDS_CACHE[old]
         _RECORDS_CACHE[key] = recs
         # Держим и число файлов, и общее число записей: один огромный xlsx не
         # должен занимать память двадцатью копиями.
@@ -923,6 +930,8 @@ def _clear_file_caches() -> None:
     with _RECORDS_LOCK:
         _REC_CACHE.clear()
         _RECORDS_CACHE.clear()
+        _OLD_KEYS_CACHE.clear()
+        _OLD_KEYS_CACHE["stamp"] = None
 
 
 def _count_records(path: str) -> int | None:
@@ -1024,6 +1033,82 @@ def _view_files(view: str, scope: str = "current") -> list[str]:
     if not since:
         return out
     return [f for f in out if _file_mtime(f) >= since]
+
+# ── «Только новые»: не встречалась ли организация в прошлых прогонах ──
+# Флаг `_is_new` отвечает на вопрос «повторный парсинг того же города даёт
+# дубли?»: запись новая, если её ключа нет ни в одном файле, написанном ДО
+# старта текущего поиска. Это зеркало scope=current: те же файлы, что срез
+# «Текущего результата», только наоборот.
+_OLD_KEYS_CACHE: dict = {"stamp": None, "keys": set()}
+
+
+def _previous_run_keys(view: str) -> set[str]:
+    """Ключи организаций из файлов ПРОШЛЫХ поисков (папка минус текущий срез).
+
+    Ключ — тот же, что у отметки «Просмотрено» (_review_key): ссылка на
+    карточку, иначе название|город|адрес. Ответ кэшируется по отпечатку
+    списка файлов (путь + mtime), поэтому чтение xlsx за прошлые прогоны
+    делается один раз, а не на каждый запрос таблицы.
+    """
+    started = float(_current_search().get("started_at") or 0)
+    if not started:
+        # Маркера нет — непонятно, что «прошлое»: считаем, что старых файлов
+        # неизвестно (иначе фильтр молча спрятал бы вообще всё).
+        return set()
+    # mtime каждого файла читаем один раз: он нужен и фильтру, и отпечатку.
+    listed = [(f, _file_mtime(f)) for f in _view_files(view, "all")]
+    prev = [(f, mt) for f, mt in listed if mt < started]
+    stamp = tuple(sorted((os.path.abspath(f), mt) for f, mt in prev))
+    with _RECORDS_LOCK:
+        if _OLD_KEYS_CACHE.get("stamp") == stamp:
+            return set(_OLD_KEYS_CACHE["keys"])
+    keys: set[str] = set()
+    for p, _mt in prev:
+        # Один побитый файл не должен обнулять признак для всей таблицы.
+        try:
+            rows = _read_records_cached(p)
+        except Exception:
+            continue
+        for r in rows:
+            if isinstance(r, dict):
+                k = _review_key(r)
+                if k:
+                    keys.add(k)
+    with _RECORDS_LOCK:
+        _OLD_KEYS_CACHE["stamp"] = stamp
+        _OLD_KEYS_CACHE["keys"] = keys
+    return keys
+
+def _new_flags_available() -> bool:
+    """Есть ли с чем сравнивать: маркер старта текущего поиска.
+
+    Без маркера «прошлое» не определено: в папке могут лежать файлы от старых
+    сборок, и объявить все записи новыми было бы неправдой. Тогда признак
+    остаётся `None` — «неизвестно», а не `True`.
+    """
+    try:
+        return bool(float((_current_search() or {}).get("started_at") or 0))
+    except (TypeError, ValueError, OSError):
+        return False
+
+def _mark_new_flags(recs: list, view: str) -> list:
+    """Дописать каждой записи `_is_new`: True/False или None (неизвестно)."""
+    known = _new_flags_available()
+    try:
+        old = _previous_run_keys(view) if known else set()
+    except Exception:
+        known, old = False, set()   # сравнить не удалось — не врём ни в одну сторону
+    for r in recs:
+        if isinstance(r, dict):
+            key = _review_key(r)
+            r["_is_new"] = ((bool(key) and key not in old) if known else None)
+    return recs
+
+
+def _new_count(recs: list) -> int:
+    """Сколько записей в списке — новых (для счётчика «Только новые»)."""
+    return sum(1 for r in recs
+               if isinstance(r, dict) and r.get("_is_new") is True)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1293,6 +1378,57 @@ def _copy_record(rec):
     """Копия записи: кэш разобранных файлов не должен меняться запросами."""
     return dict(rec) if isinstance(rec, dict) else rec
 
+def _geo_num(value) -> float | None:
+    """Координата числом; «55,75» из CSV тоже годится."""
+    try:
+        return float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def _coords_look_swapped(lat: float, lon: float, city: str) -> bool:
+    """Точка уехала в другой регион, а переставленные местами значения — рядом с городом.
+
+    Так выглядят файлы, собранные до исправления порядка координат: Яндекс
+    отдаёт «долгота,широта», а конвейер читал их наоборот — маркер уезжал на
+    сотни километров от своего города.
+    """
+    try:
+        from yandex_maps_parser.city_coords import lookup
+        center = lookup(str(city or ""))
+    except Exception:
+        center = None
+    if not center:
+        return False
+
+    def km(a_lat: float, a_lon: float) -> float:
+        dlat = (a_lat - center[0]) * 111.32
+        dlon = (a_lon - center[1]) * 111.32 * math.cos(math.radians(center[0]))
+        return (dlat * dlat + dlon * dlon) ** 0.5
+
+    here, swapped = km(lat, lon), km(lon, lat)
+    # 60 км — заведомо не «соседний район», а меньше 25 км и втрое ближе
+    # исходного — уже точно тот же город (для Уфы перестановка уводит на 155 км).
+    return here > 60 and swapped < 25 and swapped < here / 3
+
+
+def _repair_coords(recs: list) -> list:
+    """Починить переставленные координаты в старых файлах — только для показа.
+
+    Правим на копиях (они уже свои у каждого запроса), поэтому файл на диске
+    не меняется; новые прогоны пишут координаты сразу правильно.
+    """
+    for rec in recs:
+        if not isinstance(rec, dict):
+            continue
+        lat, lon = _geo_num(rec.get("lat")), _geo_num(rec.get("lon"))
+        if lat is None or lon is None:
+            continue
+        if _coords_look_swapped(lat, lon, rec.get("city") or ""):
+            rec["lat"], rec["lon"] = rec.get("lon"), rec.get("lat")
+    return recs
+
+
 
 def _collect_records(view: str, rel_file: str | None = None,
                      scope: str = "current") -> list:
@@ -1305,7 +1441,7 @@ def _collect_records(view: str, rel_file: str | None = None,
     if rel_file:
         full = _safe_output_file(rel_file)
         recs = [_copy_record(r) for r in _read_records_cached(full)] if full else []
-        return _fill_lead_scores(recs)
+        return _fill_lead_scores(_repair_coords(recs))
     recs: list = []
     for f in _view_files(view, scope):
         recs.extend(_copy_record(r) for r in _read_records_cached(f))
@@ -1315,7 +1451,7 @@ def _collect_records(view: str, rel_file: str | None = None,
             recs = dedupe_records(recs)
         except Exception:
             pass
-    return _fill_lead_scores(recs)
+    return _fill_lead_scores(_repair_coords(recs))
 
 
 # Колонки таблицы результатов, по которым «Массовый обход» умеет повторять порядок строк (см. sortTable() в static/js/04-results-table.js): 2 — название, 3 — категория, 4 — адрес, 5 — телефон. 6 — оценка лида, её считаем отдельно (числом).
@@ -1379,12 +1515,16 @@ def results_view():
     if error:
         return error
     recs = _collect_records(view, rel_file, scope)
+    # «Только новые» (фильтр в таблице): у каждой записи признак того, что
+    # она не встречалась в файлах прошлых поисков.
+    _mark_new_flags(recs, view)
     return jsonify({
         "view": view,
         "scope": scope,
         "file": rel_file,
         "current_search": _current_search() or None,
         "count": len(recs),
+        "new_count": _new_count(recs),
         "records": recs,
         "cities": _cities_of(recs),
         "unviewed": _unviewed_stats(recs),
@@ -1609,11 +1749,21 @@ def bulk_urls():
 
     recs = _sort_like_table(_collect_records(view, rel_file, scope),
                             sort_col, bool(data.get("sort_asc", True)))
+    # «Только строки под фильтром»: таблица фильтрует на клиенте, поэтому
+    # обход приносит с собой список ключей видимых строк — сервер отдаёт
+    # ровно то, что пользователь видит на экране.
+    only_raw = data.get("only_keys")
+    only_keys = ({str(k) for k in only_raw if k}
+                 if isinstance(only_raw, list) else None)
     rev = _load_reviewed()
     pool: list[dict] = []
     for r in recs:
         if city and (str(r.get("city") or "").strip() or "Без города") != city:
             continue
+        if only_keys is not None:
+            rk = _review_key(r)
+            if not rk or rk not in only_keys:
+                continue
         url = _safe_http_url(r.get(social))
         if not url:
             continue
@@ -1658,6 +1808,10 @@ def reviewed_batch():
             changed += 1
     if changed:
         _save_reviewed(reviewed)
+        try:
+            _save_reviewed(reviewed)
+        except Exception as exc:
+            return _fail(exc)
     return jsonify({"ok": True, "changed": changed})
 
 
@@ -2078,6 +2232,38 @@ def spheres_list():
         return jsonify({"ok": False, "error": f"Сферы недоступны: {exc}",
                         "spheres": [], "history": []}), 500
 
+@bp.route("/spheres", methods=["POST"])
+def spheres_save():
+    """Сохранить отредактированный каталог сфер (названия и слова).
+
+    Правки главнее встроенного набора и живут в spheres.json, а не в коде:
+    обновление приложения их не затирает.
+    """
+    from yandex_maps_parser import spheres as _spheres
+
+    data = _json_body()
+    items = data.get("spheres")
+    if not isinstance(items, list):
+        return jsonify({"ok": False, "error": "ожидался список spheres"}), 400
+    try:
+        saved = _spheres.save_custom(items)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return _fail(exc)
+    return jsonify({"ok": True, "spheres": saved})
+
+
+@bp.route("/spheres/reset", methods=["POST"])
+def spheres_reset():
+    """Вернуть встроенный каталог сфер."""
+    from yandex_maps_parser import spheres as _spheres
+
+    try:
+        _spheres.reset_custom()
+    except Exception as exc:
+        return _fail(exc)
+    return jsonify({"ok": True, "spheres": _spheres.catalog()})
 
 @bp.route("/presets", methods=["GET", "POST"])
 def presets_store_api():

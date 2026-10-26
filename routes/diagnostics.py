@@ -535,9 +535,9 @@ def check_environment() -> list[dict]:
     version = "неизвестна"
     frozen = False
     try:
-        from config import APP_VERSION, is_dev_build
+        from config import APP_VERSION
         version = APP_VERSION
-        frozen = not is_dev_build()
+        frozen = bool(getattr(sys, "frozen", False))
     except Exception:
         pass
     mode = "сборка для пользователя" if frozen else "запуск из исходников"

@@ -1,24 +1,27 @@
 # -*- coding: utf-8 -*-
-"""In-app updater: end-to-end swap on a real filesystem (Windows only).
+"""In-app updater: реальный свап файлов на диске (Windows).
 
-The test runs the ACTUAL /update/apply view — it generates the real
-updater.bat, spawns it detached and lets it swap the files while the "app"
-files are locked (a running exe cannot be moved or overwritten). Asserts:
+Тест дёргает НАСТОЯЩИЙ view /update/apply: тот распаковывает архив, пишет
+задание и запускает помощника, а помощник ждёт маркер выхода приложения и
+меняет файлы, пока «старые» заняты (запущенный exe нельзя ни удалить, ни
+перезаписать). С включённым YP_UPDATER_E2E=1 помощник поднимается отдельным
+процессом и свап идёт по-настоящему. Проверяется:
 
-  * the new version lands and the new exe starts;
-  * user data (.env, logs/) is NOT touched by the swap;
-  * the old version is kept in _update/_backup for rollback;
-  * a stale zip (older version inside than advertised) is REFUSED and deleted
-    — the «updater installs the previous published release» bug;
-  * the generated script has clean CR LF line endings — v2.3.0 wrote it in
-    text mode (CR CR LF) and cmd.exe aborted it before the first command, so
-    the app closed and the version never changed;
-  * the download URL is pinned to the ADVERTISED version: the
-    `releases/latest/download/...` alias serves the previous release while the
-    new one is a draft (or was deleted) and must never be used.
+  * новая версия встаёт на место, новый exe запускается;
+  * данные пользователя (.env, logs/, output/) свап НЕ трогает — помощник
+    сам является сборкой и создаёт эти папки у себя, их нельзя зеркалить;
+  * старые файлы уходят в _update/_backup для отката;
+  * устаревший архив (версия внутри ниже объявленной) ОТВЕРГАЕТСЯ и удаляется
+    — баг «обновлятор ставит предыдущий опубликованный релиз»;
+  * адрес архива привязан к ОБЪЯВЛЕННОЙ версии: алиас
+    `releases/latest/download/...` отдаёт предыдущий релиз, пока новый —
+    черновик (или удалён), и использовать его нельзя.
 """
+
+import json
 import os
 import shutil
+import subprocess
 import sys
 import time
 import zipfile
@@ -45,7 +48,6 @@ def env(tmp_path, monkeypatch):
 
     from routes import update as update_mod
     monkeypatch.setattr(update_mod, "_is_frozen", lambda: True)
-    monkeypatch.setattr(update_mod, "_is_dev", lambda: False)
     monkeypatch.setattr(update_mod, "_self_update_supported", lambda: True)
     monkeypatch.setattr(update_mod, "_app_root", lambda: app_root)
     monkeypatch.setattr(update_mod, "_work_dir", lambda: _ensure(app_root / "_update"))
@@ -90,8 +92,8 @@ def _make_zip(tmp_path: Path, version: str) -> Path:
 class TestRealSwap:
     @pytest.mark.skipif(
         not REAL_SWAP,
-        reason="реальный свап запускает updater.bat (консоль + ping-ожидания) "
-               "и стартует exe — включается вручную: YP_UPDATER_E2E=1")
+        reason="реальный свап поднимает помощника отдельным процессом и стартует exe "
+               "— включается вручную: YP_UPDATER_E2E=1")
     def test_swap_installs_the_new_version_and_keeps_user_data(self, env, tmp_path, monkeypatch):
         client, app_root, work = env["client"], env["app_root"], env["work"]
         zip_path = _make_zip(tmp_path, "9.9.9")
@@ -99,10 +101,26 @@ class TestRealSwap:
                             lambda: {"latest": "9.9.9",
                                      "download": {"file": str(zip_path)}})
 
+        #В сборке помощник — это НОВЫЙ exe приложения с --apply-update.
+        # В тесте «новая сборка» — чужие exe (where.exe/robocopy.exe), а они
+        # флаг не понимают, поэтому помощник запускается тем же модулем, но
+        # отдельным процессом: свап идёт по-настоящему, файлы и блокировки —
+        # настоящие. Что /update/apply передаёт флаг и путь к заданию,
+        # проверяет test_apply_spawns_the_python_helper_with_a_job_file.
+        real_popen = subprocess.Popen
+
+        def spawn(cmd, **kw):
+            job = cmd[2]
+            kw.pop("cwd", None)          # у помощника свой рабочий каталог
+            return real_popen([sys.executable, "-m", "updater_helper", job],
+                              cwd=str(ROOT), **kw)
+
+        monkeypatch.setattr(env["update"].subprocess, "Popen", spawn)
+
         # Simulate the running app: lock the exe and a file inside _internal
         # for a few seconds (the window before the process exits). The real
-        # app exits ~1 s after writing the marker; the bat's retry loop must
-        # ride out exactly this kind of short lock.
+        # app exits ~1 s after writing the marker; the helper's retry loop
+        # must ride out exactly this kind of short lock.
         lock1 = open(app_root / "YandexBusinessParser.exe", "rb")
         lock2 = open(app_root / "_internal" / "core.txt", "rb")
         try:
@@ -157,10 +175,14 @@ class TestRealSwap:
         # The exit marker is cleaned up after a successful swap.
         assert not (work / "app.exit").exists()
 
-    def test_generated_bat_uses_exact_crlf_line_endings(self, env, tmp_path, monkeypatch):
-        """Регресс: 2.3.0 писала скрипт в текстовом режиме, каждая строка
-        заканчивалась CR CR LF — cmd.exe прерывал файл до первой команды
-        замены, приложение уже вышло, версия оставалась прежней."""
+    def test_apply_spawns_the_python_helper_with_a_job_file(
+            self, env, tmp_path, monkeypatch):
+        """Вместо updater.bat — помощник из новой сборки и JSON-задание.
+
+        .bat писался в cp866 и терял путь с кириллицей: обновление
+        скачивалось, приложение закрывалось, файлы не менялись. Помощник
+        получает пути нативно, поэтому кириллица и пробелы ему не мешают.
+        """
         zip_path = _make_zip(tmp_path, "9.9.9")
         monkeypatch.setattr(env["update"], "_state",
                             lambda: {"latest": "9.9.9",
@@ -169,21 +191,69 @@ class TestRealSwap:
         monkeypatch.setattr(env["update"].subprocess, "Popen",
                             lambda cmd, **kw: spawned.setdefault("cmd", cmd))
         assert env["client"].post("/update/apply").status_code == 200
-        raw = (env["work"] / "updater.bat").read_bytes()
-        assert b"\r\r" not in raw, "CR CR LF ломает выполнение скрипта"
-        assert raw.count(b"\n") == raw.count(b"\r\n"), "у каждой строки ровно один CR"
-        assert raw.startswith(b"@echo off\r\n")
-        assert str(spawned["cmd"][-1]).endswith("updater.bat")
+        cmd = spawned["cmd"]
+        assert cmd[1] == "--apply-update", cmd
+        job_path = Path(cmd[2])
+        assert job_path == env["work"] / "update_job.json"
+        job = json.loads(job_path.read_text(encoding="utf-8"))
+        assert job["app_root"] == str(env["app_root"])
+        assert job["src"].endswith("extracted")
+        assert not (env["work"] / "updater.bat").exists()
         # Дождаться потока ЖЁСТКОГО завершения, пока os._exit ещё подменён.
-        # view спит 1 с и зовёт os._exit(0): к моменту teardown фикстуры
-        # подмена снята — и через секунду после теста НАСТОЯЩИЙ os._exit
-        # убивал процесс pytest с кодом 0. Прогон обрывался на середине
-        # без итогов, а CI видел «зелёный»: проверка целостности релиза
-        # и хвост набора молча не выполнялись.
+
         deadline = time.time() + 3
         while time.time() < deadline and not env["state"]["exited"]:
             time.sleep(0.05)
         assert env["state"]["exited"], "view must schedule the hard exit"
+
+    def test_helper_swaps_files_and_keeps_user_data(self, env, tmp_path, monkeypatch):
+        """Сам помощник: старые файлы — в backup, новые — на место, данные целы."""
+        import updater_helper
+        zip_path = _make_zip(tmp_path, "9.9.9")
+        monkeypatch.setattr(env["update"], "_state",
+                            lambda: {"latest": "9.9.9",
+                                     "download": {"file": str(zip_path)}})
+        monkeypatch.setattr(env["update"].subprocess, "Popen",
+                            lambda cmd, **kw: None)
+        assert env["client"].post("/update/apply").status_code == 200
+        job = env["work"] / "update_job.json"
+        monkeypatch.setattr(updater_helper, "_launch", lambda *a, **k: True)
+        assert updater_helper.run(job) == 0
+        assert (env["app_root"] / "_internal" / "core.txt").read_text(
+            encoding="utf-8") == "NEW"
+        assert (env["app_root"] / ".env").read_text(encoding="utf-8") == "API_KEY=1"
+        assert (env["app_root"] / "logs" / "run.log").read_text(
+            encoding="utf-8") == "keep me"
+        assert (env["work"] / "update_result.json").exists()
+        assert not (env["work"] / "app.exit").exists()
+
+    def test_helper_rolls_back_when_copying_fails(self, env, tmp_path, monkeypatch):
+        """Сбой копирования не оставляет пользователя без рабочей версии."""
+        import updater_helper
+        zip_path = _make_zip(tmp_path, "9.9.9")
+        monkeypatch.setattr(env["update"], "_state",
+                            lambda: {"latest": "9.9.9",
+                                     "download": {"file": str(zip_path)}})
+        monkeypatch.setattr(env["update"].subprocess, "Popen",
+                            lambda cmd, **kw: None)
+        assert env["client"].post("/update/apply").status_code == 200
+        job = env["work"] / "update_job.json"
+        monkeypatch.setattr(updater_helper, "_launch", lambda *a, **k: True)
+        real_copy = updater_helper._copy
+
+        def broken(src, dst):
+            if src.name == "_internal":
+                raise OSError("диск занят")
+            return real_copy(src, dst)
+
+        monkeypatch.setattr(updater_helper, "_copy", broken)
+        assert updater_helper.run(job) == 1
+        assert (env["app_root"] / "_internal" / "core.txt").read_text(
+            encoding="utf-8") == "OLD"
+        result = json.loads((env["work"] / "update_result.json").read_text(encoding="utf-8"))
+        assert result["ok"] is False
+        assert "диск занят" in result["error"]
+
 
     def test_stale_zip_is_refused_and_deleted(self, env, tmp_path, monkeypatch):
         client = env["client"]
@@ -198,6 +268,75 @@ class TestRealSwap:
         assert "не опубликован" in body["error"]
         # The stale zip is gone so the next attempt re-downloads.
         assert not zip_path.exists()
+
+class TestHelperKeepsUserData:
+    """Помощник не должен трогать данные пользователя в папке программы.
+
+    Помощник — это новая сборка приложения, и при своём старте она создаёт
+    output/, logs/ и app.log рядом с exe (в portable-режиме это и есть папка
+    программы). Если зеркалить в приложение ВСЁ содержимое распакованной
+    папки, то пустые папки помощника заменят настоящие результаты поисков,
+    а старые уйдут в _backup и будут удалены вместе с ним.
+    """
+
+    def _setup(self, tmp_path, monkeypatch):
+        app = tmp_path / "app"
+        (app / "_internal").mkdir(parents=True)
+        (app / "_internal" / "core.txt").write_text("OLD", encoding="utf-8")
+        (app / "output").mkdir()
+        (app / "output" / "keep.xlsx").write_bytes(b"results")
+        (app / "logs").mkdir()
+        (app / "logs" / "run.log").write_text("keep me", encoding="utf-8")
+        (app / ".env").write_text("VK_TOKEN=1", encoding="utf-8")
+        (app / "app.log").write_text("старый старт", encoding="utf-8")
+
+        src = tmp_path / "extracted"
+        (src / "_internal").mkdir(parents=True)
+        (src / "_internal" / "core.txt").write_text("NEW", encoding="utf-8")
+        (src / "YandexBusinessParser.exe").write_bytes(b"MZ")
+        # Следы старта самого помощника в распакованной папке:
+        (src / "output").mkdir()
+        (src / "logs").mkdir()
+        (src / "app.log").write_text("старт помощника", encoding="utf-8")
+
+        work = tmp_path / "work"
+        work.mkdir()
+        (work / "app.exit").write_text("exit", encoding="ascii")
+        job = work / "update_job.json"
+        job.write_text(json.dumps({
+            "app_root": str(app), "src": str(src),
+            "backup": str(work / "_backup"),
+            "marker": str(work / "app.exit"),
+            "log": str(work / "update.log"),
+        }, ensure_ascii=False), encoding="utf-8")
+
+        import updater_helper
+        monkeypatch.setattr(updater_helper, "_launch", lambda *a, **k: True)
+        return app, job
+
+    def test_swap_keeps_results_logs_and_env(self, tmp_path, monkeypatch):
+        import updater_helper
+        app, job = self._setup(tmp_path, monkeypatch)
+        assert updater_helper.run(job) == 0
+        # Программа обновилась…
+        assert (app / "_internal" / "core.txt").read_text(encoding="utf-8") == "NEW"
+        # …а данные пользователя остались на месте.
+        assert (app / "output" / "keep.xlsx").read_bytes() == b"results"
+        assert (app / "logs" / "run.log").read_text(encoding="utf-8") == "keep me"
+        assert (app / ".env").read_text(encoding="utf-8") == "VK_TOKEN=1"
+        assert (app / "app.log").read_text(encoding="utf-8") == "старый старт"
+
+    def test_user_data_is_not_even_touched_by_the_swap(self, tmp_path, monkeypatch):
+        """В журнале свапа нет ни output/, ни logs/, ни app.log."""
+        import updater_helper
+        app, job = self._setup(tmp_path, monkeypatch)
+        assert updater_helper.run(job) == 0
+        log = (tmp_path / "work" / "update.log").read_text(encoding="utf-8")
+        for name in ("output", "logs", "app.log", ".env"):
+            assert f"-> backup: {name}" not in log, log
+            assert f"-> app: {name}" not in log, log
+        assert "-> app: _internal" in log
+
 
 
 class TestDownloadTarget:
@@ -320,7 +459,6 @@ class TestDownloadTarget:
         from flask import Flask
         from routes import update as update_mod
         monkeypatch.setattr(update_mod, "_is_frozen", lambda: True)
-        monkeypatch.setattr(update_mod, "_is_dev", lambda: False)
         monkeypatch.setattr(update_mod, "_self_update_supported", lambda: True)
         monkeypatch.setattr(update_mod, "_user_dir", lambda: tmp_path)
         monkeypatch.setattr(update_mod, "_state", lambda: {})
@@ -334,3 +472,42 @@ class TestDownloadTarget:
         r = app.test_client().post("/update/download")
         assert r.status_code == 400
         assert "не опубликован" in r.get_json()["error"]
+
+
+class TestLastUpdateResult:
+    """Сбой помощника виден при следующем старте.
+
+    Помощник ставит файлы, когда приложение уже закрыто: если он вернул
+    старую версию, сообщить об этом некому — причина должна всплыть после
+    перезапуска, иначе «нажал Обновить, окно закрылось, версия та же».
+    """
+
+    def _write(self, env, **kw):
+        env["work"].mkdir(parents=True, exist_ok=True)
+        (env["work"] / "update_result.json").write_text(
+            json.dumps(kw, ensure_ascii=False), encoding="utf-8")
+
+    def _status(self, env):
+        return env["client"].get("/update/status").get_json()
+
+    def test_a_failed_install_is_reported(self, env, monkeypatch):
+        self._write(env, ok=False, error="диск занят",
+                    version="9.9.9", at="2026-10-25 10:00:00")
+        monkeypatch.setattr(env["update"], "_is_frozen", lambda: False)
+        data = self._status(env)
+        assert data["last_update"]["ok"] is False
+        assert "диск занят" in data["last_update"]["error"]
+        assert data["last_update"]["log"].endswith("update.log")
+
+    def test_a_successful_install_of_the_running_version_is_not_noise(
+            self, env, monkeypatch):
+        from config import APP_VERSION
+        self._write(env, ok=True, version=APP_VERSION)
+        monkeypatch.setattr(env["update"], "_is_frozen", lambda: False)
+        assert self._status(env)["last_update"] == {}
+
+    def test_a_broken_result_file_does_not_break_the_status(self, env, monkeypatch):
+        env["work"].mkdir(parents=True, exist_ok=True)
+        (env["work"] / "update_result.json").write_text("{oops", encoding="utf-8")
+        monkeypatch.setattr(env["update"], "_is_frozen", lambda: False)
+        assert env["client"].get("/update/status").status_code == 200

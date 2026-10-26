@@ -30,7 +30,15 @@ def test_console_window_gets_the_same_icon():
     app = (ROOT / "app.py").read_text(encoding="utf-8")
     assert "def _set_windows_console_icon()" in app
     assert "_set_windows_console_icon()" in app.split('if __name__ == "__main__":')[1]
-
+    # GetConsoleWindow есть только в kernel32: из user32 функция молча
+    # падала с AttributeError и иконка не ставилась вовсе.
+    body = app[app.index("def _set_windows_console_icon"):]
+    body = body[:body.index("def _maybe_apply_update")]
+    assert "kernel32.GetConsoleWindow()" in body
+    assert "user32.GetConsoleWindow()" not in body
+    # HICON — указатель: без argtypes ctypes обрезает его до 32 бит.
+    assert "SendMessageW.argtypes" in body
+    assert "ctypes.c_void_p(handle)" in body
 
 def test_browser_tab_has_a_favicon():
     html = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")

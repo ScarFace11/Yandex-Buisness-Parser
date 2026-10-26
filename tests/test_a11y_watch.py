@@ -334,8 +334,14 @@ def test_output_encoding_setup_survives_streams_without_reconfigure(monkeypatch)
     a11y_watch.configure_output()  # не должно бросить исключение
 
 
-def test_paths_outside_the_repository_do_not_break_the_report(tmp_path):
-    """Путь вне репозитория печатается как есть, а не роняет отчёт."""
-    assert a11y_watch._rel(tmp_path / "style.css") == str(tmp_path / "style.css")
+def test_paths_outside_the_repository_do_not_break_the_report():
+    """Путь вне репозитория печатается как есть, а не роняет отчёт.
+
+    Путь берётся рядом с репозиторием, а не во временной папке pytest: та
+    может оказаться внутри репозитория (когда %TEMP% недоступна и pytest
+    кладёт basetemp в текущую папку) — и проверка теряла бы смысл.
+    """
+    outside = ROOT.parent / "style.css"
+    assert a11y_watch._rel(outside) == str(outside)
     assert a11y_watch._rel(ROOT / "static" / "css" / "style.css") == \
         str(Path("static") / "css" / "style.css")

@@ -15,9 +15,7 @@ from PyInstaller.utils.hooks import collect_submodules
 
 block_cipher = None
 
-# YP_DEV=1 → внутреннее имя сборки (для локальных сборок разработчика).
-DEV_BUILD = os.environ.get("YP_DEV", "").strip().lower() not in ("", "0", "false", "no")
-APP_NAME = "YandexBusinessParserDev" if DEV_BUILD else "YandexBusinessParser"
+APP_NAME = "YandexBusinessParser"
 # Фирменная иконка .exe: в проводнике, на ярлыке и в панели задач.
 ICON = os.path.join("static", "icon.ico")
 if not os.path.exists(ICON):
@@ -31,6 +29,9 @@ a = Analysis(
         # Read-only resources served by Flask
         ('templates', 'templates'),
         ('static', 'static'),
+        # Тексты обновлений: «Что нового» и подпись баннера читаются с диска.
+        ('update_notes/notes', 'update_notes/notes'),
+        ('update_notes/ui.json', 'update_notes'),
     ],
     hiddenimports=(
         # Search/enrichment pipeline modules are imported dynamically
@@ -48,6 +49,9 @@ a = Analysis(
             'presets_store',
             'paths',
             'console_io',
+            # app.py --apply-update: помощник ставит файлы после выхода
+            'updater_helper',
+            'update_notes',
             # multiprocessing children re-import the entry module
             '__main__',
         ]

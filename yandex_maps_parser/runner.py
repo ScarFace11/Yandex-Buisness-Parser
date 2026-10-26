@@ -117,7 +117,7 @@ def run() -> None:
     # Every enriched record is appended to the JSONL sidecar as it is found (see state._emit_result), so a hard kill loses nothing already fetched.
     state._RESULT_FILE = paths["jsonl"]
     try:
-        state._RESULT_HANDLE = open(paths["jsonl"], "a", encoding="utf-8")
+        state._RESULT_HANDLE = state.open_result_handle(paths["jsonl"])
     except Exception:
         state._RESULT_HANDLE = None
 

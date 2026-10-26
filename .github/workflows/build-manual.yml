@@ -5,8 +5,8 @@ name: Manual build (no release)
 # Просто собирает .exe (Windows) и .zip (.app для macOS) и кладёт их в
 # артефакты запуска — оттуда файл можно скачать.
 #
-# Версию НЕ трогаем: config.APP_VERSION берётся из репозитория как есть, даже
-# если она «-dev». Поэтому это не публичная сборка — для тестов и проверок.
+# Версию НЕ трогаем: config.APP_VERSION берётся из репозитория как есть.
+# Это не публичная сборка — для тестов и проверок.
 # Публичные релизы по-прежнему собирают build-exe.yml / build-macos.yml.
 
 on:
@@ -89,11 +89,25 @@ jobs:
           Compress-Archive -Path dist/YandexBusinessParser/* `
             -DestinationPath dist/YandexBusinessParser-windows-x64.zip
 
-      - name: Upload the .zip as a downloadable artifact
+      - name: Build the Windows installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          $version = python -c "import config; print(config.APP_VERSION)"
+          & $iscc "/DMyAppVersion=$version" 'installer\windows.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup завершился с ошибкой' }
+          if (-not (Test-Path 'dist/YandexBusinessParser-windows-x64-setup.exe')) {
+            throw 'установщик не создан'
+          }
+
+      - name: Upload the Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: YandexBusinessParser-windows-x64
-          path: dist/YandexBusinessParser-windows-x64.zip
+          path: |
+            dist/YandexBusinessParser-windows-x64.zip
+            dist/YandexBusinessParser-windows-x64-setup.exe
           retention-days: ${{ fromJSON(inputs.retention_days) }}
 
   macos:

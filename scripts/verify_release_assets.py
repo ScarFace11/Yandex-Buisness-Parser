@@ -26,8 +26,7 @@ except ImportError:  # pragma: no cover
 # Обязательные ассеты релиза — ровно то, что собирают build-exe.yml и build-macos.yml.
 REQUIRED_ASSETS = (
     "YandexBusinessParser-windows-x64.zip",
-    "YandexBusinessParser-macos-arm64.zip",
-    "YandexBusinessParser-macos-x64.zip",
+    "YandexBusinessParser-windows-x64-setup.exe",
     "YandexBusinessParser-macos-arm64.dmg",
     "YandexBusinessParser-macos-x64.dmg",
     "CHANGELOG.md",
@@ -409,11 +408,36 @@ def verify_asset(path: Path, asset: dict, version: str) -> tuple:
     elif name.endswith(".dmg"):
         problems.extend(check_dmg(path))
         notes.append("образ проверен")
+    elif name.endswith("-setup.exe"):
+        problems.extend(check_setup_exe(path))
+        notes.append("установщик Windows проверен")
     elif name.upper() == "CHANGELOG.MD":
         problems.extend(check_changelog(path, version))
         notes.append("раздел версии на месте")
 
     return ", ".join(notes), problems
+
+def check_setup_exe(path: Path) -> list:
+    """Установщик — PE-файл Inno Setup разумного размера (не пустышка и не html).
+
+    Архитектуру заголовка не проверяем: Inno Setup 6 собирает 32-битный
+    загрузчик даже для 64-битного приложения (`ArchitecturesInstallIn64BitMode`
+    влияет на установку, а не на сам setup.exe) — требование x64 завернуло бы
+    каждый настоящий установщик.
+    """
+    problems = []
+    size = path.stat().st_size
+    if size < 1 << 20:
+        problems.append("установщик меньше 1 МБ — похоже, файл не собрался")
+    with open(path, "rb") as fh:
+        head = fh.read(0x1000)
+        fh.seek(0)
+        blob = fh.read(min(size, 4 << 20))
+    if pe_arch(head) is None:
+        problems.append("установщик не похож на PE-файл")
+    elif b"Inno Setup" not in blob:
+        problems.append("установщик собран не Inno Setup")
+    return problems
 
 
 def check_local(path: Path, version: str = "") -> list:
@@ -430,6 +454,8 @@ def check_local(path: Path, version: str = "") -> list:
         return problems
     if name.endswith(".dmg"):
         return check_dmg(path)
+    if name.endswith("-setup.exe"):
+        return check_setup_exe(path)
     return [f"не знаю, как проверять «{name}»"]
 
 

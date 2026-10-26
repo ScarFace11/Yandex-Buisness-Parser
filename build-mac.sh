@@ -2,14 +2,11 @@
 # ══════════════════════════════════════════════════════════════
 #  Build the macOS .app bundle with PyInstaller
 #
-#  Публичная сборка:  ./build-mac.sh
-#    → dist-mac/YandexBusinessParser.app
-#  Сборка разработчика:  ./build-mac.sh --dev
-#    → dist-mac/YandexBusinessParserDev.app  (порт 5010, без авто-обновления)
+#  Сборка:  ./build-mac.sh  →  dist-mac/YandexBusinessParser.app
 #
 #  Готовая .app перетаскивается в /Applications и запускается двойным
 #  кликом: приложение само открывает браузер (app.py), а данные живут в
-#  ~/Library/Application Support/YandexBusinessParser[/Dev].
+#  ~/Library/Application Support/YandexBusinessParser.
 #
 #  Архитектуру можно задать явно:  YP_ARCH=arm64 ./build-mac.sh
 #  (на Intel-маках — YP_ARCH=x86_64, универсально — YP_ARCH=universal2).
@@ -17,14 +14,6 @@
 set -euo pipefail
 
 cd "$(dirname "$0")"
-
-DEV=0
-for arg in "$@"; do
-    case "$arg" in
-        --dev|-d) DEV=1 ;;
-        *) echo "[!] Неизвестный аргумент: $arg"; echo "    Использование: ./build-mac.sh [--dev]"; exit 2 ;;
-    esac
-done
 
 PY=".venv/bin/python"
 [ -x "$PY" ] || PY="python3"
@@ -47,28 +36,15 @@ echo "[2/5] Проверяю версию..."
 import sys
 import config
 print(f"  Версия: v{config.APP_VERSION}")
-if config.is_dev_build():
-    print("  Режим: сборка разработчика (суффикс «-dev» в APP_VERSION)")
-else:
-    print("  Режим: публичная сборка")
+print("  Режим: публичная сборка")
 PY
-
-if [ "$DEV" = "1" ] && ! "$PY" -c "import config,sys; sys.exit(0 if config.is_dev_build() else 1)"; then
-    echo "[!] Для --dev версия должна быть с суффиксом «-dev» (например 2.3.0-dev)."
-    echo "    Сборка продолжится, но метка DEV и отключённое авто-обновление не включатся."
-fi
 
 echo "[3/5] Чищу прошлую сборку..."
 rm -rf build dist-mac
 
 echo "[4/5] Собираю (несколько минут)..."
-if [ "$DEV" = "1" ]; then
-    YP_DEV=1 "$PY" -m PyInstaller parser-mac.spec --noconfirm --distpath dist-mac
-    NAME="YandexBusinessParserDev"
-else
-    "$PY" -m PyInstaller parser-mac.spec --noconfirm --distpath dist-mac
-    NAME="YandexBusinessParser"
-fi
+"$PY" -m PyInstaller parser-mac.spec --noconfirm --distpath dist-mac
+NAME="YandexBusinessParser"
 
 # Метка локальной сборки: это не «установленный релиз», поэтому порог
 # минимальной версии (min_version в version.json) к такой сборке не
@@ -105,7 +81,6 @@ else
 fi
 
 PORT=5000
-[ "$DEV" = "1" ] && PORT=5010
 
 cat <<EOF
 

@@ -82,6 +82,32 @@ def skip_city_route():
     run_manager.skip_city(run_id)
     return jsonify({"ok": True, "city": info["city"], "records": info["records_found"]})
 
+def _mark_live_novelty(msg: dict, state: dict) -> None:
+    """Пометить живую запись признаком «новая организация».
+
+    Таблица фильтрует «Только новые» на клиенте, поэтому признак нужен уже
+    в потоке, а не только в ответе /results-view после прогона. Ссылки на
+    прошлые файлы не меняются, пока идёт сбор: набор ключей считается один
+    раз на поток (`state`) и дальше только проверяется.
+    """
+    if not isinstance(msg, dict) or msg.get("type") != "result":
+        return
+    data = msg.get("data")
+    if not isinstance(data, dict):
+        return
+    try:
+        from routes.api import _new_flags_available, _previous_run_keys, _review_key
+        if "known" not in state:
+            state["known"] = _new_flags_available()
+            state["previous"] = _previous_run_keys("raw") if state["known"] else set()
+        key = _review_key(data)
+        data["_is_new"] = ((bool(key) and key not in state["previous"])
+                           if state["known"] else None)
+    except Exception:
+        # Поток важнее метки: сравнить не удалось — запись уходит без флага
+        # (клиент такие строки не прячет). Следующая попытка — со следующей
+        # записью, состояние не портится.
+        state.pop("known", None)
 
 @bp.route("/logs")
 def logs():
@@ -106,9 +132,13 @@ def logs():
     lq = entry["log_queue"]
 
     def generate():
+        novelty = {}          # кэш «прошлых» ключей на этот поток
         while True:
             try:
                 msg = lq.get(timeout=25)
+                # Живая выдача несёт тот же признак новизны, что и таблица
+                # после прогона: фильтр «Только новые» работает на лету.
+                _mark_live_novelty(msg, novelty)
                 yield f"data: {json.dumps(msg, ensure_ascii=False)}\n\n"
                 if msg.get("type") == "done":
                     break

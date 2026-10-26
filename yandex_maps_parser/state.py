@@ -168,7 +168,18 @@ _RESULT_FILE: str | None = None
 # Open file handle for the sidecar — avoids re-opening the file per record.
 _RESULT_HANDLE = None
 _RESULT_LOCK = threading.Lock()
+# Сколько записей не дошло до JSONL: пишем в лог первую и каждую сотую, чтобы
+# не залить лог одной и той же ошибкой, но и не потерять записи молча.
+_jsonl_write_fails: int = 0
 
+def open_result_handle(path: str):
+    """Хэндл бокового JSONL-файла: построчно, без буфера.
+
+    Без buffering=1 в буфере оседает до 8 КБ — то есть несколько уже найденных
+    записей, и при жёстком убийстве процесса они теряются ровно там, где файл
+    обещает «ничего не терять».
+    """
+    return open(path, "a", encoding="utf-8", buffering=1)
 
 # ── Logging helpers ───────────────────────────────────────────
 
@@ -325,6 +336,7 @@ def _reset_found() -> None:
 
 def _emit_result(record: dict) -> None:
     """Persist a fully-enriched record (JSONL sidecar) and stream it to the web interface."""
+    global _jsonl_write_fails
     import json as _json
     # Stamp which city produced this record so the frontend can group stats both overall and per city (records may span several cities in one multi-city run).
     try:
@@ -345,10 +357,15 @@ def _emit_result(record: dict) -> None:
                 if _RESULT_HANDLE is not None:
                     _RESULT_HANDLE.write(line + "\n")
                 else:
-                    with open(_RESULT_FILE, "a", encoding="utf-8") as f:
+                    with open_result_handle(_RESULT_FILE) as f:
                         f.write(line + "\n")
-        except Exception:
-            pass
+        except Exception as exc:
+            # Молчание здесь — это пропавшие из выгрузки организации: итоговый
+            # набор собирается именно из этого файла.
+            _jsonl_write_fails += 1
+            if _LOG_FN and (_jsonl_write_fails == 1 or _jsonl_write_fails % 100 == 0):
+                _LOG_FN("warn", f"  [!] Запись в JSONL не удалась "
+                            f"({_jsonl_write_fails} шт.): {exc}")
     # Incremental Excel: append this record to the in-progress workbook
     if _EXCEL_APPEND_ENABLED:
         try:

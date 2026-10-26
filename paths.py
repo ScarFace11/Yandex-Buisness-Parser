@@ -18,6 +18,7 @@
 """
 import json
 import os
+import shutil
 import sys
 from datetime import date
 from pathlib import Path
@@ -48,15 +49,20 @@ def _exe_dir() -> Path:
 
 
 def _app_slug() -> str:
-    """Имя папки данных: у сборки разработчика — своё, рядом с публичным."""
-    if is_frozen() and Path(sys.executable).stem.lower().endswith("dev"):
-        return APP_SLUG + "Dev"
+    """Имя папки данных приложения."""
     return APP_SLUG
 
 
 # Метка локальной сборки: её создают build.bat / build-mac.sh и workflow build-manual.yml.
 LOCAL_BUILD_MARKER = ".local-build"
 
+# Установщик Windows кладёт рядом с exe метку .installed, а portable-архив — нет.
+# .portable (или portable.txt) рядом с exe возвращает данные в папку программы,
+# даже если сборка была установлена: так сохраняется переносимый режим.
+INSTALLED_MARKER = ".installed"
+PORTABLE_MARKER = ".portable"
+PORTABLE_MARKER_ALT = "portable.txt"
+DATA_DIR_ENV = "YP_DATA_DIR"
 
 def local_build_marker() -> Path:
     """Путь к метке локальной сборки."""
@@ -83,6 +89,59 @@ def resource_dir() -> Path:
             return c
     return candidates[0]
 
+def _installed() -> bool:
+    """Windows-сборка поставлена установщиком (рядом с exe есть .installed)."""
+    return (not _is_macos()) and (not _portable()) and (_exe_dir() / INSTALLED_MARKER).exists()
+
+
+def _portable() -> bool:
+    """Явный portable-режим: .portable или portable.txt рядом с exe."""
+    d = _exe_dir()
+    return (d / PORTABLE_MARKER).exists() or (d / PORTABLE_MARKER_ALT).exists()
+
+
+def _windows_data_dir() -> Path:
+    """%APPDATA%\\YandexBusinessParser для установленной версии."""
+    base = os.environ.get("APPDATA") or str(Path.home() / "AppData" / "Roaming")
+    return Path(base) / _app_slug()
+
+
+def _migrate_portable_data(target: Path) -> None:
+    """Первый запуск после установки: перенести данные portable-копии.
+
+    Данные НЕ удаляем: копируем только те, которых ещё нет в AppData, и
+    оставляем метку, чтобы не повторять перенос на каждом старте. Если
+    установщик ставится в папку portable-копии (и AppData ещё пуста), её
+    output/ и .env переедут в AppData и не потеряются при удалении программы.
+    Папка с уже работавшими данными AppData не трогается: иначе старые
+    файлы portable-копии перезаписали бы актуальные.
+    """
+    try:
+        if target.exists() and any(target.iterdir()):
+            return
+        target.mkdir(parents=True, exist_ok=True)
+        source = _exe_dir()
+        moved = False
+        for name in ("output", "logs", ".env", "settings.json", "sender_config.json",
+                     "api_keys.json"):
+            old = source / name
+            new = target / name
+            if not old.exists() or new.exists():
+                continue
+            if old.is_dir():
+                shutil.copytree(old, new)
+            else:
+                shutil.copy2(old, new)
+            moved = True
+        if moved:
+            (target / ".migrated-from-portable").write_text(
+                "Данные перенесены из папки программы при установке.\n",
+                encoding="utf-8")
+    except Exception:
+        # Миграция не должна мешать запуску: при любой ошибке приложение
+        # стартует с пустыми (но рабочими) папками в AppData.
+        pass
+
 
 def data_dir() -> Path:
     """Корень пользовательских данных (output/, logs/, .env, configs)."""
@@ -90,6 +149,13 @@ def data_dir() -> Path:
         if _is_macos():
             # .app обычно лежит в /Applications (только для чтения) — данные уходят в стандартную папку macOS, как у любого десктоп-приложения.
             return Path.home() / "Library" / "Application Support" / _app_slug()
+        override = os.environ.get(DATA_DIR_ENV, "").strip()
+        if override:
+            return Path(os.path.expandvars(os.path.expanduser(override)))
+        if _installed():
+            target = _windows_data_dir()
+            _migrate_portable_data(target)
+            return target
         return _exe_dir()
     return Path(__file__).resolve().parent
 

@@ -52,7 +52,7 @@ function grab(name) {
 (0, eval)(['escapeHtml', 'scoreNum', 'scoreRating', 'barRows', 'pctBarRows',
            'ratingBucketRows', 'leadBucketRows', 'coverageRows',
            'ratingSectionHTML', 'leadSectionHTML', 'coverageSectionHTML',
-           'statsEmptyArtHTML'].map(grab).join('\n'));
+           'newShare', 'newSectionHTML', 'statsEmptyArtHTML'].map(grab).join('\n'));
 
 // Как в реальности: набор полей из «Что парсить» — заглушка, потому что
 // настоящая механика (parseFields) проверяется в браузере.
@@ -132,6 +132,35 @@ test('полнота данных считает от всех записей и
   cov = coverageRows(rows);
   assert.deepEqual(cov.map(r => r.label), ['Телефон', 'Сайт / Таплинк']);
   enabled = new Set(['phone', 'aggregator_url', 'socials', 'rating']);
+});
+
+// ── Новые организации ───────────────────────────────────────────────
+test('доля новых считается от записей с известным статусом', () => {
+  const rows = [
+    row({ _is_new: true }), row({ _is_new: true }), row({ _is_new: true }),
+    row({ _is_new: false }),
+  ];
+  assert.deepEqual(newShare(rows), { fresh: 3, repeat: 1, known: 4, pct: 75 });
+});
+
+test('без статуса (нет маркера старта) доли нет — а не «0%»', () => {
+  assert.equal(newShare([row({ _is_new: null }), row({})]), null);
+  assert.equal(newSectionHTML([row({ _is_new: null })]), '');
+});
+
+test('секция новых: процент, обе доли и точные числа в легенде', () => {
+  const html = newSectionHTML([
+    row({ _is_new: true }), row({ _is_new: true }),
+    row({ _is_new: false }), row({ _is_new: false }), row({ _is_new: false }),
+  ]);
+  assert.match(html, /Новые организации/);
+  assert.match(html, /<b>40%<\/b>/);
+  assert.match(html, /width:40%/);
+  assert.match(html, /width:60%/);
+  // Числа — в тексте рядом с полосой: сама полоса только для глаза.
+  assert.match(html, /Новые<b>2 · 40%<\/b>/);
+  assert.match(html, /Уже встречались<b>3 · 60%<\/b>/);
+  assert.match(html, /role="img" aria-label="Новые — 40%, уже встречались — 60%"/);
 });
 
 test('полосы полноты показывают процент, ширина — от всех записей', () => {

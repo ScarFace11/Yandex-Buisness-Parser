@@ -2,7 +2,6 @@
 
 Проверяем контракт macOS-версии:
   * данные не пишутся внутрь .app — они в ~/Library/Application Support;
-  * данные dev- и публичной сборки не пересекаются;
   * шаблоны/статика находятся внутри бандла (Contents/Frameworks|Resources);
   * браузер открывается только на macOS-сборке (и отключается переменной);
   * авто-обновление изнутри .app не предлагается, но версия проверяется;
@@ -29,17 +28,6 @@ class TestDataDir:
                                 / "MacOS" / "YandexBusinessParser"))
         expected = Path.home() / "Library" / "Application Support" / "YandexBusinessParser"
         assert paths.data_dir() == expected
-
-    def test_dev_bundle_has_its_own_data_folder(self, monkeypatch, tmp_path):
-        import paths
-        monkeypatch.setattr(paths, "is_frozen", lambda: True)
-        monkeypatch.setattr(paths, "_is_macos", lambda: True)
-        monkeypatch.setattr(paths.sys, "executable",
-                            str(tmp_path / "YandexBusinessParserDev.app" / "Contents"
-                                / "MacOS" / "YandexBusinessParserDev"))
-        d = paths.data_dir()
-        assert d.name == "YandexBusinessParserDev"
-        assert d != Path.home() / "Library" / "Application Support" / "YandexBusinessParser"
 
     def test_frozen_elsewhere_stays_next_to_the_bundle(self, monkeypatch, tmp_path):
         """Windows-сборка не изменилась: данные лежат рядом с exe."""
@@ -338,7 +326,6 @@ class TestUpdaterOnMac:
         from routes import update as update_mod
         monkeypatch.setattr(sys, "platform", "darwin")
         monkeypatch.setattr(update_mod, "_is_frozen", lambda: True)
-        monkeypatch.setattr(update_mod, "_is_dev", lambda: False)
         # macOS нужен СВОЙ файл (.dmg), а не штампованная windows-ссылка.
         mine = ("https://github.com/o/r/releases/download/v9.9.9/"
                 + update_mod._release_asset_name(install=True))
@@ -360,7 +347,6 @@ class TestUpdaterOnMac:
         from routes import update as update_mod
         monkeypatch.setattr(sys, "platform", "darwin")
         monkeypatch.setattr(update_mod, "_is_frozen", lambda: True)
-        monkeypatch.setattr(update_mod, "_is_dev", lambda: False)
         asset = update_mod._release_asset_name(install=True)
         assert asset.startswith("YandexBusinessParser-macos-")
         assert asset.endswith(".dmg")
@@ -379,25 +365,45 @@ class TestUpdaterOnMac:
         assert d["target_version"] == "9.9.9"
         assert "windows" not in d["download_url"]
 
-    def test_download_and_apply_refuse_instead_of_running_a_bat(
-            self, monkeypatch, client, tmp_path):
+    def test_mac_downloads_the_dmg_and_opens_it(self, monkeypatch, client, tmp_path):
+        """macOS ставит обновление через .dmg: скачать внутри приложения и
+        открыть образ. Подменять файлы запущенного .app нельзя."""
         from routes import update as update_mod
         monkeypatch.setattr(sys, "platform", "darwin")
         monkeypatch.setattr(update_mod, "_is_frozen", lambda: True)
-        monkeypatch.setattr(update_mod, "_is_dev", lambda: False)
         monkeypatch.setattr(update_mod, "_user_dir", lambda: tmp_path)
-        for url in ("/update/download", "/update/apply"):
-            r = client.post(url)
-            assert r.status_code == 400, url
-            body = r.get_json()
-            assert body["ok"] is False
-            assert "Windows" in body["error"]
+        monkeypatch.setattr(update_mod, "_save_state", lambda **kw: None)
+        state = {"latest": "9.9.9", "asset_name": "x.dmg"}
+        monkeypatch.setattr(update_mod, "_state", lambda: state)
+        monkeypatch.setattr(update_mod, "_download_target",
+                            lambda *a, **k: ("https://example.com/a.dmg", ""))
+        class _Resp:
+            headers = {"Content-Length": "3"}
+            def raise_for_status(self): pass
+            def iter_content(self, chunk_size=1):
+                yield b"dmg"
+
+        import requests
+        monkeypatch.setattr(requests, "get", lambda *a, **k: _Resp())
+        r = client.post("/update/download")
+        assert r.status_code == 200, r.get_json()
+        dmg = tmp_path / "_update" / "update.dmg"
+        assert dmg.read_bytes() == b"dmg"
+
+        spawned = {}
+        monkeypatch.setattr(update_mod.subprocess, "Popen",
+                            lambda cmd, **kw: spawned.setdefault("cmd", cmd))
+        monkeypatch.setattr(update_mod, "_save_state", lambda **kw: None)
+        state["download"] = {"file": str(dmg)}
+        r = client.post("/update/apply")
+        assert r.status_code == 200, r.get_json()
+        assert r.get_json()["manual"] is True
+        assert spawned["cmd"] == ["open", str(dmg)]
 
     def test_windows_status_still_offers_self_update(self, monkeypatch, client):
         from routes import update as update_mod
         monkeypatch.setattr(sys, "platform", "win32")
         monkeypatch.setattr(update_mod, "_is_frozen", lambda: True)
-        monkeypatch.setattr(update_mod, "_is_dev", lambda: False)
         monkeypatch.setattr(update_mod, "_remote_meta",
                             lambda: {"version": "9.9.9", "download_url": self.PINNED})
         assert client.get("/update/status").get_json()["auto_apply"] is True
@@ -410,8 +416,7 @@ class TestPackagingFiles:
         spec = (ROOT / "parser-mac.spec").read_text(encoding="utf-8")
         assert "BUNDLE(" in spec
         assert "console=False" in spec            # .app без окна терминала
-        assert 'os.environ.get("YP_DEV"' in spec
-        assert '"YandexBusinessParserDev" if DEV_BUILD else "YandexBusinessParser"' in spec
+        assert 'APP_NAME = "YandexBusinessParser"' in spec
         assert "YP_ARCH" in spec
         assert "collect_submodules('yandex_maps_parser')" in spec
         assert "'playwright'" in spec             # по-прежнему исключён
@@ -427,7 +432,6 @@ class TestPackagingFiles:
         assert "--distpath dist-mac" in sh
         assert "codesign" in sh
         assert "xattr -dr com.apple.quarantine" in sh   # подсказка про Gatekeeper
-        assert 'YP_DEV=1' in sh
 
     def test_gitignore_keeps_the_mac_spec_tracked(self):
         gi = (ROOT / ".gitignore").read_text(encoding="utf-8")
@@ -527,7 +531,7 @@ class TestGithubAutomation:
         assert "gh release view" in wf           # и ждём появления релиза
 
     def test_mac_workflow_builds_only_the_public_bundle(self):
-        """Сборка .app — публичная: dev-бандл собирается локально."""
+        """Сборка .app — только публичная: dev-режима в конвейере нет."""
         wf = self._wf("build-macos.yml")
         assert "refs/heads/dev" not in wf        # без dev-триггера
         assert "inputs.dev" not in wf            # и без ручного переключателя
@@ -540,10 +544,12 @@ class TestGithubAutomation:
         assert "package-ecosystem: github-actions" in cfg
         assert "groups:" in cfg                  # мелкие обновления одним PR
 
-    def test_existing_release_pipeline_still_guards_dev_versions(self):
+    def test_existing_release_pipeline_still_guards_the_version(self):
+        """Релиз собирается только версией без суффиксов: version.json на main
+        рекламирует опубликованное, а тег обязан совпадать с APP_VERSION."""
         wf = self._wf("build-exe.yml")
-        assert "config.is_dev_build()" in wf
         assert "YandexBusinessParser-windows-x64.zip" in wf
+        assert "version.json" in wf
 
 
 # ── Иконка приложения ──────────────────────────────────────────

@@ -81,6 +81,13 @@ def make_app_zip(path: Path, *, kind="windows", version=VERSION, arch="x64",
             zf.writestr(prefix + ".local-build", "")
     return path
 
+def make_setup_exe(path: Path, *, machine=0x8664, pad=1 << 21,
+                   inno=True) -> Path:
+    """Установщик: PE-заголовок + метка Inno Setup + запас байтов."""
+    path.write_bytes(pe_bytes(machine) + (b"Inno Setup" if inno else b"")
+                     + b"\0" * pad)
+    return path
+
 
 def make_dmg(path: Path, *, valid=True, fs="Apple_APFS", decoy=False) -> Path:
     """UDIF-образ: plist разделов + трейлер koly в последних 512 байтах.
@@ -294,6 +301,33 @@ class TestDmgChecks:
         problems = vra.check_dmg(path)
         assert any("файловой системой" in p for p in problems), problems
 
+class TestSetupExe:
+    """Установщик: настоящий Inno Setup — 32-битный загрузчик при 64-битной
+    программе. Требовать x64-заголовок нельзя.
+
+    Регресс 2.3.5: проверка требовала x64, и настоящий собранный установщик
+    не проходил её — релиз нельзя было опубликовать.
+    """
+
+    NAME = "YandexBusinessParser-windows-x64-setup.exe"
+
+    def test_a_real_inno_setup_passes(self, tmp_path):
+        path = make_setup_exe(tmp_path / self.NAME, machine=0x014C)
+        assert vra.check_local(path) == []
+
+    def test_a_payload_that_is_not_inno_is_caught(self, tmp_path):
+        path = make_setup_exe(tmp_path / self.NAME, inno=False)
+        assert any("не Inno Setup" in p for p in vra.check_local(path))
+
+    def test_html_renamed_to_exe_is_caught(self, tmp_path):
+        path = tmp_path / self.NAME
+        path.write_bytes(b"<html>404</html>" + b"\0" * (2 << 20))
+        assert any("PE-файл" in p for p in vra.check_local(path))
+
+    def test_a_truncated_setup_is_caught(self, tmp_path):
+        path = tmp_path / self.NAME
+        path.write_bytes(pe_bytes(0x014C) + b"Inno Setup")
+        assert any("меньше 1 МБ" in p for p in vra.check_local(path))
 
 class TestLocalCheck:
     """Режим --check-local: сборщик проверяет файл ДО загрузки на релиз."""
@@ -429,6 +463,8 @@ class TestVerifyRelease:
                 p = make_app_zip(tmp_path / name, kind=kind, arch=arch)
             elif name.endswith(".dmg"):
                 p = make_dmg(tmp_path / name)
+            elif name.endswith("-setup.exe"):
+                p = make_setup_exe(tmp_path / name)
             else:
                 p = tmp_path / name
                 p.write_text(f"# Changelog\n\n## [{VERSION}] — Что-то\n",
@@ -457,8 +493,7 @@ def test_the_required_list_covers_everything_the_builds_produce():
     """Каждый файл, который собирают build-exe.yml и build-macos.yml,
     обязан быть в списке обязательных: иначе релиз опубликуется без него."""
     assert "YandexBusinessParser-windows-x64.zip" in vra.REQUIRED_ASSETS
-    assert "YandexBusinessParser-macos-arm64.zip" in vra.REQUIRED_ASSETS
-    assert "YandexBusinessParser-macos-x64.zip" in vra.REQUIRED_ASSETS
+    assert "YandexBusinessParser-windows-x64-setup.exe" in vra.REQUIRED_ASSETS
     assert "YandexBusinessParser-macos-arm64.dmg" in vra.REQUIRED_ASSETS
     assert "YandexBusinessParser-macos-x64.dmg" in vra.REQUIRED_ASSETS
     assert "CHANGELOG.md" in vra.REQUIRED_ASSETS

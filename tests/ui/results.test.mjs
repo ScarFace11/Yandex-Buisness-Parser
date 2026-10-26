@@ -86,7 +86,8 @@ for (const id of [
   'city-tabs', 'tbl-search', 'tbl-count', 'tbl-body', 'pager', 'pg-info', 'pg-prev', 'pg-next',
   'export-sel-wrap', 'f-collapse-chains', 'results-table',
   'bulk-panel', 'bulk-social', 'bulk-count', 'bulk-stats-note', 'unviewed-count', 'bulk-open-btn',
-  'bulk-order-note',
+  'bulk-order-note', 'bulk-only-filtered', 'bulk-only-filtered-txt', 'bulk-only-filtered-wrap',
+  'btn-only-new', 'btn-only-new-count', 'export-sel-count',
   'bulk-collapse', 'bulk-body', 'bulk-progress', 'bulk-progress-fill', 'bulk-progress-txt',
   'bulk-skip-viewed', 'bulk-mark-viewed', 'bulk-warn', 'bulk-copy-btn', 'bulk-persist-btn',
   'reviewed-save-status',
@@ -115,10 +116,11 @@ els['f-sort-score'].checked = false;   // table order stays untouched by default
   o.textContent = { vk: 'ВКонтакте', telegram: 'Telegram', whatsapp: 'WhatsApp', instagram: 'Instagram' }[v];
   els['bulk-social'].options.push(o);
 });
-els['bulk-social'].value = 'vk';
-els['bulk-count'].value = 5;
-els['bulk-skip-viewed'].checked = true;
-els['bulk-mark-viewed'].checked = true;
+  els['bulk-social'].value = 'vk';
+  els['bulk-count'].value = 5;  els['bulk-skip-viewed'].checked = true;
+  els['bulk-only-filtered'].checked = false;   // обход по городу, а не по выборке
+  els['bulk-mark-viewed'].checked = true;
+  els['bulk-only-filtered'].checked = false;
 
 // Preset buttons in the bulk panel
 const presets = [5, 10, 20].map(n => { const b = mkEl('preset' + n); b.dataset.count = String(n); return b; });
@@ -151,6 +153,7 @@ globalThis.BULK_MAX_TABS = 50;
 globalThis.SUBTAB_KEY = 'yp_results_subtab';
 globalThis.CITY_TAB_KEY = 'yp_results_city_tab';
 globalThis.CITY_FAV_KEY = 'yp_results_city_favs';
+globalThis.ONLY_NEW_KEY = 'yp_only_new';
 // Избранные города (звёздочка) — модульное состояние 05-results-bulk.
 globalThis.favoriteCities = new Set();
 globalThis.BULK_OPEN_KEY = 'yp_bulk_open';
@@ -190,6 +193,13 @@ globalThis.appendLog = (lvl, msg) => logLines.push({ lvl, msg });
 // сам список (чипы, storage, дебаунс) живёт в tests/ui/blacklist.test.mjs.
 globalThis.blacklistWords = [];
 globalThis.reviewedFilter = 'all';
+// «Только новые» — фильтр таблицы по признаку `_is_new`, который ставит сервер.
+globalThis.onlyNewFilter = false;
+// Мини-окно разбора оценки — модульное состояние 04-results-table.js; в тестах
+// окно не открывается, но renderPage обязан не падать на его отсутствии.
+globalThis._scorePop = null;
+globalThis._scorePopAnchor = null;
+globalThis._scorePopKey = '';
 globalThis.activeCity = '';
 globalThis._lastCities = [];
 globalThis.currentFileNote = '';
@@ -271,6 +281,9 @@ const fns = [
   'updateBulkStats', 'renderBulkProgress', 'resetBulkProgress', 'setBulkCount',
   // Показ по отметке «Просмотрено»: фильтр живёт в заголовке колонки «✓»
   'toggleReviewedFilter', 'reviewedFilterNote', 'syncReviewedFilterUI',
+    // «Только новые» — фильтр таблицы и его кнопка в тулбаре
+  'toggleOnlyNewFilter', 'updateOnlyNewButton', 'onlyNewNote', 'onlyNewStats',
+  'bulkOnlyFiltered', 'onBulkOnlyFilteredChange',
   // Прогресс обхода в полосах городов и звезда в списке «Где ищем?»
   'cityReviewStats', 'reviewProgressHtml', 'toggleCityFavorite',
   'fileCardHTML', 'renderFiles', 'bulkParams',
@@ -296,6 +309,10 @@ const fns = [
   // renderPage renders the «Оценка» cell, scoreHTML explains it per record.
   'minScoreThreshold', 'scoreHTML', 'scoreBreakdown', 'scoreWhyText', 'scoreNum',
   'scoreOwnWebsite', 'scoreRating', 'scoreHasSocials', 'scoreNewBusiness', 'scoreVkChecked',
+  // Видимая метка «новая» у названия организации
+  'newTagHTML',
+  // Мини-окно разбора оценки: renderPage пересаживает его на новый бейдж
+  'toggleScorePopover', 'closeScorePopover', '_reanchorScorePopover',
   // renderPage переставляет ячейки по пользовательскому порядку столбцов.
   'applyColOrder', 'applyColClasses', 'normalizeColOrder', 'moveCol',
 ];
@@ -322,6 +339,8 @@ function resetState(rows = ROWS) {
   globalThis.socialViewedState = {};
   globalThis.activeCity = '';
   globalThis.reviewedFilter = 'all';
+  globalThis.onlyNewFilter = false;
+  globalThis.updateOnlyNewButton();
   globalThis.currentFileNote = '';
   globalThis.currentFile = '';
   globalThis.bulkState = { social: 'vk', opened: 0, blocked: 0, keys: new Set(), copied: new Set(), texts: new Map(), copiedTexts: new Set() };
@@ -333,6 +352,9 @@ function resetState(rows = ROWS) {
   globalThis.reviewedPersistBusy = false;
   els['bulk-count'].value = 5;
   els['bulk-skip-viewed'].checked = true;
+  // «Только под фильтром» — выключено по умолчанию (как в разметке): иначе
+  // состояние протекает из теста, который включил выборку, в следующие.
+  els['bulk-only-filtered'].checked = false;
   els['bulk-social'].value = 'vk';
   els['f-sort-score'].checked = false;      // таблица — в порядке файла
   els['bulk-order-note'].textContent = '';
@@ -924,6 +946,145 @@ test('refreshReviewedUI re-applies the reviewed filter after a bulk run', () => 
   assert.equal(globalThis.filteredRows.length, 2, 'marked rows drop out at once');
   assert.equal(els['tbl-count'].textContent, '2 записей · только непросмотренные');
   assert.equal(els['unviewed-count'].textContent, '2', 'bulk counter follows the marks');
+});
+
+// ── «Только новые» (сервер метит записи признаком `_is_new`) ──────
+test('фильтр «Только новые» прячет организации из прошлых прогонов', () => {
+  // Индексы 0 и 1 — организации, которые уже встречались в прошлых файлах.
+  resetState(ROWS.map((r, i) => ({ ...r, _is_new: i >= 2 })));
+  globalThis.filterTable();
+  assert.equal(globalThis.filteredRows.length, 4, 'без фильтра видно всё');
+
+  globalThis.toggleOnlyNewFilter();
+  assert.equal(globalThis.onlyNewFilter, true);
+  assert.equal(globalThis.filteredRows.length, 2, 'остались только новые');
+  assert.equal(els['tbl-count'].textContent, '2 записей · только новые');
+  assert.equal(els['btn-only-new'].getAttribute('aria-pressed'), 'true',
+    'aria-pressed обязан отражать состояние — aria-checked для button недопустим');
+
+  globalThis.toggleOnlyNewFilter();
+  assert.equal(globalThis.filteredRows.length, 4, 'фильтр снимается');
+  assert.equal(els['tbl-count'].textContent, '4 записей');
+  assert.equal(globalThis.onlyNewNote(), '');
+  assert.equal(els['btn-only-new'].getAttribute('aria-pressed'), 'false');
+});
+
+test('строки без признака новизны фильтр «Только новые» не прячет', () => {
+  resetState(ROWS);           // признака нет — живой поток или старый JSON
+  globalThis.toggleOnlyNewFilter();
+  assert.equal(globalThis.filteredRows.length, 4);
+});
+
+// ── «Только под фильтром»: обход идёт по видимым строкам ──────────────
+test('обход идёт по городу, пока «Только под фильтром» не включён', () => {
+  resetState();
+  globalThis.filterTable();
+  assert.equal(globalThis.bulkScopeRows().length, 4);
+  globalThis.activeCity = 'Уфа';
+  globalThis.filterTable();
+  assert.equal(globalThis.bulkScopeRows().length, 2);
+  assert.equal(globalThis.bulkOnlyFiltered(), false);
+  assert.equal(globalThis.bulkParams().only_keys, null,
+    'без выборки сервер сам фильтрует по городу — список не нужен');
+});
+
+test('«Только под фильтром» отдаёт обходу ровно видимые строки', () => {
+  resetState();
+  globalThis.activeCity = 'Уфа';
+  els['tbl-search'].value = 'Б';
+  globalThis.filterTable();               // город + поиск → одна строка
+  assert.equal(globalThis.filteredRows.length, 1);
+
+  els['bulk-only-filtered'].checked = true;
+  assert.equal(globalThis.bulkOnlyFiltered(), true);
+  assert.equal(globalThis.bulkScopeRows().length, 1, 'обход идёт по выборке, а не по городу');
+  assert.deepEqual(globalThis.bulkParams().only_keys, [globalThis.reviewKey(ROWS[1])],
+    'серверу уезжают ключи видимых строк — иначе он вернёт и спрятанные');
+});
+
+// ── Счётчик новых записей на кнопке фильтра ──────────────────────────
+test('на кнопке «Только новые» видно, сколько новых записей', () => {
+  resetState(ROWS.map((r, i) => ({ ...r, _is_new: i < 3 })));
+  globalThis.filterTable();
+  assert.equal(els['btn-only-new-count'].textContent, '3');
+  assert.equal(els['btn-only-new-count'].hidden, false);
+  assert.match(els['btn-only-new'].getAttribute('aria-label'), /3 записи/);
+  assert.match(els['btn-only-new'].title, /3 записи/);
+});
+
+test('без признака новизны цифры на кнопке нет', () => {
+  // Старая папка без маркера старта: _is_new = null — «0» соврал бы.
+  resetState(ROWS);
+  globalThis.filterTable();
+  assert.equal(els['btn-only-new-count'].hidden, true);
+  assert.equal(els['btn-only-new'].getAttribute('aria-label'), 'Только новые');
+});
+
+test('во время сбора счётчик растёт вместе с живыми записями', () => {
+  resetState(ROWS.map(r => ({ ...r, _is_new: false })));
+  globalThis.filterTable();
+  assert.equal(els['btn-only-new-count'].textContent, '0',
+    'новых нет — это известно и видно');
+  // Так делает живой поток: запись пришла в allResults, рендер — по таймеру.
+  globalThis.allResults.push({ ...ROWS[0], name: 'Живая',
+                               yandex_maps_url: 'https://ya.ru/live-new', _is_new: true });
+  globalThis.renderPage();
+  assert.equal(els['btn-only-new-count'].textContent, '1');
+  assert.equal(els['btn-only-new-count'].hidden, false);
+});
+// ── Метка «новая» у названия ─────────────────────────────────────────
+test('метка «новая» стоит у названия, пока фильтр выключен', () => {
+  resetState(ROWS.map((r, i) => ({ ...r, _is_new: i < 2 })));
+  globalThis.filterTable();
+  const body = els['tbl-body'].innerHTML;
+  assert.equal((body.match(/class="new-tag"/g) || []).length, 2,
+    'метка только у новых записей');
+  assert.match(body, /Новая организация: её не было в прошлых поисках/);
+  // Признак false или null (сравнивать было не с чем) — без метки.
+  assert.equal(globalThis.newTagHTML({ _is_new: false }), '');
+  assert.equal(globalThis.newTagHTML({ _is_new: null }), '');
+  assert.equal(globalThis.newTagHTML({}), '');
+  assert.ok(globalThis.newTagHTML({ _is_new: true }).includes('new-tag'));
+});
+
+test('под фильтром «Только новые» метка в строках не дублируется', () => {
+  resetState(ROWS.map(r => ({ ...r, _is_new: true })));
+  globalThis.filterTable();
+  assert.ok(els['tbl-body'].innerHTML.includes('new-tag'));
+  globalThis.toggleOnlyNewFilter();
+  assert.ok(!els['tbl-body'].innerHTML.includes('new-tag'),
+    'фильтр уже говорит, что строки новые');
+});
+
+// ── «Выборка»: сколько строк уедет в Excel/CSV и попадёт в обход ──────
+test('«Выборка» показывает число строк и прячется, когда фильтр пуст', () => {
+  resetState();
+  globalThis.filterTable();
+  assert.equal(els['export-sel-count'].textContent, '4', 'сколько строк в выборке');
+  assert.equal(els['bulk-only-filtered-txt'].textContent, 'Только под фильтром (4)',
+    'обход обещает то же число, что и выгрузка');
+  assert.equal(els['bulk-only-filtered-wrap'].hidden, false);
+
+  els['tbl-search'].value = 'Б';
+  globalThis.filterTable();
+  assert.equal(els['export-sel-count'].textContent, '1', 'счётчик следует фильтру');
+
+  els['tbl-search'].value = 'нет такого';
+  globalThis.filterTable();
+  assert.equal(els['export-sel-count'].textContent, '', 'пустая выборка — без цифры');
+  assert.equal(els['bulk-only-filtered-txt'].textContent, 'Только под фильтром (0)');
+  assert.equal(els['bulk-only-filtered-wrap'].hidden, true);
+});
+
+// ── Оценка лида: бейдж открывает мини-окно разбора ───────────────────
+test('бейдж оценки — кнопка с данными для мини-окна разбора', () => {
+  const html = globalThis.scoreHTML({ ...ROWS[0], lead_score: 72 });
+  assert.match(html, /<button type="button" class="score-badge hot"/);
+  assert.match(html, /aria-haspopup="dialog"/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.ok(html.includes(globalThis.reviewKey(ROWS[0])), 'бейдж знает, чья это запись');
+  // Оценки нет (файл до этой фичи) — по-прежнему пустая метка, не кнопка.
+  assert.equal(globalThis.scoreHTML(ROWS[0]), '<span class="score-na">—</span>');
 });
 
 test('полоса города показывает прогресс обхода: просмотрено и всего', () => {

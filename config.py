@@ -8,14 +8,8 @@ from console_io import enable_utf8, say
 
 enable_utf8()
 
-# Версия приложения. Для публичного релиза — без суффиксов: "2.3.4.2".
-APP_VERSION = "2.3.4.2"
-
-
-def is_dev_build() -> bool:
-    """True для внутренней сборки (версия с суффиксом «-dev»/«-beta»)."""
-    v = str(APP_VERSION).strip().lower()
-    return v.endswith(("-dev", "-beta")) or "-dev." in v or "-beta." in v
+# Версия приложения.
+APP_VERSION = "2.3.5"
 
 
 # ── Минимально допустимая версия ──────────────────────────────
@@ -24,8 +18,6 @@ SKIP_MIN_VERSION_ENV = "YP_SKIP_MIN_VERSION"
 
 def skips_min_version() -> bool:
     """True для сборок, которым порог минимальной версии не мешает."""
-    if is_dev_build():
-        return True
     if os.environ.get(SKIP_MIN_VERSION_ENV, "").strip().lower() not in (
             "", "0", "false", "no", "off"):
         return True
@@ -38,23 +30,18 @@ def skips_min_version() -> bool:
         return False
 
 
-# Порт по умолчанию для внутренней сборки — 5010 вместо 5000, чтобы она не боролась за один порт с публичной.
-DEV_PORT = 5010
-
 # macOS: порт 5000 занят системным AirPlay Receiver (macOS 12+), поэтому у .app-сборки свой порт — иначе первый же запуск упирался бы в «порт занят».
 MAC_PORT = 5050
 
 
 def app_port() -> int:
-    """HTTP-порт: переменная YP_PORT → внутренняя сборка 5010 → macOS 5050 → 5000. Порядок важен: у внутренней сборки свой порт на любой системе, а публичная сборка на macOS не может занять 5000 (там слушает AirPlay Receiver)."""
+    """HTTP-порт: переменная YP_PORT → macOS 5050 → 5000. На macOS 5000 занят AirPlay Receiver."""
     try:
         from_env = int(os.getenv("YP_PORT", ""))
         if 1 <= from_env <= 65535:
             return from_env
     except (TypeError, ValueError):
         pass
-    if is_dev_build():
-        return DEV_PORT
     if sys.platform == "darwin":
         return MAC_PORT
     return 5000

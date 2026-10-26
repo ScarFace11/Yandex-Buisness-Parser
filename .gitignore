@@ -23,7 +23,6 @@ __pycache__/
 *.egg
 *.egg-info/
 dist/
-dist-dev/
 dist-mac/
 build/
 .eggs/
@@ -45,7 +44,6 @@ ENV/
 _update/
 
 # Local-only build scripts and CI leftovers
-build-dev.bat
 release_notes.md
 
 # Локальный дневник разработки: не поставляется и не коммитится
@@ -79,6 +77,11 @@ yp-*.log
 icon-preview.png
 icon-final.png
 spheres.json
+# Coverage
+.coverage
+.coverage.*
+coverage.json
+htmlcov/
 
 # Tool caches
 .pytest_cache/

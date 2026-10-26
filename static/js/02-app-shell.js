@@ -17,6 +17,10 @@ function _countQueries() {
 // «Будет выполнен 1 запрос / Будет выполнено N запросов» — hidden when empty;
 // capped at «10+» so the UI never gets crowded (edge case 3).
 function updateQueriesCounter() {
+  // «Очистить» рядом с «Сферы» нужна только пока в поле что-то есть.
+  const clearBtn = document.getElementById('clear-queries-btn');
+  const box = document.getElementById('f-queries');
+  if (clearBtn && box) clearBtn.hidden = !String(box.value || '').trim();
   const el = document.getElementById('queries-count');
   if (!el) return;
   const n = _countQueries();
@@ -25,6 +29,15 @@ function updateQueriesCounter() {
   el.textContent = `• Будет выполнен${n === 1 ? '' : 'о'} ${shown} ${_pluralRu(n, 'запрос', 'запроса', 'запросов')}`;
   el.hidden = false;
   updateRunBtnState();
+}
+
+function clearQueriesField() {
+  const ta = document.getElementById('f-queries');
+  if (!ta) return;
+  ta.value = '';
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+  ta.focus();
+  if (typeof saveSettings === 'function') saveSettings();
 }
 
 // «(3 города)» next to the «Где ищем?» label — 1 город / 2-4 города / 5+ городов.
