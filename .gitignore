@@ -77,6 +77,10 @@ yp-*.log
 icon-preview.png
 icon-final.png
 spheres.json
+# Временные папки прогонов, когда системная %TEMP% недоступна: pytest кладёт
+# туда basetemp, а профиль Chromium для CDP — mkdtemp с префиксом yp-cdp-
+pytest-of-*/
+yp-cdp-*/
 # Coverage
 .coverage
 .coverage.*
