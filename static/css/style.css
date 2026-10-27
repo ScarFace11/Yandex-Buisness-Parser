@@ -418,7 +418,10 @@ aside::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
 /* ════════════════════════════════
    FORM
    ════════════════════════════════ */
-.form-body{padding:18px;display:flex;flex-direction:column;gap:15px}
+/* Единая сетка вертикального ритма: gap задаёт шаг 16px между блоками,
+   собственные margin у блоков убраны — иначе зазоры складывались
+   (15+12, 15+10, 15+18) и колонка «плыла» разной высоты между секциями. */
+.form-body{padding:18px;display:flex;flex-direction:column;gap:16px}
 .intro-copy{font-size:13px;line-height:1.55;color:var(--sub)}
 label.lbl{
   font-size:12px;font-weight:700;color:var(--sub);
@@ -2891,7 +2894,9 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
    ══════════════════════════════════════════════════════════ */
 .preset-block{
   border:1px solid var(--bdr);border-radius:var(--r-md);
-  background:var(--card);padding:10px 12px;margin-top:10px;
+  /* Отступ одинаков с заголовками аккордеонов и API (11px 13px):
+     текст всех блоков колонки начинается с одной вертикали. */
+  background:var(--card);padding:11px 13px;
 }
 .preset-block-head{
   display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -3162,8 +3167,11 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   text-transform:uppercase;
   color:var(--muted);
   letter-spacing:0.09em;
-  padding:18px 0 8px;
-  margin-bottom:2px;
+  /* Ритм секции на общей сетке: +8 сверху поверх gap 16 (итого 24 — секция
+     начинается с паузы), а −8 внизу компенсирует gap: заголовок прижат
+     к своей секции (итого 8), а не расстоянием обычного блока. */
+  padding:8px 0 0;
+  margin:0 0 -8px;
 }
 [data-theme="dark"] .group-title{color:var(--muted)}
 
@@ -4469,13 +4477,15 @@ header{
   /* Две колонки, а не поток: в колонке 300px пять чипов подряд занимали
      пять строк и сводка сама становилась «много информации». */
   display:grid;grid-template-columns:1fr 1fr;gap:5px;
-  padding:8px 9px;margin:2px 0 12px;
+  /* Внутренний отступ сводки = отступу остальных блоков колонки (13px):
+     рамки чипов и заголовки блоков стоят на одной вертикали. */
+  padding:8px 13px;margin:0;
   background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r-md);
   animation:setup-sum-in .22s ease both;
 }
 .setup-chip{
-  display:flex;flex-direction:column;align-items:flex-start;gap:1px;
-  min-width:0;padding:5px 9px;border-radius:var(--r-sm);overflow:hidden;
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  min-width:0;padding:6px 9px;border-radius:var(--r-sm);overflow:hidden;
   background:var(--card);border:1px solid var(--bdr);
   color:var(--txt);font-family:inherit;font-size:12px;font-weight:600;
   cursor:pointer;text-align:left;
@@ -4487,17 +4497,20 @@ header{
 }
 .setup-chip:active{transform:translateY(0)}
 .setup-chip:focus-visible{outline:2px solid var(--c);outline-offset:2px}
-/* «Объём» — итог всех остальных чипов (города × запросы × точки × страницы),
-   поэтому ширина не в одну колонку: иначе значение («≈1 200 организаций ·
-   132 стр.») обрезалось бы многоточием и его пришлось бы читать в подсказке. */
-.setup-chip[data-setup-key="volume"]{grid-column:1 / -1}
+/* Шесть чипов живут в ровную сетку 2×3: раньше «Объём» занимал всю ширину
+   и под ним оставалась пустая ячейка — ряды читались как сбитые.
+   Длинное значение переносится на две строки (см. .setup-chip-val),
+   полный текст — в подсказке чипа. */
 .setup-chip-lbl{
   font-size:12px;font-weight:800;color:var(--muted);
   text-transform:uppercase;letter-spacing:.05em;
 }
 .setup-chip-lbl,.setup-chip-val{max-width:100%}
 .setup-chip-val{width:100%;font-size:12px;font-weight:700;color:var(--txt);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Значение до двух строк вместо жёсткого «…»: текст не режется
+     посередине, а высота ряда выравнивается по самому длинному чипу. */
+  white-space:normal;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 /* «Не заполнено» — предупреждение, а не просто текст: этот чип ведёт туда,
    без чего запуск не начнётся (запрос, город, формат выгрузки). */
 .setup-chip.is-missing{border-color:var(--warn-bdr);background:var(--warn-bg)}
