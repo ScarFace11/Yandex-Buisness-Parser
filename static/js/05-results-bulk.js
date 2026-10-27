@@ -1197,10 +1197,6 @@ function downloadResultsFile(rel) {
   window.location.href = url;
 }
 
-function basenameOf(rel) {
-  return rel.split('/').pop() || rel;
-}
-
 async function archiveResultsFile(rel) {
   const ok = await uiConfirm(
     `Файл «${rel}» переедет в output/_archive/ (папка сегодняшнего дня). Оттуда его можно вернуть.`,
