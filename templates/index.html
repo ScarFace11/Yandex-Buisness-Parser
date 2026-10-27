@@ -193,6 +193,9 @@
       <svg class="ico" aria-hidden="true"><use href="#i-skip"/></svg>
       <span class="hdr-lbl">Город</span>
     </button>
+    <!-- Служебные кнопки — отдельной группой справа: от пользовательских
+         их отделяет тонкая линия (см. .hdr-tools в style.css). -->
+    <div class="hdr-tools" role="group" aria-label="Служебные кнопки">
     <button id="btn-logs" onclick="showLogsModal()" title="Подробные логи всех запусков" aria-label="Логи">
       <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>
       <span class="hdr-lbl">Логи</span>
@@ -219,6 +222,7 @@
       <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>
       <span class="hdr-lbl">Обновления</span>
     </button>
+    </div>
   </div>
 </header>
 

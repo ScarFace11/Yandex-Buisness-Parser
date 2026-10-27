@@ -279,7 +279,7 @@ function applyColClasses() {
   if (btn) {
     const n = hiddenCols.size;
     btn.classList.toggle('active', n > 0);
-    btn.innerHTML = n > 0 ? `${UI_ICONS.gear}Столбцы <span style="background:var(--c);color:var(--on-accent);border-radius:10px;padding:1px 6px;font-size:10px">${COLS.length - n}/${COLS.length}</span>` : UI_ICONS.gear + 'Столбцы';
+    btn.innerHTML = n > 0 ? `${UI_ICONS.gear}Столбцы <span style="background:var(--c);color:var(--on-accent);border-radius:10px;padding:1px 6px;font-size:12px">${COLS.length - n}/${COLS.length}</span>` : UI_ICONS.gear + 'Столбцы';
   }
 }
 

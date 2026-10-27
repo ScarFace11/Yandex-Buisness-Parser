@@ -166,7 +166,7 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 /* Status badge: every state is a token pair (bg + text), so the same rule
    works in both themes — the variants no longer need per-theme overrides. */
 #status-badge{
-  font-size:11px;font-weight:700;padding:4px 10px;border-radius:var(--pill);
+  font-size:12px;font-weight:700;padding:4px 10px;border-radius:var(--pill);
   background:rgba(255,255,255,.10);color:var(--on-accent);letter-spacing:.02em;
   /* Пиктограмма + подпись: зазор между ними — flex-gap, а не пробел в тексте,
      потому что HTML-пробел в строчном элементе сжимается до нуля. */
@@ -195,13 +195,19 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 /* Кнопки шапки — «призрачные»: рамка не рисует лишний шум, состояние
    показывает подложка. Так шапка читается как панель, а не как набор кнопок. */
 .hdr-right > button,
+.hdr-right .hdr-tools > button,
 .hdr-right .notify-wrap > button{
   padding:6px 11px;border:none;border-radius:var(--r-sm);
   background:rgba(255,255,255,.06);color:var(--on-accent);
   font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
   display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s;
 }
+/* Служебные кнопки (логи, диагностика, проблема, версии) — отдельная группа
+   справа: тонкая вертикаль отделяет их от пользовательских кнопок слева. */
+.hdr-tools{display:flex;align-items:center;gap:7px;padding-left:7px;
+  border-left:1px solid rgba(127,127,127,.45)}
 .hdr-right > button:hover,
+.hdr-right .hdr-tools > button:hover,
 .hdr-right .notify-wrap > button:hover{background:rgba(255,255,255,.14)}
 /* ⏸ Пауза — оранжевая в ОБЕИХ темах (красный остался за ⏹ «Остановить»):
    два действия не путаются, а тёмный текст держит контраст выше 4.5:1.
@@ -240,7 +246,7 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 
 /* ── Сноска про ограничение числа «страниц» на точку ── */
 .pages-cap-note{
-  margin-top:4px;font-size:11px;line-height:1.45;color:var(--warn-strong);
+  margin-top:4px;font-size:12px;line-height:1.45;color:var(--warn-strong);
   background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.35);
   border-radius:6px;padding:5px 8px;
 }
@@ -264,8 +270,8 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 .logs-list li{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--bdr);font-size:13px}
 .logs-list li:last-child{border-bottom:none}
 .logs-list .log-name{color:var(--txt);font-family:monospace}
-.logs-list .log-meta{color:var(--muted);font-size:11px;margin:0 12px}
-.logs-list .log-actions a{padding:4px 10px;border-radius:4px;font-size:11px;text-decoration:none;margin-left:6px}
+.logs-list .log-meta{color:var(--muted);font-size:12px;margin:0 12px}
+.logs-list .log-actions a{padding:4px 10px;border-radius:4px;font-size:12px;text-decoration:none;margin-left:6px}
 .logs-list .log-view{background:var(--c-soft);color:var(--txt)}
 .logs-list .log-dl{background:var(--ok-bg);color:var(--ok-txt)}
 .logs-list .log-actions a:hover{opacity:.85}
@@ -292,7 +298,7 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 .notify-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
 .notify-row-lbl{font-size:12.5px;font-weight:600;color:var(--sub)}
 .notify-sep{border:none;border-top:1px solid var(--bdr);margin:9px 0}
-.notify-hint{font-size:11px;line-height:1.45;color:var(--muted);margin:6px 0 0}
+.notify-hint{font-size:12px;line-height:1.45;color:var(--muted);margin:6px 0 0}
 .notify-hint[hidden]{display:none}
 .notify-save{
   width:100%;margin-top:11px;padding:8px 12px;border:none;border-radius:7px;
@@ -331,7 +337,7 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 .notify-snd select:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .notify-play{
   width:28px;height:27px;flex:0 0 auto;padding:0;border:1px solid var(--bdr);
-  border-radius:6px;background:var(--card);color:var(--txt);font-size:11px;
+  border-radius:6px;background:var(--card);color:var(--txt);font-size:12px;
   font-family:inherit;line-height:1;cursor:pointer;transition:background .15s,border-color .15s;
 }
 .notify-play:hover{background:var(--c-soft);border-color:var(--focus-ring)}
@@ -342,7 +348,7 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 }
 .notify-row-vol input[type="range"]:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
 .notify-vol-val{
-  min-width:36px;text-align:right;font-size:11.5px;font-weight:700;color:var(--sub);
+  min-width:36px;text-align:right;font-size:12px;font-weight:700;color:var(--sub);
   font-variant-numeric:tabular-nums;
 }
 
@@ -350,7 +356,7 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 #prog-wrap{height:4px;background:var(--track);overflow:hidden;display:none}
 #prog-bar{height:100%;background:var(--c);width:0%;transition:width .35s ease}
 #prog-label{
-  font-size:11px;font-weight:600;color:var(--sub);padding:5px 24px;
+  font-size:12px;font-weight:600;color:var(--sub);padding:5px 24px;
   background:var(--cl);border-bottom:1px solid var(--bdr);display:none;
 }
 /* ── Live stats strip ── */
@@ -360,7 +366,7 @@ header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
 .live-badge{
   display:inline-flex;align-items:center;justify-content:center;
   background:var(--grn-btn);color:var(--on-accent);
-  font-size:10px;font-weight:800;min-width:18px;height:18px;
+  font-size:12px;font-weight:800;min-width:18px;height:18px;
   border-radius:9px;padding:0 5px;margin-left:5px;vertical-align:middle;
   animation:badge-pop .18s ease;
 }
@@ -430,7 +436,7 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,texta
   box-shadow:0 0 0 3px var(--focus-ring);
 }
 textarea{resize:vertical;min-height:76px;line-height:1.5}
-.hint{font-size:11px;color:var(--muted);margin-top:4px}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
 
 /* ── 2-col rows inside form ── */
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -441,7 +447,7 @@ textarea{resize:vertical;min-height:76px;line-height:1.5}
 .row2-align>div{display:flex;flex-direction:column}
 .row2-align .stepper{margin-top:auto}
 .sec{
-  font-size:10.5px;font-weight:700;color:var(--muted);
+  font-size:12px;font-weight:700;color:var(--muted);
   text-transform:uppercase;letter-spacing:.055em;
   padding-bottom:7px;border-bottom:1px solid var(--bdr);
 }
@@ -489,15 +495,15 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 /* ── Presets ── */
 .preset-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .preset-chip{
-  font-size:11px;padding:4px 10px;border-radius:20px;font-weight:600;
+  font-size:12px;padding:4px 10px;border-radius:20px;font-weight:600;
   border:1.5px solid var(--c);background:var(--cl);color:var(--c);
   cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;
   transition:background .12s;
 }
 .preset-chip:hover{background:var(--cl)}
-.preset-chip .del{color:var(--red);font-size:11px;line-height:1;margin-left:2px;font-weight:700}
+.preset-chip .del{color:var(--red);font-size:12px;line-height:1;margin-left:2px;font-weight:700}
 .btn-sm{
-  font-size:11px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;
+  font-size:12px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;
   background:var(--card);cursor:pointer;color:var(--sub);font-weight:600;
   transition:border-color .12s,color .12s;font-family:inherit;
 }
@@ -620,7 +626,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 .flow-step:active{transform:translateY(0)}
 .flow-step:focus-visible{outline:2px solid var(--c);outline-offset:2px}
 .flow-step b{
-  font-size:10.5px;font-weight:800;color:var(--c);
+  font-size:12px;font-weight:800;color:var(--c);
   letter-spacing:.07em;text-transform:uppercase;
 }
 .flow-step strong{font-size:13.5px;font-weight:700;color:var(--txt);line-height:1.3}
@@ -664,9 +670,9 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 }
 .dot{width:9px;height:9px;border-radius:50%}
 .dot.r{background:var(--err-bdr)}.dot.y{background:var(--warn-bdr)}.dot.g{background:var(--grn)}
-.term-lbl{font-size:11px;font-weight:600;color:var(--muted);margin-left:auto;letter-spacing:.02em}
+.term-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-left:auto;letter-spacing:.02em}
 .term-clear{
-  font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;
+  font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;
   border:1px solid var(--bdr);background:var(--card);color:var(--sub);
   cursor:pointer;font-family:inherit;white-space:nowrap;
   transition:border-color .12s,color .12s,background .12s;
@@ -687,7 +693,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 #log-output::-webkit-scrollbar{width:8px}
 #log-output::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
 #log-output::-webkit-scrollbar-thumb:hover{background:var(--sub)}
-.ll-time{color:var(--muted);font-size:10.5px;margin-right:7px;font-variant-numeric:tabular-nums}
+.ll-time{color:var(--muted);font-size:12px;margin-right:7px;font-variant-numeric:tabular-nums}
 [data-theme="dark"] #log-output::-webkit-scrollbar-thumb{background:var(--bdr-h)}
 [data-theme="dark"] #log-output::-webkit-scrollbar-thumb:hover{background:var(--muted)}
 .ll{
@@ -757,7 +763,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
   position:sticky;top:0;z-index:2;background:var(--card);color:var(--muted);
   padding:9px 12px;text-align:left;cursor:pointer;
   user-select:none;white-space:nowrap;
-  font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
   /* Тень отделяет липкую шапку от строк, которые под неё уезжают: при
      border-collapse рамка едет вместе с содержимым. */
   box-shadow:inset 0 -1px 0 var(--bdr);
@@ -821,7 +827,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 .tbl-cat{color:var(--sub)}
 .social-badge{
   display:inline-block;padding:2px 7px;border-radius:4px;
-  font-size:10px;font-weight:800;color:var(--on-accent);
+  font-size:12px;font-weight:800;color:var(--on-accent);
   margin:1px 2px 1px 0;text-decoration:none;letter-spacing:.01em;
 }
 /* Lead score badge in the results table (green = hot lead) */
@@ -829,7 +835,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
    Поэтому здесь reset кнопочных стилей, а не только плашка. */
 .score-badge{
   display:inline-block;min-width:26px;padding:2px 7px;border-radius:4px;
-  font-size:11px;font-weight:800;text-align:center;line-height:1.35;
+  font-size:12px;font-weight:800;text-align:center;line-height:1.35;
   background:var(--track);color:var(--sub);
   border:none;font-family:inherit;cursor:pointer;
 }
@@ -855,7 +861,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 .score-pop-sum{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:7px}
 /* В разборе оценка — просто цифра, а не ещё одна кнопка: курсор обычный. */
 .score-pop-sum .score-badge{cursor:default;filter:none}
-.score-pop-max{color:var(--sub);font-size:11.5px}
+.score-pop-max{color:var(--sub);font-size:12px}
 .score-pop-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
 .score-pop-list li{color:var(--sub);font-size:12px}
 .score-pop-list li.hit{color:var(--txt)}
@@ -866,7 +872,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
    завершённая история) — в обеих темах цвет берётся из токенов. */
 .new-tag{
   display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;
-  font-size:10px;font-weight:800;line-height:16px;vertical-align:1px;
+  font-size:12px;font-weight:800;line-height:16px;vertical-align:1px;
   background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr);
   white-space:nowrap;
 }
@@ -925,7 +931,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 /* Строка спрятана: данных нет (empty) или колонка соцсетей скрыта
    (col-hidden — фильтр без объекта только путает). */
 .tbl-social-row.empty,.tbl-social-row.col-hidden,.tbl-social-row.socials-off{display:none}
-.social-filter-lbl{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap;margin-right:2px}
+.social-filter-lbl{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap;margin-right:2px}
 /* Цвет плитки фильтра — токен бренда соцсети (--vk/--ig/--tg/--wa): белая
    надпись 11px/800 на исходных брендовых #2CA5E0 (Telegram) и #25D366
    (WhatsApp) давала 2.78:1 и 1.98:1 при пороге WCAG AA 4.5:1 — TG и WA
@@ -941,7 +947,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 .sf-tag[data-key="whatsapp"]{--tile:var(--wa)}
 .sf-tag{
   display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;
-  font-size:11px;font-weight:800;color:var(--on-accent);cursor:pointer;border:none;
+  font-size:12px;font-weight:800;color:var(--on-accent);cursor:pointer;border:none;
   /* Плитка без своей сети (data-key нет) остаётся акцентной, а не прозрачной. */
   background:var(--tile,var(--c));
   opacity:.25;transition:opacity .12s,transform .1s;user-select:none;
@@ -956,7 +962,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
   transform:scale(1.06);
 }
 .sf-clear{
-  font-size:11px;padding:2px 9px;border:1px solid var(--bdr);border-radius:20px;
+  font-size:12px;padding:2px 9px;border:1px solid var(--bdr);border-radius:20px;
   background:none;cursor:pointer;color:var(--muted);margin-left:4px;
   font-weight:600;display:none;transition:border-color .12s,color .12s;
 }
@@ -1004,7 +1010,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 .col-sep{height:1px;background:var(--bdr);margin:4px 10px}
 .col-all-btn{
   width:100%;padding:5px 12px;border:none;background:none;
-  color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;
+  color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;
   text-align:left;border-radius:5px;font-family:inherit;transition:background .1s;
 }
 .col-all-btn:hover{background:var(--cl);color:var(--c)}
@@ -1024,10 +1030,10 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
    `overflow:hidden` на flex-контейнере схлопывал анонимный текстовый
    флекс-элемент в ноль — список столбцов показывал пустые строки. */
 .col-lbl-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.col-hint{padding:2px 12px 6px;color:var(--muted);font-size:10.5px;line-height:1.35}
+.col-hint{padding:2px 12px 6px;color:var(--muted);font-size:12px;line-height:1.35}
 /* Рейтинг: звезда + число отзывов; пустая ячейка — прочерк из JS. */
 .rate-val{font-weight:700;white-space:nowrap}
-.rate-rev{color:var(--muted);margin-left:5px;font-size:11px;font-variant-numeric:tabular-nums}
+.rate-rev{color:var(--muted);margin-left:5px;font-size:12px;font-variant-numeric:tabular-nums}
 .rate-rev::after{content:' отз.'}
 
 /* Кнопка импорта — label, оборачивающий скрытый file input: стилизация
@@ -1084,7 +1090,7 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 .num-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .num-row .lbl{margin:0}
 .num-row input[type="number"]{width:78px;flex:0 0 auto}
-.num-unit{font-size:11.5px;color:var(--sub)}
+.num-unit{font-size:12px;color:var(--sub)}
 
 /* ── Переключатель источника данных ──
    Один источник — Яндекс.Карты; вёрстка оставлена переключателем, чтобы
@@ -1111,17 +1117,17 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 .source-mode-opt[data-engine].active{background:var(--brand);border-color:var(--brand)}
 [data-theme="dark"] .source-mode-opt[data-engine].active{background:var(--brand);border-color:var(--brand);color:var(--on-accent)}
 /* Доступность движка: бейдж под селектором («Chrome найден/не найден»). */
-.engine-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.engine-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
 .engine-badge.ok{background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr)}
 .engine-badge.miss{background:var(--err-bg);color:var(--red);border:1px solid var(--red)}
 /* «?» — кнопка сравнения способов рядом с заголовком. */
-.engine-help-btn{border:1px solid var(--bdr);background:var(--card);color:var(--sub);border-radius:50%;width:18px;height:18px;line-height:1;font-size:11px;font-weight:800;cursor:pointer;padding:0;margin-left:6px;flex:none}
+.engine-help-btn{border:1px solid var(--bdr);background:var(--card);color:var(--sub);border-radius:50%;width:18px;height:18px;line-height:1;font-size:12px;font-weight:800;cursor:pointer;padding:0;margin-left:6px;flex:none}
 .engine-help-btn:hover{background:var(--cl);color:var(--c);border-color:var(--c)}
 /* «рекоменд.» — бейдж рекомендованного варианта в переключателе способа
    парсинга. Текст — var(--ok-on), не --on-accent: в светлой теме бейдж
    --ok-strong (#0b6b45) с белым текстом читается, а в тёмной остаётся
    контрастным за счёт --ok-on. */
-.src-rec{font-size:9px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;background:var(--ok-strong);color:var(--ok-on);border-radius:4px;padding:1px 4px;line-height:1.4}
+.src-rec{font-size:12px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;background:var(--ok-strong);color:var(--ok-on);border-radius:4px;padding:1px 4px;line-height:1.4}
 
 /* ── Grid coverage: radio modes + range sliders ──
    Replaces the old checkbox+steppers block: «Весь город» keeps everything
@@ -1141,13 +1147,13 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
 .grid-mode-opt.active{background:var(--cl)}
 .grid-mode-opt.active .gm-lbl{color:var(--c)}
 .grid-mode-opt.active .gm-dot{border-color:var(--c);background:var(--c);box-shadow:inset 0 0 0 2px var(--card)}
-.grid-mode-opt .gm-note{font-size:10px;color:var(--muted)}
+.grid-mode-opt .gm-note{font-size:12px;color:var(--muted)}
 [data-theme="dark"] .grid-mode-opt{background:var(--panel)}
 [data-theme="dark"] .grid-mode-opt:hover{background:var(--row-hover)}
 [data-theme="dark"] .grid-mode-opt.active{background:var(--row-hover)}
 .grid-slider-row{margin:10px 0 4px}
 .grid-slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
-.grid-slider-sub{font-size:9.5px;line-height:1.45;color:var(--muted);margin:-1px 0 4px}
+.grid-slider-sub{font-size:12px;line-height:1.45;color:var(--muted);margin:-1px 0 4px}
 .grid-slider-val{font-size:12px;color:var(--sub)}
 .grid-slider-val b{color:var(--c);font-size:14px}
 input[type="range"]{width:100%;height:22px;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;margin:0}
@@ -1157,10 +1163,10 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.15)}
 input[type="range"]::-moz-range-track{height:6px;border-radius:3px;background:var(--bdr)}
 input[type="range"]::-moz-range-progress{height:6px;border-radius:3px;background:var(--c)}
 input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--card);border:2.5px solid var(--c)}
-.grid-slider-scale{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:1px}
+.grid-slider-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:1px}
 .grid-hint{
   margin-top:8px;padding:7px 9px;border-radius:7px;background:var(--cl);
-  border-left:3px solid var(--c);font-size:11px;line-height:1.5;color:var(--sub);
+  border-left:3px solid var(--c);font-size:12px;line-height:1.5;color:var(--sub);
   transition:color .25s, border-color .25s;
 }
 .grid-hint .hint-line+.hint-line{margin-top:3px}
@@ -1204,7 +1210,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 }
 #btn-save-key:hover{background:var(--brand-dark)}
 #btn-save-key:disabled{opacity:.45;cursor:default}
-#apikey-status{font-size:11px;margin-top:2px;padding:7px 10px;border-radius:6px;display:none;line-height:1.4;font-weight:600}
+#apikey-status{font-size:12px;margin-top:2px;padding:7px 10px;border-radius:6px;display:none;line-height:1.4;font-weight:600}
 #apikey-status.ok{background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr)}
 #apikey-status.err{background:var(--err-bg);color:var(--err-txt);border:1px solid var(--err-bdr)}
 
@@ -1228,7 +1234,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 .toast.error{background:var(--red-btn)}
 .toast .t-ico{
   width:20px;height:20px;border-radius:50%;flex-shrink:0;
-  display:grid;place-items:center;font-size:11px;font-weight:800;
+  display:grid;place-items:center;font-size:12px;font-weight:800;
   background:rgba(255,255,255,.22);
 }
 [data-theme="dark"] .toast.error{background:var(--err-bdr)}
@@ -1244,17 +1250,17 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
    было инлайновым с прежней палитрой и не переключалось вместе с темой. */
 .map-pop{min-width:190px;max-width:250px;font-family:var(--font-ui);font-size:12px;color:var(--txt)}
 .map-pop-name{font-size:13px;font-weight:700;line-height:1.3}
-.map-pop-cat{color:var(--muted);font-size:11px;margin-top:1px}
-.map-pop-row{font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.35;font-variant-numeric:tabular-nums}
+.map-pop-cat{color:var(--muted);font-size:12px;margin-top:1px}
+.map-pop-row{font-size:12px;color:var(--sub);margin-top:3px;line-height:1.35;font-variant-numeric:tabular-nums}
 .map-pop-soc{margin-top:6px}
 .map-soc{
   display:inline-block;padding:2px 7px;margin:1px 3px 1px 0;border-radius:var(--r-sm);
   background:var(--tile,var(--c));color:var(--on-accent);
-  font-size:10px;font-weight:700;text-decoration:none;transition:filter .12s;
+  font-size:12px;font-weight:700;text-decoration:none;transition:filter .12s;
 }
 .map-soc:hover{filter:brightness(1.1)}
 .map-pop-links{display:flex;flex-direction:column;gap:3px;margin-top:8px}
-.map-pop-links a{font-size:11.5px;color:var(--c);font-weight:600;text-decoration:none}
+.map-pop-links a{font-size:12px;color:var(--c);font-weight:600;text-decoration:none}
 .map-pop-links a:hover{text-decoration:underline}
 .leaflet-container{font-family:var(--font-ui);background:var(--panel)}
 .leaflet-popup-content-wrapper{border:1px solid var(--bdr);border-radius:var(--r-md);box-shadow:var(--sh-lg)}
@@ -1271,7 +1277,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 }
 .stat-card:hover{border-color:var(--bdr-h);box-shadow:var(--sh)}
 .stat-card .num{font-size:30px;font-weight:800;color:var(--c);letter-spacing:-.03em;line-height:1.15}
-.stat-card .lbl{font-size:11px;color:var(--muted);margin-top:6px;font-weight:600}
+.stat-card .lbl{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
 .stat-section{margin-bottom:26px}
 .stat-section h3{font-size:13px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:13px}
 
@@ -1333,7 +1339,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
    color-scheme переключается вместе с темой: без него пикер и его иконка
    остаются светлыми на тёмном фоне. */
 .dyn-month,.dyn-date{
-  width:auto;padding:3px 8px;font-size:11.5px;font-weight:600;
+  width:auto;padding:3px 8px;font-size:12px;font-weight:600;
   font-family:inherit;border:1px solid var(--bdr);border-radius:var(--pill);
   background:var(--panel);color:var(--txt);color-scheme:light;
   transition:border-color .12s,color .12s;
@@ -1349,10 +1355,10 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
    они сжимали те до нечитаемого на телефоне. */
 .dyn-custom{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:-5px 0 13px}
 .dyn-custom[hidden]{display:none}
-.dyn-custom-lbl{font-size:11.5px;color:var(--muted);font-weight:600}
+.dyn-custom-lbl{font-size:12px;color:var(--muted);font-weight:600}
 .dyn-apply{
   border:1px solid var(--brand);background:var(--brand);color:var(--on-accent);
-  border-radius:var(--pill);padding:3px 12px;font-size:11.5px;font-weight:700;
+  border-radius:var(--pill);padding:3px 12px;font-size:12px;font-weight:700;
   font-family:inherit;cursor:pointer;transition:opacity .12s;
 }
 .dyn-apply:hover{opacity:.88}
@@ -1361,7 +1367,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 .dyn-ranges{display:inline-flex;gap:2px;padding:2px;border-radius:var(--pill);background:var(--panel);border:1px solid var(--bdr)}
 .dyn-range{
   border:none;background:transparent;color:var(--sub);font-family:inherit;
-  font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:var(--pill);cursor:pointer;
+  font-size:12px;font-weight:600;padding:3px 10px;border-radius:var(--pill);cursor:pointer;
   transition:background .12s,color .12s;
 }
 .dyn-range:hover{background:var(--row-hover);color:var(--txt)}
@@ -1382,7 +1388,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 .dyn-yaxis{position:absolute;left:0;top:18px;bottom:30px;width:34px}
 .dyn-tick{
   position:absolute;right:0;transform:translateY(50%);
-  font-size:9.5px;font-weight:600;color:var(--muted);
+  font-size:12px;font-weight:600;color:var(--muted);
   font-variant-numeric:tabular-nums;white-space:nowrap;
 }
 .dyn-area{position:relative}
@@ -1445,7 +1451,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
    поэтому подпись едет вместе со столбцом и не отрывается от него. */
 .dyn-vlab{
   position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;
-  font-size:9.5px;line-height:12px;font-weight:700;color:var(--sub);
+  font-size:12px;line-height:12px;font-weight:700;color:var(--sub);
   font-variant-numeric:tabular-nums;pointer-events:none;
 }
 .dyn-series.dyn-found .dyn-vlab{color:var(--c)}
@@ -1460,8 +1466,8 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 .dyn-chart.is-dense .dyn-vlab{display:none}
 
 .dyn-day{height:30px;padding-top:5px;display:flex;flex-direction:column;align-items:center;line-height:1.25}
-.dyn-wd{font-size:10px;font-weight:700;color:var(--muted)}
-.dyn-dm{font-size:10.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.dyn-wd{font-size:12px;font-weight:700;color:var(--muted)}
+.dyn-dm{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
 
 /* ── Подсказка при наведении ────────────────────────────────────────────
    position:fixed и живёт в <body>, а не внутри графика: подсказку резали и
@@ -1477,13 +1483,13 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
   max-width:min(240px,calc(100vw - 16px));
   min-width:132px;padding:8px 10px;border-radius:var(--r-sm);
   background:var(--card);border:1px solid var(--bdr-h);box-shadow:var(--sh-lg);
-  font-size:11.5px;color:var(--sub);
+  font-size:12px;color:var(--sub);
 }
 .dyn-tip.is-on{opacity:1}
 .dyn-tip-day{font-weight:800;color:var(--txt);font-size:12px;margin-bottom:5px}
 .dyn-tip-row{display:flex;align-items:center;gap:6px;margin-top:3px}
 .dyn-tip-row b{margin-left:auto;color:var(--txt);font-variant-numeric:tabular-nums}
-.dyn-tip-note{margin-top:6px;color:var(--muted);font-size:10.5px}
+.dyn-tip-note{margin-top:6px;color:var(--muted);font-size:12px}
 
 .dyn-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--sub)}
 /* Даты показанного периода — справа от легенды: у месяца и произвольного
@@ -1497,7 +1503,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
    «какой день лучший» и «сколько найденного уже разобрано». */
 .dyn-facts{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
 .dyn-fact{
-  font-size:11px;color:var(--sub);background:var(--card);
+  font-size:12px;color:var(--sub);background:var(--card);
   border:1px solid var(--bdr);border-radius:var(--pill);padding:3px 10px;
 }
 .dyn-fact b{color:var(--txt)}
@@ -1509,7 +1515,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 .dyn-fact-best b{color:var(--grn)}
 .dyn-fact-share b{font-weight:800}
 /* О чём график умалчивает: отметки без даты и обрезанный период. */
-.dyn-note{margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.5}
+.dyn-note{margin-top:8px;font-size:12px;color:var(--muted);line-height:1.5}
 .dyn-empty{color:var(--muted);font-size:12.5px;padding:4px 2px}
 
 /* «Сегодня» по часам и одинокий дневной столбец: узкий столбец посреди
@@ -1548,7 +1554,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 #output-advanced.open .tiles-inner{padding-top:8px}
 #output-advanced .lbl{margin-top:4px}
 .out-dir-err{
-  font-size:11.5px;font-weight:700;line-height:1.45;
+  font-size:12px;font-weight:700;line-height:1.45;
   background:var(--err-bg);border:1px solid var(--err-bdr);color:var(--err-txt);
   border-radius:7px;padding:6px 9px;
 }
@@ -1587,7 +1593,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 .sender-config-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
 .sender-config-hdr h3{font-size:13px;font-weight:700;color:var(--c);margin:0}
 .sender-config-toggle{
-  font-size:11px;color:var(--muted);padding:3px 9px;
+  font-size:12px;color:var(--muted);padding:3px 9px;
   border:1px solid var(--bdr);border-radius:5px;
   background:none;cursor:pointer;font-weight:600;font-family:inherit;
   transition:border-color .12s,color .12s;
@@ -1603,7 +1609,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
   display:flex;flex-direction:column;gap:10px;
 }
 .sender-part-title{
-  font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+  font-size:12px;text-transform:uppercase;letter-spacing:.06em;
   color:var(--c);font-weight:800;
 }
 .sender-advanced summary{
@@ -1611,7 +1617,7 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
   font-size:12px;font-weight:700;color:var(--sub);padding:2px 0;
 }
 .sender-advanced summary::-webkit-details-marker{display:none}
-.sender-advanced summary::before{content:"▶  ";font-size:10px}
+.sender-advanced summary::before{content:"▶  ";font-size:12px}
 details[open].sender-advanced summary::before{content:"▼  "}
 #btn-send-run{
   flex:1;padding:11px 15px;border:none;border-radius:var(--r-sm);
@@ -1655,13 +1661,13 @@ details[open].sender-advanced summary::before{content:"▼  "}
    VERSION BADGE
    ════════════════════════════════ */
 #app-version{
-  font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;
+  font-size:12px;font-weight:700;padding:3px 8px;border-radius:4px;
   background:rgba(255,255,255,.14);color:rgba(255,255,255,.8);
   letter-spacing:.02em;font-family:monospace;
 }
 /* Метка сборки разработчика — сборку видно с первого взгляда */
 #app-dev{
-  font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;
+  font-size:12px;font-weight:800;padding:3px 8px;border-radius:4px;
   background:var(--warn-bdr);color:var(--txt);letter-spacing:.04em;
   font-family:monospace;text-transform:uppercase;
 }
@@ -1704,7 +1710,7 @@ details[open].sender-advanced summary::before{content:"▼  "}
 .city-input-wrap .city-clear{
   position:absolute;right:8px;top:50%;transform:translateY(-50%);
   width:18px;height:18px;border:none;border-radius:50%;
-  background:var(--bdr);color:var(--sub);font-size:11px;font-weight:800;
+  background:var(--bdr);color:var(--sub);font-size:12px;font-weight:800;
   cursor:pointer;display:none;align-items:center;justify-content:center;
   transition:background .12s;
 }
@@ -1729,9 +1735,9 @@ details[open].sender-advanced summary::before{content:"▼  "}
 .city-option.selected{background:var(--cl);color:var(--c);font-weight:700}
 .city-option-top{display:flex;align-items:center;justify-content:space-between;width:100%}
 .city-option-name{font-size:13px;font-weight:500;color:var(--txt)}
-.city-option-pop{font-size:11px;color:var(--muted);font-weight:700;flex-shrink:0;margin-left:8px}
+.city-option-pop{font-size:12px;color:var(--muted);font-weight:700;flex-shrink:0;margin-left:8px}
 .city-option-hist{
-  font-size:10.5px;color:var(--ok,var(--tip-ok));font-weight:600;
+  font-size:12px;color:var(--ok,var(--tip-ok));font-weight:600;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;
   display:flex;align-items:center;gap:3px;min-height:13px;
 }
@@ -1746,7 +1752,7 @@ details[open].sender-advanced summary::before{content:"▼  "}
 .spheres-btn{
   flex-shrink:0;display:inline-flex;align-items:center;gap:4px;
   padding:2px 9px;border:1px solid var(--bdr);border-radius:999px;
-  background:var(--field);color:var(--txt);font:inherit;font-size:11px;
+  background:var(--field);color:var(--txt);font:inherit;font-size:12px;
   font-weight:600;cursor:pointer;transition:background .12s,border-color .12s;
 }
 .spheres-btn:hover{background:var(--row-hover);border-color:var(--c)}
@@ -1777,7 +1783,7 @@ details[open].sender-advanced summary::before{content:"▼  "}
 
 /* «Только данные компании» в блоке персональных данных */
 .pd-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
-.pd-actions-note{font-size:11px;color:var(--muted);margin:0}
+.pd-actions-note{font-size:12px;color:var(--muted);margin:0}
 
 [data-theme="dark"] .city-input-wrap input{background:var(--panel);border-color:var(--bdr);color:var(--txt)}
 [data-theme="dark"] .city-input-wrap input:focus{background:var(--tip-field)}
@@ -1817,7 +1823,7 @@ details[open].sender-advanced summary::before{content:"▼  "}
 .donut .donut-track{stroke:var(--track)}
 .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
 .donut-center b{font-size:22px;line-height:1.1;color:var(--txt);font-variant-numeric:tabular-nums}
-.donut-center span{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.donut-center span{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
 .donut-legend{display:flex;flex-direction:column;gap:5px;width:100%}
 .donut-legend-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--sub)}
 .donut-legend-row b{margin-left:auto;color:var(--txt);font-variant-numeric:tabular-nums}
@@ -1931,14 +1937,14 @@ details[open].sender-advanced summary::before{content:"▼  "}
 .cl-ver{font-size:13px;font-weight:800;color:var(--c);display:flex;align-items:center;gap:7px}
 .cl-name{font-size:12.5px;font-weight:700;color:var(--txt);line-height:1.4}
 .cl-sum{font-size:12.5px;color:var(--sub);line-height:1.55}
-.cl-more{font-size:11.5px;font-weight:700;color:var(--c)}
-.cl-date{font-size:11px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.cl-more{font-size:12px;font-weight:700;color:var(--c)}
+.cl-date{font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
 .cl-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:13px}
 .cl-foot{justify-content:space-between}
 /* Одна кнопка (список версий) — у правого края, как в остальных окнах. */
 .cl-foot .m-cancel:only-child{margin-left:auto}
 .cl-tag{
-  font-size:10px;font-weight:800;padding:1px 8px;border-radius:20px;
+  font-size:12px;font-weight:800;padding:1px 8px;border-radius:20px;
   background:var(--brand);color:var(--on-accent);letter-spacing:.02em;
 }
 .cl-tag.cl-yours{background:var(--grn)}
@@ -2126,8 +2132,10 @@ html.theme-anim #log-output{
    контраст текста и бейджей выше 4.5:1. */
 [data-theme="dark"] header{background:var(--hdr)}
 [data-theme="dark"] .hdr-right > button,
+[data-theme="dark"] .hdr-right .hdr-tools > button,
 [data-theme="dark"] .hdr-right .notify-wrap > button{border-color:rgba(255,255,255,.34);color:var(--txt)}
 [data-theme="dark"] .hdr-right > button:hover,
+[data-theme="dark"] .hdr-right .hdr-tools > button:hover,
 [data-theme="dark"] .hdr-right .notify-wrap > button:hover{background:rgba(255,255,255,.1);opacity:1}
 [data-theme="dark"] #status-badge.done{background:rgba(255,255,255,.16);color:var(--on-accent);border-color:rgba(255,255,255,.30)}
 [data-theme="dark"] input[type=text],[data-theme="dark"] input[type=number],
@@ -2199,7 +2207,7 @@ html.theme-anim #log-output{
   .notify-snd{flex:1 1 auto}
   .notify-snd select{max-width:none;flex:1 1 auto;min-width:0}
   .notify-row-vol input[type="range"]{flex:1 1 auto}
-  .tab-btn{padding:8px 11px;font-size:11px}
+  .tab-btn{padding:8px 11px;font-size:12px}
   aside{position:static}
   details.advanced-settings>.dbody{grid-template-columns:1fr}
   .sender-row3{grid-template-columns:1fr 1fr}
@@ -2230,14 +2238,14 @@ html.theme-anim #log-output{
 }
 .acc-hdr:focus-visible{outline:2px solid var(--c);outline-offset:-2px}
 .acc-num{
-  font-size:11px;font-weight:800;color:var(--c);
+  font-size:12px;font-weight:800;color:var(--c);
   letter-spacing:.06em;
   width:26px;height:26px;border-radius:7px;flex-shrink:0;
   display:grid;place-items:center;
   background:var(--cl);
 }
 .acc-title{flex:1;font-size:13px;font-weight:800;color:var(--txt);letter-spacing:-.01em}
-.acc-sub{font-size:10.5px;font-weight:600;color:var(--muted);margin-left:5px;letter-spacing:0}
+.acc-sub{font-size:12px;font-weight:600;color:var(--muted);margin-left:5px;letter-spacing:0}
 .acc-chev{
   width:9px;height:9px;flex-shrink:0;
   border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
@@ -2278,7 +2286,7 @@ html.theme-anim #log-output{
 .flt-group{padding-top:16px}
 .flt-group+.flt-group{border-top:1px solid var(--bdr);margin-top:16px}
 .flt-group-title{
-  font-size:11px;font-weight:800;color:var(--muted);
+  font-size:12px;font-weight:800;color:var(--muted);
   text-transform:uppercase;letter-spacing:.05em;line-height:1.25;
   padding:0 0 8px 9px;border-left:3px solid var(--c);
 }
@@ -2299,7 +2307,7 @@ html.theme-anim #log-output{
    а вторая строка объясняет охват данных (источник без дат и т.п.). */
 .ct-count{
   padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;
-  background:var(--row-alt);font-size:11px;line-height:1.5;color:var(--muted);
+  background:var(--row-alt);font-size:12px;line-height:1.5;color:var(--muted);
 }
 .ct-count.on{border-color:var(--c);color:var(--sub)}
 .ct-count b{color:var(--txt);font-weight:700}
@@ -2388,7 +2396,7 @@ html.theme-anim #log-output{
   flex:0 0 auto;width:38px;padding:0;font-size:17px;font-weight:800;line-height:1;
 }
 .bl-input-wrap #btn-blacklist-add:hover:not(:disabled){border-color:var(--c);color:var(--c)}
-.bl-err{font-size:11px;font-weight:600;color:var(--err-strong);margin-top:6px}
+.bl-err{font-size:12px;font-weight:600;color:var(--err-strong);margin-top:6px}
 .bl-err[hidden]{display:none}
 /* Дропдаун «Загрузить шаблон»: кнопка + панель со списками. Кастомный,
    потому что у нативного select не бывает кнопок ✎/🗑 в опциях. */
@@ -2411,7 +2419,7 @@ html.theme-anim #log-output{
 }
 .bl-dd-panel[hidden]{display:none}
 .bl-dd-group{
-  font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
   color:var(--muted);padding:6px 8px 3px;
 }
 .bl-dd-group-gap{margin-top:4px;border-top:1px dashed var(--bdr);padding-top:8px}
@@ -2421,22 +2429,22 @@ html.theme-anim #log-output{
   font-family:inherit;cursor:pointer;transition:background .12s,color .12s;
 }
 .bl-dd-item:hover{background:var(--c-soft);color:var(--c)}
-.bl-dd-n{color:var(--muted);font-size:11px}
+.bl-dd-n{color:var(--muted);font-size:12px}
 .bl-dd-row{display:flex;align-items:center;gap:4px}
 .bl-dd-row .bl-dd-apply{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bl-dd-actions{display:flex;gap:3px;flex:0 0 auto;opacity:0;transition:opacity .15s}
 .bl-dd-row:hover .bl-dd-actions,.bl-dd-row:focus-within .bl-dd-actions{opacity:1}
-.bl-dd-empty{padding:6px 8px;font-size:11.5px;color:var(--muted);line-height:1.5}
-.bl-dd-note{padding:6px 8px 2px;font-size:10.5px;color:var(--muted);border-top:1px dashed var(--bdr);margin-top:4px}
+.bl-dd-empty{padding:6px 8px;font-size:12px;color:var(--muted);line-height:1.5}
+.bl-dd-note{padding:6px 8px 2px;font-size:12px;color:var(--muted);border-top:1px dashed var(--bdr);margin-top:4px}
 .bl-tpl-act{
   display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
   border:1px solid var(--bdr);border-radius:6px;background:transparent;color:var(--sub);
-  font:inherit;font-size:11px;cursor:pointer;transition:all .12s;
+  font:inherit;font-size:12px;cursor:pointer;transition:all .12s;
 }
 .bl-tpl-act:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
 .bl-tpl-del:hover{border-color:var(--err-strong);color:var(--err-strong);background:var(--err-bg)}
 .bl-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
-.bl-actions .btn-sm{width:100%;padding:9px 6px;font-size:11.5px}
+.bl-actions .btn-sm{width:100%;padding:9px 6px;font-size:12px}
 
 /* ══════════════════════════════════════════════════════════
    2. TECH BOX (grey panel for technical parameters)
@@ -2446,8 +2454,8 @@ html.theme-anim #log-output{
   padding:12px;display:flex;flex-direction:column;gap:9px;
 }
 [data-theme="dark"] .tech-box{background:var(--term);border-color:var(--bdr)}
-.tech-box-title{font-size:11px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
-.tech-box-note{font-size:11px;color:var(--muted);line-height:1.5;margin:0}
+.tech-box-title{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
+.tech-box-note{font-size:12px;color:var(--muted);line-height:1.5;margin:0}
 
 /* ── Stepper (− / input / +) ── */
 .stepper{display:flex;align-items:stretch;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;background:var(--card)}
@@ -2467,7 +2475,7 @@ html.theme-anim #log-output{
 .stp-btn:hover{background:var(--cl);color:var(--c)}
 .stp-btn:active{background:var(--cl);color:var(--cd)}
 [data-theme="dark"] .stp-btn{background:var(--panel);color:var(--sub)}
-.lbl-note{font-weight:500;color:var(--muted);text-transform:none;font-size:11px}
+.lbl-note{font-weight:500;color:var(--muted);text-transform:none;font-size:12px}
 
 /* ══════════════════════════════════════════════════════════
    3. SOCIAL NETWORK TILES
@@ -2484,13 +2492,13 @@ html.theme-anim #log-output{
 /* Верхний отступ только у ОТКРЫТОЙ секции: в закрытом виде (grid-template-rows
    0fr) тот же padding давал 2-пиксельную полоску содержимого. */
 .tiles-reveal.open>.tiles-inner{padding-top:2px}
-.tiles-title{font-size:11px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.tiles-title{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
 .tiles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:7px}
 .soc-tile{
   display:flex;flex-direction:column;align-items:center;gap:5px;
   padding:10px 6px;border:1px solid var(--bdr);border-radius:10px;
   background:var(--card);cursor:pointer;user-select:none;
-  font-size:11.5px;font-weight:700;color:var(--sub);text-align:center;
+  font-size:12px;font-weight:700;color:var(--sub);text-align:center;
   transition:border-color .13s,background .13s,color .13s,transform .13s,box-shadow .13s;
 }
 .soc-tile:hover{border-color:var(--tile,var(--bdr));transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.07)}
@@ -2500,21 +2508,21 @@ html.theme-anim #log-output{
   width:26px;height:26px;border-radius:8px;flex-shrink:0;
   display:grid;place-items:center;
   background:var(--tile,var(--bdr));color:var(--on-accent);
-  font-size:11px;font-weight:800;letter-spacing:.01em;
+  font-size:12px;font-weight:800;letter-spacing:.01em;
 }
 .soc-mark{
   width:15px;height:15px;border-radius:5px;border:1px solid var(--bdr);
-  display:grid;place-items:center;font-size:9px;line-height:1;
+  display:grid;place-items:center;font-size:12px;line-height:1;
   color:transparent;transition:all .13s;
 }
 .soc-tile.on .soc-mark::after{content:"✓";color:var(--on-accent)}
 /* Compact variant used in step 02 — square, icon + short name + checkmark */
 .soc-tile-sm{padding:8px 4px;gap:4px;border-radius:9px}
 .soc-tile-sm .soc-name{
-  font-size:10px;font-weight:600;line-height:1.2;
+  font-size:12px;font-weight:600;line-height:1.2;
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.soc-tile-sm .soc-ico{width:24px;height:24px;border-radius:7px;font-size:10px}
+.soc-tile-sm .soc-ico{width:24px;height:24px;border-radius:7px;font-size:12px}
 .soc-tile-sm .soc-mark{width:13px;height:13px;border-radius:4px}
 
 /* ══════════════════════════════════════════════════════════
@@ -2547,7 +2555,7 @@ html.theme-anim #log-output{
    5. INLINE VALIDATION
    ══════════════════════════════════════════════════════════ */
 .field-error{
-  font-size:11px;font-weight:700;color:var(--red);
+  font-size:12px;font-weight:700;color:var(--red);
   margin-top:5px;display:flex;align-items:center;gap:4px;
   animation:err-in .18s ease;
 }
@@ -2600,9 +2608,9 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .hist-status.unknown{background:var(--track);color:var(--muted)}
 .hist-head{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .hist-title{font-size:13.5px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hist-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:600}
+.hist-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-weight:600}
 .hist-meta b{color:var(--sub);font-weight:700}
-.hist-chip{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;letter-spacing:.02em;flex-shrink:0}
+.hist-chip{font-size:12px;font-weight:800;padding:2px 8px;border-radius:20px;letter-spacing:.02em;flex-shrink:0}
 .hist-chip.completed{background:var(--ok-bg);color:var(--ok-txt)}
 .hist-chip.stopped{background:var(--err-bg);color:var(--err-txt)}
 .hist-chip.unknown{background:var(--track);color:var(--muted)}
@@ -2617,7 +2625,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .hist-body>div{overflow:hidden;min-height:0}
 .hist-detail{padding:2px 15px 13px;border-top:1px solid var(--bdr)}
 .hist-dl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 2px}
-.hist-dl-lbl{font-size:11px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
+.hist-dl-lbl{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
 .hist-dl-all{
   display:inline-flex;align-items:center;gap:5px;padding:6px 12px;
   border-radius:7px;border:1.5px solid var(--brand);background:var(--brand);
@@ -2629,7 +2637,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .hist-dl{
   display:inline-flex;align-items:center;gap:5px;padding:5px 11px;
   border-radius:7px;border:1px solid var(--bdr);background:var(--card);
-  color:var(--sub);font-size:11.5px;font-weight:700;cursor:pointer;text-decoration:none;
+  color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;
   transition:border-color .13s,color .13s;font-family:inherit;
 }
 .hist-dl:hover{border-color:var(--c);color:var(--c)}
@@ -2674,7 +2682,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .diag-modal{max-width:620px;width:min(620px,94vw);max-height:86vh;overflow:auto}
 .diag-lead{font-size:12.5px;line-height:1.55;color:var(--sub);margin:0 0 8px}
 .diag-note{
-  font-size:11.5px;line-height:1.5;color:var(--muted);
+  font-size:12px;line-height:1.5;color:var(--muted);
   background:var(--row-alt);border:1px solid var(--bdr);border-radius:8px;
   padding:8px 10px;margin:0 0 12px;
 }
@@ -2692,7 +2700,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
    в тексте — мелкая зелёная/жёлтая надпись не проходит по контрасту. */
 .diag-legend{
   display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
-  margin:0 0 12px;font-size:11.5px;color:var(--sub);
+  margin:0 0 12px;font-size:12px;color:var(--sub);
 }
 .diag-legend-item{
   display:inline-flex;align-items:center;gap:5px;
@@ -2707,7 +2715,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;
   margin:10px 0 14px;padding-top:10px;border-top:1px solid var(--bdr);
 }
-.diag-copy-hint{font-size:11px;line-height:1.45;color:var(--muted);flex:1 1 180px}
+.diag-copy-hint{font-size:12px;line-height:1.45;color:var(--muted);flex:1 1 180px}
 .diag-note code{
   font-family:var(--mono, ui-monospace, SFMono-Regular, Consolas, monospace);
   font-size:.95em;background:var(--card);border:1px solid var(--bdr);
@@ -2715,7 +2723,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 }
 .diag-group{margin-bottom:14px}
 .diag-group-title{
-  font-size:11px;font-weight:800;color:var(--muted);
+  font-size:12px;font-weight:800;color:var(--muted);
   text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;
 }
 .diag-row{
@@ -2730,11 +2738,11 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .diag-title{font-size:13px;font-weight:700;color:var(--txt);line-height:1.35}
 /* Статус словами — для скринридера: цвет и цвет полосы ему не видны. */
 .diag-sr{
-  margin-left:auto;flex:0 0 auto;font-size:10.5px;font-weight:700;
+  margin-left:auto;flex:0 0 auto;font-size:12px;font-weight:700;
   text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
 }
 .diag-detail{font-size:12px;line-height:1.5;color:var(--sub);margin-top:4px;word-break:break-word}
-.diag-hint{font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:4px}
+.diag-hint{font-size:12px;line-height:1.5;color:var(--muted);margin-top:4px}
 .diag-empty{font-size:12.5px;color:var(--muted);padding:12px 0}
 @media(max-width:860px){
   .diag-modal{max-height:92vh;padding:18px 16px}
@@ -2807,11 +2815,11 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
    из _ghPillCss (09-ui-extras.js) — там же выбирается контрастный текст. */
 .gh-pill{
   display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
-  font-size:11px;font-weight:700;line-height:1.5;white-space:nowrap;
+  font-size:12px;font-weight:700;line-height:1.5;white-space:nowrap;
 }
 .rep-label-opt .gh-pill{justify-self:start}
 .rep-checks{display:flex;flex-direction:column;gap:5px;margin:2px 0 4px}
-.rep-sec-lbl{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;
+.rep-sec-lbl{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;
   letter-spacing:.05em;margin:12px 0 4px}
 .rep-sec-lbl label{cursor:pointer}
 .report-modal input[type="text"],.report-modal input[type="password"],
@@ -2824,14 +2832,14 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .rep-preview-wrap summary::before{content:'▸ ';color:var(--muted)}
 .rep-preview-wrap[open] summary::before{content:'▾ '}
 .rep-preview{margin:7px 0 2px;max-height:230px;overflow:auto;white-space:pre-wrap;
-  word-break:break-word;font-size:11.5px;line-height:1.45;color:var(--sub);
+  word-break:break-word;font-size:12px;line-height:1.45;color:var(--sub);
   background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-sm);padding:8px 9px;
   scrollbar-width:thin}
 .rep-shot{border:1px dashed var(--bdr-h);border-radius:var(--r-sm);padding:12px 10px;
   font-size:12px;color:var(--sub);text-align:center;cursor:pointer;transition:border-color .14s,background .14s}
 .rep-shot:hover,.rep-shot:focus-visible{border-color:var(--c);background:var(--cl)}
 .rep-shot img{max-width:100%;max-height:200px;border-radius:var(--r-sm);display:block;margin:0 auto 6px}
-.rep-shot-note{font-size:11.5px;color:var(--muted);margin-top:5px}
+.rep-shot-note{font-size:12px;color:var(--muted);margin-top:5px}
 /* Кнопка копирования — вне rep-shot (у того роль button, и кнопка внутри
    была бы вложенным элементом управления). [hidden] глобально её гасит. */
 .rep-shot-actions{display:flex;gap:8px;margin-top:8px}
@@ -2947,7 +2955,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   line-height:1;transition:all .12s;font-family:inherit;
 }
 .preset-dd-del:hover{background:rgba(196,64,64,.12);color:var(--red)}
-.preset-block-hint{font-size:11px;color:var(--muted);line-height:1.45;margin-top:7px}
+.preset-block-hint{font-size:12px;color:var(--muted);line-height:1.45;margin-top:7px}
 [data-theme="dark"] .preset-block{background:var(--panel);border-color:var(--bdr)}
 [data-theme="dark"] .preset-dd-btn{background:var(--term)}
 [data-theme="dark"] .preset-dd-btn.has-selection{background:var(--hdr)}
@@ -3022,21 +3030,21 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* ══════════════════════════════════════════════════════════
    Multi-city progress panel (top bar): statuses, %, found count
    ══════════════════════════════════════════════════════════ */
-#cp-summary{font-size:11.5px;color:var(--sub);font-weight:600;margin-bottom:6px}
+#cp-summary{font-size:12px;color:var(--sub);font-weight:600;margin-bottom:6px}
 #cp-summary b{color:var(--txt)}
 .cp-item{display:flex;align-items:center;gap:6px;min-width:190px}
 .cp-ico{font-size:12px;width:15px;text-align:center;flex-shrink:0}
-.cp-name{font-weight:600;color:var(--txt);font-size:11px;min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-name{font-weight:600;color:var(--txt);font-size:12px;min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 [data-theme="dark"] .cp-name{color:var(--sub)}
 .cp-bar{flex:1;height:6px;background:var(--track);border-radius:3px;min-width:60px;max-width:120px}
 [data-theme="dark"] .cp-bar{background:var(--bdr)}
 .cp-fill{height:100%;border-radius:3px;transition:width .3s}
-.cp-val{font-size:10px;color:var(--sub);min-width:78px;text-align:right;white-space:nowrap}
+.cp-val{font-size:12px;color:var(--sub);min-width:78px;text-align:right;white-space:nowrap}
 .cp-found{color:var(--muted)}
 .cp-queued .cp-fill{background-image:repeating-linear-gradient(45deg,var(--bdr) 0 4px,transparent 4px 8px)}
 
 /* Developer «tech» lines behind the log-details toggle */
-.ll.tech{color:var(--muted);font-style:italic;font-size:11px}
+.ll.tech{color:var(--muted);font-style:italic;font-size:12px}
 .ll.tech::before{content:'⌙ ';opacity:.7}
 [data-theme="dark"] .ll.tech{color:var(--sub)}
 #btn-tech-details{margin-left:auto}
@@ -3125,7 +3133,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   overflow:hidden;background:var(--card);flex-shrink:0;
 }
 .rt-btn{
-  border:none;background:transparent;padding:7px 13px;font-size:11.5px;
+  border:none;background:transparent;padding:7px 13px;font-size:12px;
   font-weight:700;color:var(--sub);cursor:pointer;font-family:inherit;
   border-right:1px solid var(--bdr);transition:background .12s,color .12s;
   white-space:nowrap;
@@ -3149,7 +3157,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 
 /* ── Group titles (📥 Сбор данных / 📤 Вывод и фильтрация) ── */
 .group-title{
-  font-size:10.5px;
+  font-size:12px;
   font-weight:700;
   text-transform:uppercase;
   color:var(--muted);
@@ -3174,7 +3182,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .api-icon{font-size:14px;line-height:1}
 .api-title{flex:0 1 auto;font-size:13px;font-weight:800;color:var(--txt);letter-spacing:-.01em}
 .api-badge{
-  flex:1;text-align:right;font-size:11px;font-weight:800;
+  flex:1;text-align:right;font-size:12px;font-weight:800;
   padding:3px 9px;border-radius:20px;letter-spacing:.01em;white-space:nowrap;
 }
 .score-presets{display:flex;gap:6px;margin:4px 0 6px}
@@ -3199,7 +3207,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   border-bottom:1px dashed var(--bdr);
 }
 .sf-row b{color:var(--c);font-size:13px}
-.sf-total{padding-top:8px;font-size:11.5px;color:var(--muted)}
+.sf-total{padding-top:8px;font-size:12px;color:var(--muted)}
 .api-badge.ok{background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr)}
 .api-badge.warn{background:var(--warn-bg);color:var(--warn-strong);border:1px solid var(--warn-bdr)}
 .key-dot{
@@ -3208,7 +3216,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 }
 .key-dot.on{background:var(--wa)}
 .key-where{
-  font-size:11px;color:var(--c);text-decoration:none;margin-top:3px;align-self:flex-start;
+  font-size:12px;color:var(--c);text-decoration:none;margin-top:3px;align-self:flex-start;
 }
 .key-where:hover{text-decoration:underline}
 .api-badge.err{background:var(--err-bg);color:var(--err-txt);border:1px solid var(--err-bdr)}
@@ -3259,6 +3267,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 [data-theme="dark"] .btn-sm.warn:hover,[data-theme="dark"] .files-bulk-arch:hover{
   background:var(--warn-on);border-color:var(--warn-strong);color:var(--warn-strong)}
 [data-theme="dark"] .hdr-right > button,
+[data-theme="dark"] .hdr-right .hdr-tools > button,
 [data-theme="dark"] .hdr-right .notify-wrap > button{border-color:rgba(255,255,255,.3)}
 /* Dark theme header is teal, so a 15%-alpha badge washed out (contrast ~1.5:1).
    Solid fills with dark text keep every state readable on the teal bar. */
@@ -3307,7 +3316,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .subt-spacer{flex:1}
 .subt-link{
   padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;background:transparent;
-  color:var(--muted);font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
   transition:border-color .12s,color .12s,background .12s;margin-bottom:6px;
 }
 .subt-link:hover{border-color:var(--c);color:var(--c)}
@@ -3334,7 +3343,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .bulk-icon{font-size:15px}
 .bulk-title{font-size:13px;font-weight:800;color:var(--txt);white-space:nowrap}
 .bulk-sub{
-  font-size:11.5px;color:var(--sub);font-weight:600;
+  font-size:12px;color:var(--sub);font-weight:600;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .bulk-collapse{
@@ -3380,19 +3389,19 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .bulk-stats{font-size:12px;color:var(--muted);font-weight:600}
 .bulk-stats b{color:var(--txt);font-size:13px}
 /* Порядок обхода = порядок строк таблицы (иначе вкладки открывались вразброс) */
-.bulk-tpl-note{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
-.bulk-order{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px}
+.bulk-tpl-note{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+.bulk-order{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
 .bulk-order:empty{display:none}
 /* Статус автосохранения отметок «Просмотрено» */
 .rev-save-row{min-height:16px}
-.rev-save-status{font-size:11.5px;font-weight:700}
+.rev-save-status{font-size:12px;font-weight:700}
 .rev-save-status.ok{color:var(--grn)}
 .rev-save-status.dirty,.rev-save-status.busy{color:var(--yel)}
 .rev-save-status.err{color:var(--red)}
 .bulk-progress{display:flex;align-items:center;gap:9px}
 .bulk-progress-bar{flex:1;height:7px;border-radius:4px;background:var(--bdr);overflow:hidden}
 .bulk-progress-fill{height:100%;width:0;background:var(--c);transition:width .25s}
-.bulk-progress-txt{font-size:11.5px;color:var(--sub);font-weight:700;white-space:nowrap}
+.bulk-progress-txt{font-size:12px;color:var(--sub);font-weight:700;white-space:nowrap}
 .bulk-reset{
   border:1px solid var(--bdr);background:transparent;border-radius:5px;color:var(--sub);
   cursor:pointer;font-size:12px;padding:1px 7px;font-family:inherit;
@@ -3416,7 +3425,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 }
 .city-tab:hover{color:var(--c)}
 .city-tab.active{color:var(--c);border-bottom-color:var(--c);font-weight:800}
-.city-count{color:var(--muted);font-size:11px;font-weight:700}
+.city-count{color:var(--muted);font-size:12px;font-weight:700}
 .city-tab.active .city-count{color:var(--c)}
 /* Вкладка города вместе со звёздочкой: звезда — отдельный элемент РЯДОМ с
    кнопкой (вложенные кнопки невалидны), клик по ней только закрепляет город. */
@@ -3442,16 +3451,16 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 }
 #results-table tr.city-group .fav-star{vertical-align:-5px}
 .city-group-name{margin:0 6px 0 2px}
-.city-group-count{color:var(--muted);font-weight:700;font-size:11px}
+.city-group-count{color:var(--muted);font-weight:700;font-size:12px}
 
 /* Прогресс обхода рядом с названием города: сколько уже просмотрено
    из скольких («✓12/42»). В подсказке — то же и остаток. */
 .city-done{
-  color:var(--grn);font-size:10.5px;font-weight:800;margin-left:6px;
+  color:var(--grn);font-size:12px;font-weight:800;margin-left:6px;
   font-variant-numeric:tabular-nums;
 }
 .city-group-done{
-  color:var(--grn);font-weight:800;font-size:11px;
+  color:var(--grn);font-weight:800;font-size:12px;
   margin:0 9px 0 5px;font-variant-numeric:tabular-nums;
 }
 
@@ -3472,7 +3481,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* Метка в заголовке «Рейтинг»: колонка одна, а сортировки две —
    по оценке или по числу отзывов (направление показывает стрелка). */
 .sort-mode{
-  font-size:9.5px;font-weight:700;color:var(--muted);margin-left:4px;
+  font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;
   letter-spacing:.01em;
 }
 #results-table th.asc .sort-mode,#results-table th.desc .sort-mode{color:var(--c)}
@@ -3480,7 +3489,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* ── Показ по отметке «Просмотрено» ── */
 .tbl-filter-btn{
   padding:5px 11px;border:1px solid var(--bdr);border-radius:6px;background:var(--card);
-  color:var(--sub);font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;
+  color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
   transition:background .12s,border-color .12s,color .12s;white-space:nowrap;
 }
 .tbl-filter-btn:hover{border-color:var(--c);color:var(--c)}
@@ -3492,7 +3501,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .tbl-filter-count{
   display:inline-block;min-width:16px;margin-left:5px;padding:0 4px;
   border-radius:8px;background:var(--track);color:var(--sub);
-  font-size:10px;font-weight:800;line-height:15px;text-align:center;
+  font-size:12px;font-weight:800;line-height:15px;text-align:center;
   vertical-align:1px;
 }
 .tbl-filter-btn.active .tbl-filter-count{background:rgba(255,255,255,.24);color:inherit}
@@ -3508,10 +3517,10 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring);
 }
 .files-toolbar input::placeholder{color:var(--muted)}
-.files-found{font-size:11.5px;font-weight:700;color:var(--sub);white-space:nowrap}
+.files-found{font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap}
 .files-count{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:var(--muted);font-weight:700}
 .files-badge{
-  font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;
+  font-size:12px;font-weight:800;padding:3px 9px;border-radius:999px;
   border:1px solid transparent;white-space:nowrap;
 }
 .files-badge.raw{background:var(--track);color:var(--sub);border-color:var(--bdr)}
@@ -3522,7 +3531,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* Разделы «Истории файлов» сворачиваются по клику на заголовок. */
 .history-collapse{cursor:pointer;user-select:none;border-radius:6px}
 .history-collapse:focus-visible{outline:2px solid var(--c);outline-offset:2px}
-.history-caret{margin-left:auto;font-size:11px;color:var(--muted);transition:transform .15s}
+.history-caret{margin-left:auto;font-size:12px;color:var(--muted);transition:transform .15s}
 .history-section.is-collapsed .history-caret{transform:rotate(-90deg)}
 .history-section.is-collapsed .history-hint,
 .history-section.is-collapsed .history-list{display:none}
@@ -3548,7 +3557,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   font-size:12.5px;font-weight:700;color:var(--txt);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;
 }
-.file-meta{font-size:11px;color:var(--muted);margin-top:2px;font-weight:600}
+.file-meta{font-size:12px;color:var(--muted);margin-top:2px;font-weight:600}
 .file-actions{display:flex;gap:3px;flex-shrink:0}
 /* Resting state is visible on purpose: bare icons read as decoration.
    The glyphs are inline SVGs with stroke="currentColor", so one `color`
@@ -3589,7 +3598,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .tpl-cat:hover{border-color:var(--c);color:var(--c)}
 .tpl-cat.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
 .tpl-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
-.tpl-missing-chk{margin-left:auto;font-size:11.5px;color:var(--sub)}
+.tpl-missing-chk{margin-left:auto;font-size:12px;color:var(--sub)}
 .tpl-list{display:flex;flex-direction:column;gap:12px}
 .template-card{
   background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);
@@ -3599,7 +3608,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .template-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .template-name{font-weight:800;font-size:13.5px;color:var(--txt)}
 .template-cat{
-  font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  font-size:12px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
   color:var(--c);background:var(--c-soft);border-radius:999px;padding:2px 8px;
 }
 .template-actions{margin-left:auto;display:flex;gap:4px;opacity:0;transition:opacity .15s}
@@ -3608,14 +3617,14 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .template-more{
   display:inline-flex;align-items:center;justify-content:center;
   padding:4px 8px;border:1px solid var(--bdr);border-radius:6px;background:transparent;
-  color:var(--sub);font:inherit;font-size:11px;font-weight:700;cursor:pointer;transition:all .12s;
+  color:var(--sub);font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;
 }
 .template-more svg{display:block}
 .template-more:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
 .template-more.danger:hover{border-color:var(--err-strong);color:var(--err-strong);background:var(--err-bg)}
 .template-text{white-space:pre-wrap;font-size:12.5px;line-height:1.6;color:var(--txt);margin-bottom:8px;word-break:break-word}
-.template-vars{font-size:11px;color:var(--muted)}
-.template-vars code{background:var(--chip-bg);color:var(--chip-txt);border-radius:4px;padding:1px 5px;font-size:10.5px}
+.template-vars{font-size:12px;color:var(--muted)}
+.template-vars code{background:var(--chip-bg);color:var(--chip-txt);border-radius:4px;padding:1px 5px;font-size:12px}
 .tpl-empty{padding:26px;text-align:center;color:var(--muted);border:1px dashed var(--bdr);border-radius:8px}
 /* «+ Добавить шаблон» живёт в тулбаре (btn-sm) — крупные стили больше не
    нужны, кнопка внизу списка удалена. */
@@ -3626,7 +3635,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   border:1px solid var(--bdr);border-radius:8px;background:var(--field);color:var(--txt);
 }
 .tpl-search input:focus{outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring)}
-.tpl-search-count{font-size:11.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.tpl-search-count{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
 /* Пустое состояние — канвас вместо заглушки */
 .tpl-empty-box{
   border:1px dashed var(--bdr);border-radius:10px;padding:28px 20px;text-align:center;
@@ -3637,8 +3646,8 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .tpl-empty-box p{font-size:12px;line-height:1.6;margin:0 auto 14px;max-width:420px}
 .tpl-empty-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 /* Мета-строка карточки: переменные + дата обновления */
-.template-meta{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
-.template-upd{margin-left:auto;font-size:10.5px;color:var(--muted);white-space:nowrap}
+.template-meta{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.template-upd{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
 /* Меню «ещё» (⋮) — дублирование спрятано сюда, чтобы карточка не тонула в кнопках */
 .tpl-more-wrap{position:relative;display:inline-flex}
 .tpl-menu{
@@ -3653,10 +3662,10 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 }
 .tpl-menu button:hover{background:var(--c-soft);color:var(--c)}
 /* Подсказки внутри модалки и интро */
-.tpl-hint{font-size:11px;line-height:1.5;color:var(--muted);margin-top:5px}
-.tpl-preview-note{font-size:11px;line-height:1.5;color:var(--muted);margin-top:6px}
+.tpl-hint{font-size:12px;line-height:1.5;color:var(--muted);margin-top:5px}
+.tpl-preview-note{font-size:12px;line-height:1.5;color:var(--muted);margin-top:6px}
 .tpl-intro-hint{
-  font-size:11.5px;line-height:1.6;color:var(--sub);background:var(--panel);
+  font-size:12px;line-height:1.6;color:var(--sub);background:var(--panel);
   border:1px solid var(--bdr);border-radius:8px;padding:8px 12px;margin-bottom:16px;
 }
 /* Подвкладки «Шаблоны» / «Переменные» внутри вкладки */
@@ -3678,12 +3687,12 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* Ссылка «управлять переменными» под списком встроенных */
 .tpl-vars-manage{
   margin-top:10px;border:none;background:transparent;color:var(--c);
-  font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;padding:0;
+  font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0;
 }
 .tpl-vars-manage:hover{text-decoration:underline}
 /* Подвкладка «Переменные» */
 .tpl-vars-intro h3{margin:0 0 6px;font-size:16px}
-.tpl-var-count{font-size:11.5px;font-weight:700;color:var(--muted);margin-left:8px}
+.tpl-var-count{font-size:12px;font-weight:700;color:var(--muted);margin-left:8px}
 .tpl-vars-intro p{margin:0 0 12px;color:var(--muted);font-size:12.5px;line-height:1.6;max-width:640px}
 .tpl-var-cards{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .tpl-var-empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed var(--bdr);border-radius:8px;font-size:12.5px}
@@ -3693,13 +3702,13 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .tpl-var-card code{color:var(--c);font-weight:700;font-size:12.5px}
 .tpl-var-card-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tpl-var-kind{
-  font-size:10px;font-weight:700;color:var(--sub);background:var(--panel);
+  font-size:12px;font-weight:700;color:var(--sub);background:var(--panel);
   border:1px solid var(--bdr);border-radius:999px;padding:2px 8px;
 }
 .tpl-var-actions{margin-left:auto;display:flex;gap:4px;opacity:0;transition:opacity .15s}
 .tpl-var-card:hover .tpl-var-actions,.tpl-var-card:focus-within .tpl-var-actions{opacity:1}
-.tpl-var-desc{font-size:11.5px;color:var(--sub);margin-top:5px}
-.tpl-var-val{font-size:11.5px;color:var(--muted);margin-top:4px;word-break:break-word}
+.tpl-var-desc{font-size:12px;color:var(--sub);margin-top:5px}
+.tpl-var-val{font-size:12px;color:var(--muted);margin-top:4px;word-break:break-word}
 /* Форма переменной: имя между фигурными скобками */
 .tpl-var-name-row{display:flex;align-items:center;gap:6px}
 .tpl-var-name-row input{flex:1;min-width:0}
@@ -3720,8 +3729,8 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .tpl-ac-item:hover,.tpl-ac-item.active{background:var(--row-hover)}
 .tpl-ac-item code{color:var(--c);font-weight:700;white-space:nowrap}
 .tpl-ac-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sub)}
-.tpl-ac-own{font-size:9.5px;font-weight:800;text-transform:uppercase;color:var(--c);background:var(--c-soft);border-radius:999px;padding:1px 7px}
-.tpl-ac-hint{padding:5px 9px 3px;font-size:10px;color:var(--muted);border-top:1px solid var(--bdr);margin-top:3px}
+.tpl-ac-own{font-size:12px;font-weight:800;text-transform:uppercase;color:var(--c);background:var(--c-soft);border-radius:999px;padding:1px 7px}
+.tpl-ac-hint{padding:5px 9px 3px;font-size:12px;color:var(--muted);border-top:1px solid var(--bdr);margin-top:3px}
 
 /* Select категории — явный dropdown: стрелка справа, не «поле ввода» */
 .tpl-modal select{
@@ -3755,7 +3764,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .tpl-insert-row{display:flex;align-items:center;gap:8px;margin-top:10px}
 .tpl-insert-row select{width:auto;flex:0 0 auto;margin-top:0}
 .tpl-preview{margin-top:12px}
-.tpl-preview-title{font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.tpl-preview-title{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
 .tpl-preview-body{
   white-space:pre-wrap;font-size:12.5px;line-height:1.6;color:var(--txt);
   background:var(--panel);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;
@@ -3765,14 +3774,14 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* Очередь сообщений в массовом обходе */
 .bulk-queue{margin:8px 0;border:1px solid var(--bdr);border-radius:8px;overflow:hidden}
 .bulk-queue[hidden]{display:none}
-.bulk-queue-head{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);font-size:11.5px;font-weight:700;color:var(--sub)}
+.bulk-queue-head{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);font-size:12px;font-weight:700;color:var(--sub)}
 .bulk-queue-head button{margin-left:auto}
 .bulk-queue-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--bdr);font-size:12px}
 .bulk-queue-item .bqi-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bulk-queue-item button{border:1px solid var(--bdr);border-radius:6px;background:transparent;color:var(--sub);cursor:pointer;padding:3px 8px;font:inherit;font-size:11px;font-weight:700}
+.bulk-queue-item button{border:1px solid var(--bdr);border-radius:6px;background:transparent;color:var(--sub);cursor:pointer;padding:3px 8px;font:inherit;font-size:12px;font-weight:700}
 .bulk-queue-item button:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
 .bulk-queue-item.done{opacity:.5}
-.tbl-tpl-wrap{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted)}
+.tbl-tpl-wrap{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
 .tbl-tpl-wrap select{padding:5px 8px;border:1px solid var(--bdr);border-radius:7px;background:var(--card);color:var(--txt);font-size:12px;font-family:inherit;max-width:190px}
 .sender-tpl-row{display:flex;gap:8px;align-items:center}
 .sender-tpl-row select{flex:1;min-width:0}
@@ -3791,7 +3800,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .tpl-pick-modes{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
 .tpl-pick-mode{font-weight:600}
 .tpl-pick-body .chk{width:100%;justify-content:flex-start;font-weight:500}
-.tpl-pick-count{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:8px}
+.tpl-pick-count{font-size:12px;color:var(--muted);font-weight:600;margin-top:8px}
 .tpl-pick-foot{margin-top:10px}
 .tpl-pick .ghost{background:transparent}
 .tpl-pick-list-empty{font-size:12px;color:var(--muted);padding:6px 0}
@@ -3809,7 +3818,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 #tpl-variants-wrap[hidden]{display:none}
 /* Бейдж составного шаблона в карточке списка. */
 .tpl-comp-badge{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:500}
-.tpl-pick-modal-hint{margin-top:8px;font-size:11.5px;color:var(--muted)}
+.tpl-pick-modal-hint{margin-top:8px;font-size:12px;color:var(--muted)}
 .tpl-pick-modal-hint[hidden]{display:none}
 .sender-random-chk{margin-top:8px;font-weight:500}
 
@@ -3895,7 +3904,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .term-progress[hidden]{display:none}
 .term-progress-info{
   display:flex;justify-content:space-between;gap:10px;
-  font-size:11.5px;font-weight:600;color:var(--sub);margin-bottom:6px;
+  font-size:12px;font-weight:600;color:var(--sub);margin-bottom:6px;
 }
 .term-progress-info b{color:var(--txt)}
 .term-progress-eta{color:var(--muted)}
@@ -3920,10 +3929,10 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   font-family:'Inter',system-ui,sans-serif;
 }
 .log-stats-head{font-size:12.5px;font-weight:800;color:var(--c);display:flex;align-items:baseline;gap:8px}
-.log-stats-head span{font-size:11px;font-weight:600;color:var(--muted)}
+.log-stats-head span{font-size:12px;font-weight:600;color:var(--muted)}
 .log-stats-section{display:grid;gap:7px}
 .log-stats-title{
-  font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+  font-size:12px;text-transform:uppercase;letter-spacing:.05em;
   font-weight:800;color:var(--muted);
 }
 .log-stats-row{display:flex;align-items:center;gap:10px;font-size:12px}
@@ -3945,7 +3954,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .log-filters{display:flex;gap:4px;margin:0 6px 0 10px;flex-wrap:wrap}
 .log-filter{
   display:inline-flex;align-items:center;gap:5px;
-  font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;
+  font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;
   border:1px solid var(--bdr);background:var(--card);color:var(--sub);
   cursor:pointer;font-family:inherit;white-space:nowrap;
   transition:border-color .12s,color .12s,background .12s;
@@ -3953,7 +3962,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .log-filter:hover{border-color:var(--c);color:var(--c)}
 .log-filter.active{background:var(--brand);border-color:var(--brand);color:var(--on-accent)}
 .log-filter-count{
-  min-width:15px;padding:0 4px;border-radius:999px;font-size:10px;
+  min-width:15px;padding:0 4px;border-radius:999px;font-size:12px;
   background:var(--err-bg);color:var(--err-txt);
 }
 [data-theme="dark"] .log-filter{background:var(--panel)}
@@ -3987,7 +3996,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   margin-top:7px;font-weight:800;color:var(--on-accent);background:var(--brand);
   border-left-color:var(--brand);cursor:pointer;
 }
-#log-output .ll.city .ll-caret{display:inline-block;margin-right:7px;font-size:10px;opacity:.85}
+#log-output .ll.city .ll-caret{display:inline-block;margin-right:7px;font-size:12px;opacity:.85}
 #log-output .ll.city:hover{filter:brightness(1.07)}
 #log-output .ll.city.collapsed .ll-caret{transform:rotate(-90deg)}
 #log-output .ll.city.collapsed::after{content:' (свёрнуто)';font-weight:600;opacity:.8}
@@ -4010,7 +4019,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
   position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:5;
   padding:6px 13px;border-radius:999px;border:1px solid var(--c);
   background:var(--brand);color:var(--on-accent);
-  font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;
+  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;
   box-shadow:var(--sh);
 }
 .log-jump:hover{filter:brightness(1.08)}
@@ -4046,12 +4055,14 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
    ≤620px ниже. */
 @media(max-width:1120px){
   .hdr-right > button .hdr-lbl{display:none}
+  .hdr-right .hdr-tools > button .hdr-lbl{display:none}
 }
 @media(max-width:620px){
   header{padding:0 12px}
   header h1{font-size:12.5px}
   .hdr-right{gap:4px}
   .hdr-right > button{padding:6px 9px}
+  .hdr-right .hdr-tools > button{padding:6px 9px}
   .hdr-right > button .hdr-lbl{display:none}
   .hdr-right .ico{width:15px;height:15px}
   /* Подпись скрыта — кнопка снова только со значком: центрируем без зазора. */
@@ -4082,7 +4093,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 }
 .live-stats-right{
   margin-left:auto;display:flex;align-items:center;gap:5px;
-  color:var(--muted);font-size:11.5px;font-weight:600;
+  color:var(--muted);font-size:12px;font-weight:600;
 }
 .live-found-num{font-size:15px;font-weight:800;color:var(--grn)}
 .live-found-lbl{color:var(--sub);font-weight:600}
@@ -4095,7 +4106,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .city-progress-list{display:flex;flex-wrap:wrap;gap:8px}
 
 /* ── Тулбар экспорта ── */
-.export-sel-lbl{font-size:11px;color:var(--muted);font-weight:700}
+.export-sel-lbl{font-size:12px;color:var(--muted);font-weight:700}
 #export-sel-count{color:var(--txt);margin-left:3px}
 /* ── Инлайн-сноска внутри <label> ── */
 .lbl-note-inline{font-weight:400;text-transform:none;color:var(--muted)}
@@ -4130,7 +4141,7 @@ h1,h2,h3,.acc-title,.card-hdr,.panel-title{
   line-height:1.6;
 }
 .hint{
-  font-size:11px;
+  font-size:12px;
   line-height:1.55;
   color:var(--muted);
 }
@@ -4184,7 +4195,7 @@ select:focus{
 /* ── Таблица: аккуратнее строки и hover ── */
 #results-table th{
   padding:10px 12px;
-  font-size:10.5px;
+  font-size:12px;
   letter-spacing:.06em;
   color:var(--muted);
 }
@@ -4333,10 +4344,12 @@ header{
 
 /* ── Кнопки шапки: мягче hover ── */
 .hdr-right > button,
+.hdr-right .hdr-tools > button,
 .hdr-right .notify-wrap > button{
   transition:background .14s ease,color .14s ease;
 }
 .hdr-right > button:active,
+.hdr-right .hdr-tools > button:active,
 .hdr-right .notify-wrap > button:active{
   transform:translateY(1px);
 }
@@ -4393,7 +4406,7 @@ header{
 .terms-accept-row{margin-bottom:10px}
 /* Версия редакции: мелкая строка над чекбоксом — видно, что именно
    принимаешь и что уже принято. */
-.terms-meta{font-size:11.5px;color:var(--muted);line-height:1.5;margin:0 0 8px}
+.terms-meta{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 8px}
 .terms-body .terms-meta{margin-top:8px}
 #terms-declined{position:fixed;inset:0;background:var(--term);z-index:10000;
   display:flex;align-items:center;justify-content:center}
@@ -4479,11 +4492,11 @@ header{
    132 стр.») обрезалось бы многоточием и его пришлось бы читать в подсказке. */
 .setup-chip[data-setup-key="volume"]{grid-column:1 / -1}
 .setup-chip-lbl{
-  font-size:10px;font-weight:800;color:var(--muted);
+  font-size:12px;font-weight:800;color:var(--muted);
   text-transform:uppercase;letter-spacing:.05em;
 }
 .setup-chip-lbl,.setup-chip-val{max-width:100%}
-.setup-chip-val{width:100%;font-size:11.5px;font-weight:700;color:var(--txt);
+.setup-chip-val{width:100%;font-size:12px;font-weight:700;color:var(--txt);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* «Не заполнено» — предупреждение, а не просто текст: этот чип ведёт туда,
    без чего запуск не начнётся (запрос, город, формат выгрузки). */

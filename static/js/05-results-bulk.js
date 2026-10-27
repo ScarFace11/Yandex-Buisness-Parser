@@ -62,7 +62,7 @@ function toggleReviewed(url, cb) {
 const SUBTAB_KEY    = 'yp_results_subtab';   // current | history
 const CITY_TAB_KEY  = 'yp_results_city_tab';  // '' = все города
 const CITY_FAV_KEY  = 'yp_results_city_favs'; // избранные города («звёздочка»)
-const BULK_OPEN_KEY = 'yp_bulk_open';         // 1 | 0 — панель развёрнута
+const BULK_OPEN_KEY = 'yp_bulk_open';         // 1 — пользователь явно развёрнул; иначе свёрнута
 const SCOPE_KEY     = 'yp_results_scope';     // current | all (текущий поиск | вся папка)
 const BULK_MAX_TABS = 50;                     // предел вкладок за один клик
 
@@ -1249,7 +1249,10 @@ function initResultsPanel() {
   try { onlyNewFilter = localStorage.getItem(ONLY_NEW_KEY) === '1'; } catch (e) { onlyNewFilter = false; }
   updateOnlyNewButton();
   try {
-    if (localStorage.getItem(BULK_OPEN_KEY) === '0') {
+    // По умолчанию панель свёрнута: таблица результатов должна быть видна
+    // сразу, а не на 400px ниже сгиба. Развёрнутой остаётся только та,
+    // которую пользователь явно открывал (ключ === '1').
+    if (localStorage.getItem(BULK_OPEN_KEY) !== '1') {
       const body = document.getElementById('bulk-body');
       const arrow = document.getElementById('bulk-collapse');
       if (body) body.hidden = true;

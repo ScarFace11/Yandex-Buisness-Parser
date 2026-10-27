@@ -564,7 +564,7 @@ class TestFilterAccordionGroups:
 
     def test_group_title_looks_like_the_sidebar_group_title(self):
         rule = self._rule(".flt-group-title{")
-        assert "font-size:11px" in rule
+        assert "font-size:12px" in rule
         assert "text-transform:uppercase" in rule
         assert "color:var(--muted)" in rule
         assert "border-left:3px solid var(--c)" in rule

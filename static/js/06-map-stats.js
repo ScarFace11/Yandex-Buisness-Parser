@@ -491,7 +491,7 @@ function renderStats(data, elapsed, skippedCities) {
         .slice(0, 6);
       const chips = citySocials.length
         ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px">`
-          + citySocials.map(s => `<span style="background:${SOCIALS[s.p]};color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:600">${SLABELS[s.p]} ${s.count}</span>`).join('')
+          + citySocials.map(s => `<span style="background:${SOCIALS[s.p]};color:#fff;border-radius:10px;font-size:12px;padding:1px 6px;font-weight:600">${SLABELS[s.p]} ${s.count}</span>`).join('')
           + `</div>`
         : '';
       return `<div class="stat-city-card">
