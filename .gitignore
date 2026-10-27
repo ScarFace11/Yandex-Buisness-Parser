@@ -73,7 +73,7 @@ replit.nix
 
 # Локальные артефакты проверки вёрстки и разработки
 screenshots/
-ui-review-*.png
+ui-*.png
 yp-*.log
 icon-preview.png
 icon-final.png
