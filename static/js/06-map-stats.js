@@ -115,7 +115,14 @@ function initMap() {
   const container = document.getElementById('map-container');
   const pts = allResults.filter(r => r.lat && r.lon);
   if (!pts.length) {
-    container.innerHTML = '<div class="no-data" style="padding:60px">Нет данных с координатами</div>';
+    // Два разных «пусто»: данных вовсе нет и данные есть, но файл собран без
+    // колонок Широта/Долгота (выгрузки до 2.3.5 их не писали — см.
+    // constants.CSV_FIELDS): без подсказки пустая карта выглядит как поломка.
+    const msg = allResults.length
+      ? 'Координат в этом файле нет: колонки «Широта/Долгота» пишутся с версии 2.3.5. '
+        + 'Запустите новый поиск — по нему карта покажет точки.'
+      : 'Нет данных с координатами';
+    container.innerHTML = `<div class="no-data" style="padding:60px">${msg}</div>`;
     return;
   }
 

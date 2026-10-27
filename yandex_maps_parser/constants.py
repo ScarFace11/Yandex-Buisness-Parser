@@ -69,6 +69,9 @@ CSV_FIELDS = [
     "query", "parsed_at",
     # Two-stage pipeline: raw files must carry the city so stage 2 can group by «Название + Город» without a new crawl.
     "city",
+    # Координаты карточки: вкладка «На карте» читает lat/lon из файла — без
+    # этих колонок карта пустеет, поэтому они пишутся всегда.
+    "lat", "lon",
 ]
 
 # Lead Score: категории, за услуги которым платят выше среднего.
@@ -121,6 +124,10 @@ HEADER_LABELS = {
     "query":         "Запрос",
     "parsed_at":     "Дата сбора",
     "city":          "Город",
+    # Служебные колонки для карты: в отборе «Что парсить» не выбираются
+    # (см. _enabled_fields — выбор их не отключает).
+    "lat":           "Широта",
+    "lon":           "Долгота",
     "website":       "Сайт",
     # «Тип компании» (stage «Фильтрация результата»): внутренние поля raw- выгрузки, как website — в отчёт они не попадают, но их читает этап 2 (обратная карта «русский заголовок → ключ» ищет подписи именно здесь).
     "branch_count":  "Филиалов",
@@ -139,5 +146,6 @@ COL_WIDTHS = {
     "aggregator_url": 32,
     "yandex_maps_url": 36, "query": 14, "parsed_at": 18,
     "city": 18, "website": 26,
+    "lat": 11, "lon": 11,
     "branch_count": 10, "added_at": 12,
 }

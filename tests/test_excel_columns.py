@@ -75,7 +75,7 @@ def test_map_column_aliased_in_user_selection():
         fields = _enabled_fields()
     finally:
         state.EXCEL_COLUMNS = None
-    assert fields == ["name", "yandex_maps_url"]
+    assert fields == ["name", "yandex_maps_url", "lat", "lon"]
 
 
 def test_obsolete_map_alias_is_ignored_but_selection_survives():
@@ -87,7 +87,7 @@ def test_obsolete_map_alias_is_ignored_but_selection_survives():
         fields = _enabled_fields()
     finally:
         state.EXCEL_COLUMNS = None
-    assert fields == ["name"]
+    assert fields == ["name", "lat", "lon"]
     assert "twogis_url" not in fields
 
 
@@ -113,15 +113,16 @@ def test_map_column_does_not_depend_on_stale_records():
 def test_enabled_fields_subset_keeps_csv_order():
     state.EXCEL_COLUMNS = {"vk", "name", "phone"}
     try:
-        assert _enabled_fields() == ["name", "phone", "vk"]
+        assert _enabled_fields() == ["name", "phone", "vk", "lat", "lon"]
     finally:
         state.EXCEL_COLUMNS = None
 
 
 def test_excel_writes_only_selected_columns():
     headers, row = _xlsx_headers(RECORDS, {"name", "phone", "vk"})
-    assert headers == ["Название", "Телефон", "ВКонтакте"]
-    assert row == ("Тест", "+7 999 123-45-67", "https://vk.com/test")
+    # lat/lon — служебные колонки карты: к выбору колонок они не относятся.
+    assert headers == ["Название", "Телефон", "ВКонтакте", "Широта", "Долгота"]
+    assert row[:3] == ("Тест", "+7 999 123-45-67", "https://vk.com/test")
 
 
 def test_excel_includes_all_columns_when_none_selected():
@@ -130,3 +131,27 @@ def test_excel_includes_all_columns_when_none_selected():
     assert "Название" in headers and "ВКонтакте" in headers
     assert row[headers.index("Название")] == "Тест"
     assert row[headers.index("ВКонтакте")] == "https://vk.com/test"
+
+
+def test_coordinates_are_written_even_when_not_selected():
+    """Координаты не выбираются в «Что парсить», но обязаны попадать в файл:
+    вкладка «На карте» строится по lat/lon из результатов."""
+    headers, _row = _xlsx_headers(RECORDS, {"name", "phone"})
+    assert "Широта" in headers and "Долгота" in headers
+
+
+def test_coordinates_round_trip_from_xlsx_for_the_map():
+    """Сохранённые координаты читаются обратно теми же ключами (lat/lon),
+    которых ждёт static/js/06-map-stats.js."""
+    from yandex_maps_parser.exporters import _records_from_xlsx
+
+    path = os.path.join(tempfile.mkdtemp(), "geo.xlsx")
+    state.EXCEL_COLUMNS = {"name"}
+    try:
+        save_excel([dict(RECORDS[0], lat="43.313", lon="45.696")], path)
+    finally:
+        state.EXCEL_COLUMNS = None
+    recs = _records_from_xlsx(path)
+    assert len(recs) == 1
+    assert abs(float(recs[0]["lat"]) - 43.313) < 1e-6
+    assert abs(float(recs[0]["lon"]) - 45.696) < 1e-6

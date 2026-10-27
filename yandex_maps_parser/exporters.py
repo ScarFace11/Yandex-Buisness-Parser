@@ -525,6 +525,10 @@ def _enabled_fields(extra: tuple[str, ...] = (), records: list[dict] | None = No
     if not cols:
         return fields
     sel = set(cols)
+    # Координаты — служебные колонки: вкладка «На карте» читает lat/lon из
+    # файла, поэтому выбор «Что парсить» их не отключает (как и ссылку
+    # на карточку — см. _MAP_FIELDS ниже).
+    sel.update(("lat", "lon"))
     # «Ссылка» в выборе колонок — это и есть карточка организации: даже если сохранённый набор пришёл из старой версии приложения, колонка попадёт в файл.
     if sel & set(_MAP_FIELDS):
         sel.add(keep_map)
