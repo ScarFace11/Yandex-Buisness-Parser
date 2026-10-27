@@ -957,7 +957,7 @@ async function loadFilesPanel(force) {
 // Показать ошибку «файла нет», не превратив таблицу в автомата, и обновить список файлов.
 function showFileNotFound(view) {
   const body = document.getElementById('tbl-body');
-  if (body) body.innerHTML = '<tr><td colspan="9" class="no-data">Файл не найден в этой папке. Проверьте Историю файлов (Обновить) и откройте его снова.</td></tr>';
+  if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Файл не найден в этой папке. Проверьте Историю файлов (Обновить) и откройте его снова.</td></tr>`;
   showToast('Файл не найден в этой папке. Проверьте Историю файлов (Обновить) и откройте его снова.', 'warn');
   loadFilesPanel(true);
 }
@@ -1152,7 +1152,7 @@ function openFileInTable(rel) {
   if (!rel) return;
   setResultsSubTab('current');
   const body = document.getElementById('tbl-body');
-  if (body) body.innerHTML = '<tr><td colspan="9" class="no-data">Загрузка…</td></tr>';
+  if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Загрузка…</td></tr>`;
   const seq = ++_resultsReqSeq;      // перебивает незавершённую загрузку общего вида
   fetch('/results-view?view=' + encodeURIComponent(_resultsView) + '&file=' + encodeURIComponent(rel))
     .then(r => r.json())
@@ -1167,7 +1167,7 @@ function openFileInTable(rel) {
       const recs = d.records || [];
       if (!recs.length) {
         // Сервер вернул пустой список — нет данных этого поиска, либо запрос не тот.
-        body.innerHTML = '<tr><td colspan="9" class="no-data">Нет данных. Запустите сбор данных, затем откройте файл в Истории файлов.</td></tr>';
+        body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Нет данных. Запустите сбор данных, затем откройте файл в Истории файлов.</td></tr>`;
         showToast('Нет данных. Запустите сбор данных, затем откройте файл в Истории файлов.', 'info');
         return;
       }
@@ -1186,7 +1186,7 @@ function openFileInTable(rel) {
     .catch(() => {
       currentFileNote = '';
       currentFile = '';
-      if (body) body.innerHTML = '<tr><td colspan="9" class="no-data">Не удалось загрузить данные файла.</td></tr>';
+      if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Не удалось загрузить данные файла.</td></tr>`;
       showToast('Не удалось загрузить данные файла. Проверьте соединение и попробуйте снова.', 'error');
     });
 }

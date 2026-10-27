@@ -359,7 +359,7 @@ function setResultsView(view) {
   document.querySelectorAll('#results-toggle .rt-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.view === view));
   const body = document.getElementById('tbl-body');
-  if (body) body.innerHTML = '<tr><td colspan="7" class="no-data">Загрузка…</td></tr>';
+  if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Загрузка…</td></tr>`;
   currentFileNote = _resultsScope === 'all' ? ' · все файлы в папке' : '';
   currentFile = '';
   const seq = ++_resultsReqSeq;
@@ -381,7 +381,7 @@ function setResultsView(view) {
           msg += ' Файлы прошлых поисков — в «Истории файлов» (или включите «Все поиски»).';
         }
         document.getElementById('tbl-body').innerHTML =
-          `<tr><td colspan="7" class="no-data">${msg}</td></tr>`;
+          `<tr><td colspan="${_tableColspan()}" class="no-data">${msg}</td></tr>`;
       }
       updateBulkStats();
       if (typeof updateStatsBadge === 'function') updateStatsBadge();
@@ -389,7 +389,7 @@ function setResultsView(view) {
     .catch(() => {
       if (seq !== _resultsReqSeq) return;
       document.getElementById('tbl-body').innerHTML =
-        '<tr><td colspan="7" class="no-data">Ошибка загрузки данных</td></tr>';
+        `<tr><td colspan="${_tableColspan()}" class="no-data">Ошибка загрузки данных</td></tr>`;
     });
 }
 
@@ -874,6 +874,8 @@ function scoreHTML(r) {
 // Открывается кликом по оценке, закрывается по Esc, кнопке ✕ или клику мимо.
 // Не модальное: фокус уходит в окно, ловушка фокуса не нужна — за строкой
 // таблицы всё ещё можно работать.
+let _scorePop = null;        // сам элемент (создаётся один раз, живёт в body)
+let _scorePopAnchor = null;  // бейдж, открывший окно
 let _scorePopKey = '';       // ключ записи — по нему окно находит новый бейдж
 
 function _scorePopEl() {
@@ -1407,7 +1409,9 @@ function renderPage() {
 
   const tbody = document.getElementById('tbl-body');
   if (!total) {
-    tbody.innerHTML = '<tr><td colspan="9" class="no-data">Ничего не найдено</td></tr>';   // плейсхолдер: столбцов у него нет
+    // Столбцов у плейсхолдера нет, но ему нужна ширина строки: её считаем по
+    // видимым колонкам — пользователь может скрыть часть в настройках.
+    tbody.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Ничего не найдено</td></tr>`;
 
     closeScorePopover(false);       // разбирать больше нечего — строки ушли
     document.getElementById('pager').style.display = 'none';

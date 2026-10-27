@@ -834,7 +834,7 @@ function startRun() {
   if (typeof updateOnlyNewButton === 'function') updateOnlyNewButton();
   _resetTableBadge();
   document.getElementById('tbl-body').innerHTML =
-    '<tr><td colspan="9" class="no-data">Ожидание результатов…</td></tr>';
+    `<tr><td colspan="${_tableColspan()}" class="no-data">Ожидание результатов…</td></tr>`;
   // Stats keep their default zero cards during the run — numbers fill in
   // live as cities complete.
   renderDefaultStats();

@@ -401,3 +401,17 @@ test('the template gives every column a stable data-col and keyed sort', () => {
   assert.match(css, /#results-table \.col-hidden\{display:none\}/);
   assert.ok(!/#results-table\.col-hide-/.test(css));
 });
+
+test('every table placeholder sizes its row from the visible columns', () => {
+  // Скрытая колонка уменьшает таблицу: плейсхолдер с зашитой «9» не дотянется
+  // до правого края и строка выглядит обрезанной.
+  const hardcoded = [...src.matchAll(/<td colspan="(\d+)" class="no-data">/g)].map(m => m[1]);
+  assert.deepEqual(hardcoded, [],
+    'colspan плейсхолдеров задан числом вместо _tableColspan(): ' + hardcoded.join(', '));
+  const rows = [...src.matchAll(/<td colspan="[^"]+" class="no-data">/g)];
+  assert.ok(rows.length >= 9, 'ожидались плейсхолдеры обеих вкладок результатов');
+  const dynamic = [...src.matchAll(/<td colspan="\$\{_tableColspan\(\)\}" class="no-data">/g)];
+  assert.equal(dynamic.length, rows.length,
+    'часть плейсхолдеров не считает colspan через _tableColspan()');
+  assert.match(src, /function _tableColspan\(\)/);
+});

@@ -213,6 +213,7 @@ def available_browsers() -> list[dict]:
     """Все найденные Chromium-браузеры — для выбора в интерфейсе."""
     out: list[dict] = []
     seen: set[str] = set()
+    labels: set[str] = set()
 
     def add(label: str, path: object) -> None:
         text = str(path or "")
@@ -227,7 +228,15 @@ def available_browsers() -> list[dict]:
         except OSError:
             return
         seen.add(key)
-        out.append({"name": _browser_label(text) or label, "path": text})
+        name = _browser_label(text) or label
+        # Две сборки одного браузера (например, две версии Chromium из кэша
+        # Playwright) давали в списке два одинаковых пункта с разными путями:
+        # выбрать между ними всё равно нельзя, а «Автоматически» берёт первый —
+        # поэтому оставляем только его.
+        if name in labels:
+            return
+        labels.add(name)
+        out.append({"name": name, "path": text})
 
     for label, path in _browser_candidates():
         add(label, path)

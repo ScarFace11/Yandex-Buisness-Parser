@@ -1017,7 +1017,7 @@ function renderHistoryEntry(entry) {
       <button type="button" class="hist-hdr" onclick="toggleHistoryCard(this)" aria-expanded="false">
         <span class="hist-status ${statusCls}">${statusIcon}</span>
         <span class="hist-head">
-          <span class="hist-title">${escapeHtml(entry.queries.join(', '))}</span>
+          <span class="hist-title">${escapeHtml((entry.queries || []).filter(q => String(q).trim()).join(', ') || 'без запроса')}</span>
           <span class="hist-meta">
             <span>🏙 <b>${entry.cities.length}</b> ${entry.cities.length === 1 ? 'город' : 'города'}</span>
             <span>📊 <b>${entry.results_count}</b> записей</span>

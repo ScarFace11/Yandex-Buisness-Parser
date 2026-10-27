@@ -309,6 +309,7 @@ function initSpheres() {
     if (e.key === 'Escape') closeSphereDropdown();
   });
 
+  const btn = document.getElementById('spheres-btn');
   if (btn) {
     btn.addEventListener('mousedown', e => e.preventDefault());  // не уводим фокус
     btn.addEventListener('click', e => {
