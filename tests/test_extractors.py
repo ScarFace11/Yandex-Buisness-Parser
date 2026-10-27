@@ -364,6 +364,14 @@ class TestIsAggregator:
     def test_normal_website(self):
         assert not _is_aggregator("https://salon-example.ru")
 
+    def test_domains_starting_with_w_are_recognised(self):
+        """Домены из списка, начинающиеся с «w»: lstrip("www.") съедал букву."""
+        assert _is_aggregator("https://wlo.link/salon")
+        assert _is_aggregator("https://withkoji.com/salon")
+
+    def test_www_prefix_is_stripped(self):
+        assert _is_aggregator("https://www.taplink.cc/salon")
+
 
 # ── parse_feature ─────────────────────────────────────────────
 

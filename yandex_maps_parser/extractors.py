@@ -106,7 +106,12 @@ _HTTP_LIKE = re.compile(r'https?://[^\s"\'<>\\\\,}{]+', re.I)
 def _is_aggregator(url: str) -> bool:
     try:
         from urllib.parse import urlparse
-        host = urlparse(url).netloc.lower().lstrip("www.")
+        host = urlparse(url).netloc.lower()
+        # Именно префикс «www.», а не набор символов: lstrip("www.") съедал
+        # первую «w» у доменов из списка агрегаторов вроде wlo.link и
+        # withkoji.com — они переставали считаться агрегаторами.
+        if host.startswith("www."):
+            host = host[len("www."):]
         return any(host == agg or host.endswith("." + agg) for agg in LINK_AGGREGATORS)
     except Exception:
         return False
