@@ -2288,6 +2288,14 @@ html.theme-anim #log-output{
   border-top:1px solid transparent;
 }
 .acc.open .acc-inner{border-top-color:var(--bdr)}
+/* Закрытый аккордеон раньше показывал 29px собственного отступа, и первая
+   строка содержимого выглядывала обрезанной: у «Форматы результата» —
+   половина галочек Excel/JSON. Отступ сворачивается вместе с высотой. */
+.acc-inner{
+  transition:padding-top .26s cubic-bezier(.4,0,.2,1),
+             padding-bottom .26s cubic-bezier(.4,0,.2,1);
+}
+.acc:not(.open) .acc-inner{padding-top:0;padding-bottom:0}
 
 /* ══════════════════════════════════════════════════════════
    «ФИЛЬТРАЦИЯ РЕЗУЛЬТАТА»: логические группы, «⚙️ Дополнительно»
@@ -3124,9 +3132,16 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 #run-dock{
   position:sticky;bottom:0;z-index:60;
   margin-top:auto;                 /* keep the button at the bottom when the sidebar is short */
-  padding:10px 0 2px;
-  background:linear-gradient(180deg,transparent 0%,var(--bg) 12px);
-  box-shadow:0 -4px 12px rgba(0,0,0,.05);   /* separates the button from scrolled content */
+  padding:12px 0 2px;
+  /* Подложка непрозрачная: раньше верхние 12px были прозрачными, и текст
+     формы читался прямо сквозь подсказку «чего не хватает» — выглядело
+     так, будто две строки наехали друг на друга. */
+  background:var(--card);
+  /* Чёткий шов вместо градиента: градиент над плашкой при прокрутке до
+     конца гасил последние 18px формы — нижние галочки выглядели
+     обрезанными, хотя были доступны. */
+  border-top:1px solid var(--bdr);
+  box-shadow:0 -6px 14px -10px rgba(0,0,0,.35);
 }
 @media(max-width:860px){#run-dock{position:static}}
 

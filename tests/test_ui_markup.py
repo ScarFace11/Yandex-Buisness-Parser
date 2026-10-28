@@ -2068,3 +2068,54 @@ class TestFirstScreenCopy:
         assert 'Выберите пресет — настройки подставятся автоматически.' in APP_JS
         # Запуск без интерфейса — не первый экран для новичка.
         assert 'Тот же пресет запускается без интерфейса' not in APP_JS
+
+
+class TestDockSurface:
+    """Док не просвечивает: подсказка и форма больше не наезжают.
+
+    На первом экране верхние 12px дока были прозрачными, а подсказка
+    стояла именно там — сквозь неё читалось «Напишите по одному виду
+    бизнеса в строке», и две строки выглядели склеенными.
+    """
+
+    def test_dock_has_an_opaque_surface(self):
+        start = STYLE.index('#run-dock{')
+        rule = STYLE[start:STYLE.index('}', start)]
+        assert 'background:var(--card)' in rule
+        assert 'transparent 0%' not in rule, 'прозрачная верхушка вернулась'
+        assert 'position:sticky' in rule
+
+    def test_separator_is_a_border_not_a_fade(self):
+        # Градиент над доком при прокрутке до конца гасил последние 18px
+        # формы: нижние галочки выглядели обрезанными. Шов — линия.
+        start = STYLE.index('#run-dock{')
+        rule = STYLE[start:STYLE.index('}', start)]
+        assert 'border-top:1px solid var(--bdr)' in rule
+        assert '#run-dock::before' not in STYLE
+
+    def test_hint_sits_on_the_solid_part(self):
+        # Подсказка — первый ребёнок дока, а подложка начинается с его
+        # верхней границы, поэтому текст всегда на непрозрачном фоне.
+        dock = TEMPLATE[TEMPLATE.index('id="run-dock"'):]
+        dock = dock[:dock.index('<!-- ПРАВО: вкладки -->')]
+        assert dock.index('id="run-hint"') < dock.index('class="run-dock-row"')
+
+
+class TestCollapsedAccordion:
+    """Закрытая секция не показывает обрезанную первую строку.
+
+    Аккордеон сжимается через grid-rows:0fr, но внутренний отступ (12px
+    сверху + 16px снизу) оставался видимым — у «Форматы результата»
+    торчала половина галочек Excel/JSON.
+    """
+
+    def test_collapsed_inner_has_no_vertical_padding(self):
+        assert '.acc:not(.open) .acc-inner{padding-top:0;padding-bottom:0}' in STYLE
+
+    def test_padding_collapses_with_the_same_curve_as_the_rows(self):
+        body = STYLE[STYLE.index('.acc-body{'):]
+        body = body[:body.index('}')]
+        assert 'grid-template-rows .26s cubic-bezier(.4,0,.2,1)' in body
+        inner = STYLE[STYLE.index('.acc-inner{\n  transition:padding-top'):]
+        inner = inner[:inner.index('}')]
+        assert 'cubic-bezier(.4,0,.2,1)' in inner
