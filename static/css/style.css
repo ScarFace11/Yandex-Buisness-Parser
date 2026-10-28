@@ -423,9 +423,16 @@ aside::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
    (15+12, 15+10, 15+18) и колонка «плыла» разной высоты между секциями. */
 .form-body{padding:18px;display:flex;flex-direction:column;gap:16px}
 .intro-copy{font-size:13px;line-height:1.55;color:var(--sub)}
-label.lbl{
+/* Подписи поля — и <label>, и <span class="lbl"> у радиогрупп («Источник
+   данных», «Тип организаций»…): у span не было никаких стилов, и эти четыре
+   строки набирались 14px обычным начертанием — на фоне 12px/700 подписей
+   колонка читалась плывущей, а зазор до контрола схлопывался в 1px. */
+label.lbl,span.lbl{
   font-size:12px;font-weight:700;color:var(--sub);
-  display:block;margin-bottom:5px;
+  /* 6px, не 5: шаг сетки 6 (подпись → поле) и тот же шаг даёт flex-gap
+     контейнеров ниже, так что пара «подпись → поле» читается одинаково
+     и в блочном потоке, и в gap-колонке. */
+  display:block;margin-bottom:6px;
 }
 input[type=text],input[type=number],input[type=password],textarea,select{
   border:1px solid var(--bdr);border-radius:8px;padding:9px 11px;
@@ -438,8 +445,10 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,texta
   outline:none;border-color:var(--c);
   box-shadow:0 0 0 3px var(--focus-ring);
 }
-textarea{resize:vertical;min-height:76px;line-height:1.5}
-.hint{font-size:12px;color:var(--muted);margin-top:4px}
+/* display:block: как inline-block textarea стояла на базовой линии — под ней
+   оставалось ~4px пустого «хвоста», и зазор до подсказки получался 9 вместо 4. */
+textarea{display:block;resize:vertical;min-height:76px;line-height:1.5}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
 
 /* ── 2-col rows inside form ── */
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -452,7 +461,7 @@ textarea{resize:vertical;min-height:76px;line-height:1.5}
 .sec{
   font-size:12px;font-weight:700;color:var(--muted);
   text-transform:uppercase;letter-spacing:.055em;
-  padding-bottom:7px;border-bottom:1px solid var(--bdr);
+  padding-bottom:8px;border-bottom:1px solid var(--bdr);
 }
 .chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .chk{
@@ -611,9 +620,9 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
   font-size:22px;font-weight:700;color:var(--txt);
   margin-bottom:8px;letter-spacing:-.02em;line-height:1.25;
 }
-.onboarding-lead{color:var(--sub);font-size:13.5px;margin-bottom:30px;line-height:1.6}
+.onboarding-lead{color:var(--sub);font-size:13.5px;margin-bottom:32px;line-height:1.6}
 .flow-steps{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:14px;text-align:left;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:left;
 }
 .flow-step{
   width:100%;padding:16px;border-radius:var(--r-md);
@@ -1550,12 +1559,12 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 .out-dir-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .out-dir-row input{flex:1 1 190px;min-width:0}
 .out-dir-row .btn-sm{flex:0 0 auto;white-space:nowrap}
-#output-advanced .tiles-inner{display:flex;flex-direction:column;gap:4px}
+#output-advanced .tiles-inner{display:flex;flex-direction:column;gap:6px}
 /* Отступ сверху держит только ОТКРЫТЫЙ блок: та же строка в закрытом
    состоянии (grid-template-rows:0fr) давала 8-пиксельную полоску контента —
    закрытая секция «протекала» наружу. */
 #output-advanced.open .tiles-inner{padding-top:8px}
-#output-advanced .lbl{margin-top:4px}
+#output-advanced .lbl{margin-top:0}
 .out-dir-err{
   font-size:12px;font-weight:700;line-height:1.45;
   background:var(--err-bg);border:1px solid var(--err-bdr);color:var(--err-txt);
@@ -1753,10 +1762,13 @@ details[open].sender-advanced summary::before{content:"▼  "}
    выпадающий список, и две разные вёрстки для одного элемента читались бы
    как ошибка. Здесь только то, что у сфер иное: кнопка и строки-опции. */
 .spheres-btn{
-  flex-shrink:0;display:inline-flex;align-items:center;gap:4px;
-  padding:2px 9px;border:1px solid var(--bdr);border-radius:999px;
+  flex-shrink:0;display:inline-flex;align-items:center;gap:5px;
+  /* Высота считается так же, как у «Очистить» (line-height 1.4, padding 4px),
+     чтобы пара кнопок в строке была одного размера, а не «пила» на 1–3px. */
+  padding:4px 11px;border:1px solid var(--bdr);border-radius:999px;
   background:var(--field);color:var(--txt);font:inherit;font-size:12px;
-  font-weight:600;cursor:pointer;transition:background .12s,border-color .12s;
+  line-height:1.4;font-weight:600;cursor:pointer;
+  transition:background .12s,border-color .12s;
 }
 .spheres-btn:hover{background:var(--row-hover);border-color:var(--c)}
 .spheres-btn:focus-visible{outline:2px solid var(--c);outline-offset:2px}
@@ -1785,7 +1797,7 @@ details[open].sender-advanced summary::before{content:"▼  "}
 .spheres-reset{margin-right:auto}
 
 /* «Только данные компании» в блоке персональных данных */
-.pd-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.pd-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
 .pd-actions-note{font-size:12px;color:var(--muted);margin:0}
 
 [data-theme="dark"] .city-input-wrap input{background:var(--panel);border-color:var(--bdr);color:var(--txt)}
@@ -2262,7 +2274,11 @@ html.theme-anim #log-output{
 .acc.open .acc-body{grid-template-rows:1fr}
 .acc-body>.acc-inner{overflow:hidden;min-height:0}
 .acc-inner{
-  padding:2px 13px 13px;display:flex;flex-direction:column;gap:13px;
+  /* 12px сверху (шаг сетки): содержимое не прилипает к линии разделителя
+     под шапкой (было 2px — первая строка читалась как часть заголовка).
+     Ритм колонки — 16px, как в .form-body, чтобы зазоры не отличались
+     от секции к секции. */
+  padding:12px 13px 16px;display:flex;flex-direction:column;gap:16px;
   border-top:1px solid transparent;
 }
 .acc.open .acc-inner{border-top-color:var(--bdr)}
@@ -2323,7 +2339,8 @@ html.theme-anim #log-output{
 
 /* «⚙️ Дополнительно»: редкие настройки, свёрнуто по умолчанию. */
 .flt-extra{
-  margin-top:20px;border:1px solid var(--bdr);border-radius:9px;
+  /* 16px — тот же шаг, что у .flt-group+.flt-group ниже по секции. */
+  margin-top:16px;border:1px solid var(--bdr);border-radius:9px;
   background:var(--row-alt);overflow:hidden;
 }
 .flt-extra>summary{
@@ -2340,7 +2357,7 @@ html.theme-anim #log-output{
 .flt-extra[open]>summary::after{transform:rotate(180deg)}
 .flt-extra>summary:hover{background:var(--cl);color:var(--c)}
 .flt-extra[open]>summary{border-bottom:1px solid var(--bdr)}
-.flt-extra-body{padding:11px;display:flex;flex-direction:column;gap:10px}
+.flt-extra-body{padding:11px;display:flex;flex-direction:column;gap:12px}
 
 /* Футер аккордеона: кнопка действия всегда на виду. Паркуется НАД sticky-доком
    сайдбора — иначе две прилипающие панели накладывались бы друг на друга.
@@ -2356,13 +2373,15 @@ html.theme-anim #log-output{
 .flt-footer #btn-refilter{width:100%;padding:11px 12px;font-size:13px;font-weight:700}
 
 /* ── Чёрный список слов («🚫 Исключить по словам») ── */
-.bl-block{display:flex;flex-direction:column}
+.bl-block{display:flex;flex-direction:column;gap:8px}
 /* Список чипов: тянется по строке, но не растёт бесконечно — при сотне слов
    аккордеон должен остаться аккордеоном, а не простыней. */
 .bl-chips{
   display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;
   max-height:150px;overflow-y:auto;overflow-x:hidden;
-  margin:8px 0 0;padding:0 2px 0 0;scrollbar-width:thin;
+  /* margin убран в пользу gap: у .bl-block он и так складывался с mt чипов
+     (5+8 = 13px от подписи, хотя шаг блока — 8). */
+  margin:0;padding:0 2px 0 0;scrollbar-width:thin;
 }
 .bl-chip{
   display:inline-flex;align-items:center;gap:5px;max-width:100%;
@@ -2454,7 +2473,9 @@ html.theme-anim #log-output{
    ══════════════════════════════════════════════════════════ */
 .tech-box{
   background:var(--panel);border:1px solid var(--bdr);border-radius:9px;
-  padding:12px;display:flex;flex-direction:column;gap:9px;
+  /* Шаг 8 — половина сетки 16: было 9, и внутри зазоры читались то 9,
+     то 13 (9 + margin подсказки 4). */
+  padding:12px;display:flex;flex-direction:column;gap:8px;
 }
 [data-theme="dark"] .tech-box{background:var(--term);border-color:var(--bdr)}
 .tech-box-title{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
@@ -2495,7 +2516,7 @@ html.theme-anim #log-output{
 /* Верхний отступ только у ОТКРЫТОЙ секции: в закрытом виде (grid-template-rows
    0fr) тот же padding давал 2-пиксельную полоску содержимого. */
 .tiles-reveal.open>.tiles-inner{padding-top:2px}
-.tiles-title{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.tiles-title{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
 .tiles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:7px}
 .soc-tile{
   display:flex;flex-direction:column;align-items:center;gap:5px;
@@ -2579,7 +2600,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .history-body{padding:18px 20px;overflow-y:auto;flex:1}
 .history-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .history-toolbar h3{margin:0;font-size:17px;font-weight:800;color:var(--txt);letter-spacing:-.02em}
-.history-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.history-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .btn-sm.danger{border-color:var(--err-bdr);color:var(--red)}
 .btn-sm.danger:hover{background:var(--err-bg);border-color:var(--red)}
 .btn-sm.warn{border-color:var(--warn-bdr);color:var(--warn-strong)}
@@ -2991,7 +3012,12 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
    ══════════════════════════════════════════════════════════ */
 .hint-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
 .hint-count{color:var(--muted);white-space:nowrap}
-.lbl-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+/* Строка «подпись + кнопки»: подпись живёт по центру вместе с кнопками,
+   поэтому её 5px margin-bottom (работающий только когда label стоит над
+   полем) здесь лишь приподнимал текст относительно кнопок — строка «плыла».
+   Воздух перед полем даёт сама строка (8px — половина шага сетки 16px). */
+.lbl-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.lbl-row .lbl{margin-bottom:0}
 .lbl-count{font-size:12px;color:var(--muted);font-weight:500}
 .clear-all-btn{
   background:transparent;
@@ -3020,6 +3046,9 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* Thin separators between field groups (all but the last) */
 #acc-basic .acc-inner>div{border-bottom:1px solid var(--bdr);padding-bottom:16px;margin-bottom:16px}
 #acc-basic .acc-inner>div:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+/* Разделитель групп: padding даёт 16px сверху линии, а flex-gap добавлял
+   свои 13 к margin — линия стояла на 16/29 и строка читалась сбитой. */
+#acc-basic .acc-inner{gap:0}
 /* Раньше здесь стоял невалидный селектор `var(--sub)-basic` — правило молча
    не применялось вообще. Правильный — #acc-basic. */
 [data-theme="dark"] #acc-basic .acc-inner>div{border-bottom-color:var(--bdr)}
@@ -4461,11 +4490,41 @@ header{
 /* ══════════════════════════════════════════════════════════
    Хранение результатов (срок автоудаления) + блок «Данные»
    ══════════════════════════════════════════════════════════ */
-.retention-block,.data-block{margin-top:16px;padding-top:14px;border-top:1px solid var(--bdr)}
+/* Разделитель между блоками внутри секции 05: отступ сверху даёт flex-gap
+   аккордеона (16px), под линией — свои 16px: линия посередине, а не на 32/14. */
+.retention-block,.data-block{margin-top:0;padding-top:16px;border-top:1px solid var(--bdr)}
+/* Заголовок «.sec» отделён от строки под ним (здесь блочный поток, а не
+   flex-gap, как в соседнем .out-dir-block, где этот же зазор даёт gap:6). */
+.retention-block .sec+*,.data-block .sec+*{margin-top:6px}
 .retention-row{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap}
 .retention-custom{display:inline-flex;align-items:center;gap:6px}
 .retention-custom input{width:84px}
 #retention-status:empty{display:none}
+
+/* ══════════════════════════════════════════════════════════
+   Единая сетка: где зазор уже задаёт flex-gap, margin у детей
+   только складывался с ним (6+5, 8+4, 12+4, 16+16) — и ритм
+   «плыл»: одна и та же связка «подпись → поле → подсказка»
+   получала то 5+4, то 11, то 21. Задержку задаёт сам gap.
+   Селекторы — только ПРЯМЫЕ дети: подпись во вложенном блоке
+   («Тип организаций», «Соцсети в результате») уже отделена
+   gap'ом контейнера, и её margin нужен — иначе строка
+   прилипает к переключателю (зазор 0 вместо 5).
+   Правила с ID (#acc-basic, #acc-filters) выше по приоритету:
+   там gap = 0 и margin — единственный источник ритма.
+   ══════════════════════════════════════════════════════════ */
+#acc-parse .acc-inner>*,#acc-tech .acc-inner>*,#acc-formats .acc-inner>*{margin-top:0;margin-bottom:0}
+.flt-group-body>*,.out-dir-block>*,.tiles-inner>*,.tech-box>*,.bl-block>*{margin-top:0;margin-bottom:0}
+/* label.lbl/span.lbl специфичнее сбока выше (0-1-1 против 0-1-0), поэтому
+   для подписей нужен парный селектор :where() — он держит ту же
+   специфичность и, стоя позже, всё же гасит margin: иначе получается
+   gap + 5 («Минимальная оценка» → 17px, «Папка» → 11px). */
+:where(.flt-group-body,.out-dir-block,.tiles-inner,.tech-box,.bl-block)>label.lbl,
+:where(.flt-group-body,.out-dir-block,.tiles-inner,.tech-box,.bl-block)>span.lbl{margin-top:0;margin-bottom:0}
+
+/* Выпадающий список браузера идёт после подсказки об источнике данных:
+   у подсказки свой margin обнулён (gap), поэтому отступ задаёт блок. */
+#browser-pick-wrap{margin-top:8px}
 
 /* ══════════════════════════════════════════════════════════
    ЖИВАЯ СВОДКА НАСТРОЙКИ (верх боковой панели)
@@ -4476,7 +4535,7 @@ header{
 .setup-sum{
   /* Две колонки, а не поток: в колонке 300px пять чипов подряд занимали
      пять строк и сводка сама становилась «много информации». */
-  display:grid;grid-template-columns:1fr 1fr;gap:5px;
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;
   /* Внутренний отступ сводки = отступу остальных блоков колонки (13px):
      рамки чипов и заголовки блоков стоят на одной вертикали. */
   padding:8px 13px;margin:0;
