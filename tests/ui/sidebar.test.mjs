@@ -71,7 +71,7 @@ for (const id of ['f-queries', 'queries-count', 'city-count', 'clear-all-btn',
   'api-status-badge', 'api-keys-body', 'api-keys-toggle',
   'key-dot-vk',
   'preset-block', 'preset-dd-wrap', 'preset-dd-btn', 'preset-dd-list',
-  'preset-dd-current', 'preset-block-hint', 'preset-new-btn']) {
+  'preset-dd-current', 'preset-block-hint', 'preset-new-btn', 'run-hint']) {
   els[id] = mkEl(id);
 }
 // Fake city chips for the fade-out assertion in clearAllInputs.
@@ -325,6 +325,41 @@ test('updateRunBtnState: grey+disabled when not ready, teal when ready', () => {
   globalThis.updateRunBtnState();
   assert.equal(els['btn-run'].disabled, false, 'enabled when ready');
   assert.equal(els['btn-run']._classes.has('run-ready'), true, 'teal when ready');
+});
+
+test('run-hint: объясняет, чего не хватает, и скрывается при готовности', () => {
+  const hint = els['run-hint'];
+  globalThis.selectedCities = [];
+  els['f-queries'].value = '';
+
+  globalThis.updateRunBtnState();
+  assert.equal(hint.hidden, false, 'пустая форма — подсказка видна');
+  assert.match(hint.textContent, /Введите запрос и выберите город/);
+  assert.equal(hint.getAttribute('data-need'), 'both');
+
+  els['f-queries'].value = 'кафе';
+  globalThis.updateRunBtnState();
+  assert.equal(hint.hidden, false);
+  assert.match(hint.textContent, /Выберите город/);
+  assert.equal(hint.getAttribute('data-need'), 'cities', 'клик ведёт к городу');
+
+  globalThis.selectedCities = ['Уфа'];
+  els['f-queries'].value = '';
+  globalThis.updateRunBtnState();
+  assert.match(hint.textContent, /Напишите, кого искать/);
+  assert.equal(hint.getAttribute('data-need'), 'queries');
+
+  els['f-queries'].value = 'кафе';
+  globalThis.updateRunBtnState();
+  assert.equal(hint.hidden, true, 'можно запускать — подсказка скрыта');
+  assert.equal(hint.textContent, '', 'и не занимает место текстом');
+
+  // Во время выполнения форма не важна: подсказка не должна висеть над «Паузой».
+  els['btn-run']._classes.add('run-active');
+  els['f-queries'].value = '';
+  globalThis.updateRunBtnState();
+  assert.equal(hint.hidden, true, 'во время работы подсказка не нужна');
+  els['btn-run']._classes.delete('run-active');
 });
 
 test('setRunBtnActive: one control — main button = ⏸ Пауза, small ⏹ stops', () => {

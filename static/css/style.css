@@ -434,6 +434,12 @@ label.lbl,span.lbl{
      и в блочном потоке, и в gap-колонке. */
   display:block;margin-bottom:6px;
 }
+/* Маркер обязательного поля: только у двух полей, без которых запуск
+   невозможен. Настоящее требование озвучивает aria-label, звёздочка —
+   подсказка для глаз (и объяснение в подсказке у кнопки запуска). */
+.req{
+  color:var(--c);font-weight:800;margin-left:2px;cursor:help;
+}
 input[type=text],input[type=number],input[type=password],textarea,select{
   border:1px solid var(--bdr);border-radius:8px;padding:9px 11px;
   font-size:13px;width:100%;font-family:inherit;
@@ -3087,9 +3093,25 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* ── Sticky dock: «Найти компании» is always visible at the bottom of the
       sidebar, even when city chips push the rest off-screen ── */
 /* ── Sidebar footer: 💾 Сохранить пресет + 🚀 Найти компании ── */
+/* Док — колонка: сверху подсказка «чего не хватает», под ней прежний ряд
+   кнопок. Ряд остаётся одной строкой, чтобы кнопка запуска не уменьшалась. */
 #run-dock.sidebar-footer{
-  display:flex;gap:8px;align-items:stretch;
+  display:flex;flex-direction:column;gap:8px;align-items:stretch;
 }
+.run-dock-row{display:flex;gap:8px;align-items:stretch}
+/* Подсказка у кнопки: спокойная строка, а не вторая жёлтая тревога.
+   Кликабельна — ведёт к тому полю, которого не хватает. */
+.run-hint{
+  display:block;width:100%;margin:0;padding:2px 2px;
+  background:none;border:none;border-radius:6px;
+  color:var(--sub);font-family:inherit;
+  font-size:12px;font-weight:600;line-height:1.4;text-align:left;
+  cursor:pointer;
+  transition:color .12s;
+}
+.run-hint:hover{color:var(--txt)}
+.run-hint:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.run-hint[hidden]{display:none}
 .btn-save-preset{
   flex:0 0 auto;padding:12px 14px;
   background:transparent;border:1px solid var(--bdr);border-radius:9px;

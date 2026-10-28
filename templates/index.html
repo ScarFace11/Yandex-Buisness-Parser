@@ -333,7 +333,7 @@
                 <!-- Кнопки — в строке заголовка, а не под полем: там их
                      накрывает открытый список сфер, и «Сферы» не нажать. -->
                 <div class="lbl-row">
-                  <label class="lbl" for="f-queries">Кого будем искать?</label>
+                  <label class="lbl" for="f-queries">Кого будем искать?<span class="req" title="Обязательное поле — без него поиск не начнётся" aria-label="обязательное поле">*</span></label>
                   <span class="hint-actions">
                     <button type="button" class="clear-all-btn" id="clear-queries-btn"
                             onclick="clearQueriesField()" hidden
@@ -345,7 +345,7 @@
                       <svg class="ico" aria-hidden="true"><use href="#i-pencil"/></svg>Сферы</button>
                   </span>
                 </div>
-                <textarea id="f-queries" placeholder="кафе&#10;ресторан&#10;парикмахерская">кафе</textarea>
+                <textarea id="f-queries" aria-required="true" placeholder="кафе&#10;ресторан&#10;парикмахерская">кафе</textarea>
                 <div class="hint hint-row">
                   <span>Напишите по одному виду бизнеса в строке</span>
                   <span class="hint-count" id="queries-count" hidden></span>
@@ -359,7 +359,7 @@
 
               <div id="fw-city">
                 <div class="lbl-row">
-                  <label class="lbl" for="city-select-box">Где ищем?
+                  <label class="lbl" for="city-select-box">Где ищем? <span class="req" title="Обязательное поле — без него поиск не начнётся" aria-label="обязательное поле">*</span>
                     <span class="lbl-count" id="city-count" hidden></span>
                   </label>
                   <button type="button" class="clear-all-btn" id="clear-all-btn" onclick="clearAllInputs()" hidden
@@ -948,6 +948,11 @@
 
         <!-- Sticky footer: «Сохранить пресет» + «Найти компании» -->
         <div id="run-dock" class="sidebar-footer">
+          <!-- Подсказка у самой кнопки: чего не хватает и куда нажать. Кнопка, а
+               не текст: неактивную «Найти компании» нельзя сфокусировать, а эту
+               — можно, поэтому клавиатура и скринридер её видят. -->
+          <button type="button" class="run-hint" id="run-hint" hidden onclick="runHintJump()"></button>
+          <div class="run-dock-row">
           <button type="button" class="btn-save-preset" onclick="openPresetModal()"
                   title="Сохранить все настройки поиска как пресет" aria-label="Сохранить пресет">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
@@ -958,7 +963,7 @@
             </svg>
           </button>
           <!-- ОДНА управляющая кнопка: 🚀 Найти → ⏸ Пауза → ▶ Продолжить. -->
-          <button id="btn-run" onclick="startRun()">
+          <button id="btn-run" aria-describedby="run-hint" onclick="startRun()">
             <span id="btn-icon"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg></span>
             <span id="btn-txt">Найти компании</span>
           </button>
@@ -966,6 +971,7 @@
                   title="Остановить поиск полностью — спросим подтверждение" aria-label="Остановить поиск">
             <svg class="ico" aria-hidden="true"><use href="#i-square"/></svg>
           </button>
+          </div>
         </div>
 
       </div>

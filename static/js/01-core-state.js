@@ -832,6 +832,9 @@ function initCitySelect() {
   // Полю нужна настоящая подпись: placeholder исчезает после ввода и
   // скринридером как имя поля не читается (проверяет сквозной аудит).
   inp.setAttribute('aria-label', 'Добавить город');
+  // Город обязателен: без него «Найти компании» остаётся серой. Флаг
+  // озвучивается скринридером вместе с именем поля.
+  inp.setAttribute('aria-required', 'true');
   const clr = document.createElement('button');
   clr.className = 'city-clear';
   clr.innerHTML = UI_ICONS.x;

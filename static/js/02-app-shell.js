@@ -67,12 +67,56 @@ function isRunReady() {
 function updateRunBtnState() {
   const btn = document.getElementById('btn-run');
   if (!btn) return;
+  const ready = isRunReady();
+  // Подсказка у кнопки: единственное, чего не хватает, — рядом с самой
+  // кнопкой. Чипы сводки стоят вверху длинной панели и уезжают из виду,
+  // а серая кнопка без объяснения читается как поломка.
+  const hint = document.getElementById('run-hint');
+  if (hint) {
+    const hasQueries = (document.getElementById('f-queries')?.value || '')
+      .split('\n').map(s => s.trim()).filter(Boolean).length > 0;
+    const hasCities = selectedCities.length > 0;
+    const running = btn.classList.contains('run-active') || btn.classList.contains('run-paused');
+    let need = '';
+    if (!ready && !running) {
+      need = (!hasQueries && !hasCities) ? 'both' : (!hasQueries ? 'queries' : 'cities');
+    }
+    hint.hidden = !need;
+    hint.textContent = need === 'both'
+      ? 'Введите запрос и выберите город — без них поиск не начнётся'
+      : need === 'queries'
+        ? 'Напишите, кого искать — например «кафе»'
+        : need === 'cities'
+          ? 'Выберите город — без него поиск не начнётся'
+          : '';
+    hint.setAttribute('data-need', need);
+  }
   // Mid-run the red «⏸ Пауза» state is owned by
   // setRunBtnActive()/resetBtn() — never flip it back to grey/teal.
   if (btn.classList.contains('run-active')) return;
   if (btn.classList.contains('run-paused')) return;
-  btn.disabled = !isRunReady();
-  btn.classList.toggle('run-ready', isRunReady());
+  btn.disabled = !ready;
+  btn.classList.toggle('run-ready', ready);
+}
+
+// Клик по подсказке ведёт к недостающему полю: подсказка бесполезна, если
+// после неё нужно искать поле глазами по всей панели. Раздел раскрывается
+// тем же toggleAccordion, что и у шагов «Как это работает».
+function runHintJump() {
+  const hint = document.getElementById('run-hint');
+  const need = (hint && hint.getAttribute('data-need')) || 'both';
+  const sec = document.getElementById('acc-basic');
+  if (sec && !sec.classList.contains('open')) {
+    const hdr = sec.querySelector('.acc-hdr');
+    if (hdr) toggleAccordion(hdr);
+  }
+  const el = document.getElementById(need === 'cities' ? 'f-city-input' : 'f-queries')
+    || document.getElementById('city-select-box');
+  if (!el) return;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  setTimeout(() => {
+    if (typeof el.focus === 'function') el.focus({ preventScroll: true });
+  }, 0);
 }
 
 // ── Sticky-футер «Фильтрация результата» ─────────────────────

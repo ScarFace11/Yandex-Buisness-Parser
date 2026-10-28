@@ -1990,3 +1990,57 @@ class TestStatsGraphics:
     def test_empty_stats_have_an_illustration(self):
         assert 'class="sta-art" aria-hidden="true"' in APP_JS
         assert ".sta-art{" in STYLE and ".sta-col-hi{" in STYLE
+
+
+class TestRequiredFieldsAndDockHint:
+    """Пустая форма: два обязательных поля и подсказка у серой кнопки.
+
+    Серая «Найти компании» без объяснения читалась как поломка: причина
+    жила чипом наверху длинной панели и уезжала из виду. Теперь она
+    написана прямо над кнопкой и кликабельна.
+    """
+
+    def test_both_required_fields_are_marked_for_eyes_and_screen_readers(self):
+        assert TEMPLATE.count('class="req"') == 2
+        assert 'aria-label="обязательное поле"' in TEMPLATE
+        assert 'Кого будем искать?<span class="req"' in TEMPLATE
+        assert 'Где ищем? <span class="req"' in TEMPLATE
+        # Требование озвучивается и самим полем.
+        assert 'id="f-queries" aria-required="true"' in TEMPLATE
+        assert "inp.setAttribute('aria-required', 'true')" in APP_JS
+
+    def test_hint_sits_above_the_button_row(self):
+        tail = '<!-- ПРАВО: вкладки -->'
+        assert tail in TEMPLATE
+        dock = TEMPLATE[TEMPLATE.index('id="run-dock"'):]
+        dock = dock[:dock.index(tail)]
+        assert 'class="run-hint" id="run-hint"' in dock
+        assert 'aria-describedby="run-hint"' in dock
+        # Сначала подсказка, потом ряд кнопок: иначе она оказалась бы под CTA.
+        assert dock.index('id="run-hint"') < dock.index('class="run-dock-row"')
+        assert dock.index('class="run-dock-row"') < dock.index('id="btn-run"')
+
+    def test_hint_is_a_button_that_leads_to_the_missing_field(self):
+        assert "function runHintJump()" in APP_JS
+        body = APP_JS.split("function runHintJump()")[1][:900]
+        assert "toggleAccordion(hdr)" in body
+        assert "'f-city-input' : 'f-queries'" in body
+        assert "hint.setAttribute('data-need', need)" in APP_JS
+
+    def test_hint_texts_cover_every_empty_state(self):
+        assert 'Введите запрос и выберите город — без них поиск не начнётся' in APP_JS
+        assert 'Напишите, кого искать — например «кафе»' in APP_JS
+        assert 'Выберите город — без него поиск не начнётся' in APP_JS
+
+    def test_styles_keep_the_dock_one_row_of_buttons(self):
+        start = STYLE.index('#run-dock.sidebar-footer{')
+        rule = STYLE[start:STYLE.index('}', start)]
+        assert 'flex-direction:column' in rule
+        assert '.run-dock-row{display:flex;gap:8px;align-items:stretch}' in STYLE
+        hint = STYLE[STYLE.index('.run-hint{'):]
+        hint = hint[:hint.index('}')]
+        assert 'cursor:pointer' in hint
+        assert 'color:var(--sub)' in hint
+        assert 'font-size:12px' in hint
+        assert '.run-hint[hidden]{display:none}' in STYLE
+        assert 'color:var(--c)' in STYLE[STYLE.index('.req{'):][:80]
