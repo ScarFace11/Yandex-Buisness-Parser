@@ -239,12 +239,14 @@
 .history-caret{margin-left:auto;font-size:12px;color:var(--muted);transition:transform .15s}
 .history-section.is-collapsed .history-caret{transform:rotate(-90deg)}
 .history-section.is-collapsed .history-hint,
+.history-section.is-collapsed .history-more,
 .history-section.is-collapsed .history-list{display:none}
 .history-title{
   font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--sub);
   font-weight:800;padding-left:9px;border-left:3px solid var(--c);
 }
 .history-hint{font-size:12px;color:var(--muted);padding-left:12px}
+.history-more{margin-top:0}
 .history-list{display:grid;gap:10px;min-width:0}
 .file-card{
   display:flex;align-items:center;justify-content:space-between;gap:12px;

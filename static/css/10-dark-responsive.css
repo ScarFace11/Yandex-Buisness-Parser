@@ -100,7 +100,7 @@ html.theme-anim #log-output{
              box-shadow .22s ease;
 }
 [data-theme="dark"] .api-status-block{border-color:var(--bdr);background:var(--card)}
-[data-theme="dark"] .group-title{color:var(--sub);border-left-color:var(--c)}
+[data-theme="dark"] .group-title{color:var(--txt)}
 [data-theme="dark"] .clear-all-btn{border-color:var(--bdr-h);color:var(--sub);background:transparent}
 [data-theme="dark"] .clear-all-btn:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
 [data-theme="dark"] .btn-save-preset{border-color:var(--bdr-h);color:var(--sub)}

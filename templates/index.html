@@ -390,7 +390,10 @@
                     <span class="src-dot" aria-hidden="true"></span><span>Яндекс.Карты</span>
                   </label>
                 </div>
-                <div class="hint" id="source-hint">Карточки организаций открывает ваш браузер: соцсети, сайт и телефон берутся с карточки Яндекс.Карт. Ключи платных API не нужны.</div>
+                <details class="hint-more" id="source-hint">
+                  <summary>Ключи платных API не нужны<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
+                  <div class="hm-body">Карточки организаций открывает ваш браузер: соцсети, сайт и телефон берутся с карточки Яндекс.Карт. Платные API приложению не нужны.</div>
+                </details>
                 <div class="hint" id="engine-availability" style="display:none"></div>
 
                 <!-- Браузер для сбора: если Chrome и Яндекс Браузер стоят рядом,
@@ -463,11 +466,10 @@
               <div class="tech-box">
                 <div class="tech-box-title">Скорость и объём</div>
                 <p class="tech-box-note">Значения по умолчанию подходят для большинства задач. Увеличивайте, если готовы к более долгому поиску.</p>
-                <div class="hint" id="polite-note">
-                  <b>Вежливый режим включён всегда:</b> между запросами есть пауза, а на ответ
-                  «слишком много запросов» (429) сбор сам снижает скорость. Так поиск не
-                  выглядит для сервиса шквалом обращений.
-                </div>
+                <details class="hint-more" id="polite-note">
+                  <summary>Вежливый режим<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
+                  <div class="hm-body">Включён всегда: между запросами есть пауза, а на ответ «слишком много запросов» (429) сбор сам снижает скорость. Так поиск не выглядит для сервиса шквалом обращений.</div>
+                </details>
                 <div class="row2 row2-align">
                   <div>
                     <label class="lbl" for="f-pages" title="Сколько страниц по 50 результатов собирать с каждой точки сетки.">Страниц <span class="lbl-note">×50 результатов</span></label>
@@ -558,7 +560,10 @@
                   <input type="checkbox" id="f-continue" onchange="onContinueToggle()">
                   Продолжать после последнего города
                 </label>
-                <div class="hint">Когда выбранные города закончатся, поиск сам перейдёт к следующим городам из каталога (по населению) — можно отойти, он не остановится</div>
+                <details class="hint-more">
+                  <summary>Поиск сам пойдёт дальше<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
+                  <div class="hm-body">Города берутся из каталога по населению: от крупных к мелким. Можно отойти — поиск не остановится.</div>
+                </details>
                 <div id="continue-limit-row" style="display:none;margin-top:8px">
                   <label class="lbl" for="f-continue-limit">Сколько городов добавить</label>
                   <div class="stepper" data-min="1" data-max="50" data-step="1">
@@ -870,11 +875,10 @@
               <!-- Журнал источников: в каждом файле есть когда собран и откуда
                    взята запись — это и аргумент «данные актуальны на дату»,
                    и возможность проверить любую строку по ссылке. -->
-              <div class="hint" id="src-journal-hint">
-                <b>Журнал источников:</b> в выгрузке у каждой организации есть колонки
-                «Дата сбора» (день и время) и «Яндекс.Карты» (ссылка на карточку-источник).
-                Имена и тексты отзывов не собираются.
-              </div>
+              <details class="hint-more" id="src-journal-hint">
+                <summary>Журнал источников<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
+                <div class="hm-body">У каждой организации — «Дата сбора» (день и время) и «Яндекс.Карты» (ссылка на карточку). Имена и тексты отзывов не собираются.</div>
+              </details>
 
               <div class="out-dir-block" id="output-dir-block">
                 <div class="sec">Куда сохранять</div>
@@ -931,13 +935,19 @@
                     <span class="num-unit">дн. (макс. 30)</span>
                   </span>
                 </div>
-                <div class="hint">Файлы результатов (Excel, JSON, CSV, карта) старше срока удаляются автоматически при запуске приложения. Максимум — 30 дней.</div>
+                <details class="hint-more">
+                  <summary>Старые файлы удаляются<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
+                  <div class="hm-body">Excel, JSON, CSV и карта старше выбранного срока удаляются при запуске приложения. Максимум — 30 дней.</div>
+                </details>
                 <div class="hint" id="retention-status" role="status" aria-live="polite"></div>
               </div>
 
               <div class="data-block" id="data-block">
                 <div class="sec">Данные</div>
-                <div class="hint">Отметки «Просмотрено» и настройки (включая шаблоны) хранятся рядом с результатами. Экспорт — запасная копия или перенос на другую машину; импорт добавляет отметки из архива, не стирая сделанные после экспорта.</div>
+                <details class="hint-more">
+                  <summary>Где хранятся отметки<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
+                  <div class="hm-body">Отметки «Просмотрено» и настройки хранятся рядом с результатами. Экспорт — запасная копия или перенос на другую машину; импорт добавляет отметки из архива, не стирая сделанные после экспорта.</div>
+                </details>
                 <div class="history-actions" style="align-items:center;margin-top:8px">
                   <button class="btn-sm" onclick="exportAppData()">
                     <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>Экспорт данных</button>
@@ -1309,7 +1319,10 @@
                   <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>Применить фильтры заново</button>
                 <span class="history-caret" aria-hidden="true">▾</span>
               </div>
-              <div class="history-hint">Всё, что собрал поиск, кроме отброшенного на сборе (чёрный список, «без сайта», соцсети). Отсюда работает «Фильтрация результата».</div>
+              <details class="hint-more history-more">
+                <summary>Что попадает в историю<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
+                <div class="hm-body">Всё, что собрал поиск, кроме отброшенного сразу: по чёрному списку, «без сайта» или без нужных соцсетей. Отсюда же работает «Фильтрация результата».</div>
+              </details>
               <div class="history-list" id="history-raw"><div class="no-data">Загрузка…</div></div>
             </div>
 

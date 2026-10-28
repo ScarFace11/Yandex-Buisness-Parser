@@ -2223,3 +2223,78 @@ class TestCssParts:
         big = [(p.name, p.read_text(encoding="utf-8").count("\n"))
                for p in css_files() if p.read_text(encoding="utf-8").count("\n") > 450]
         assert not big, f"часть разрослась: {big}"
+
+
+class TestSectionHierarchy:
+    """Разделы различаются не одной полоской.
+
+    «Сбор данных» и «Вывод и фильтрация» были строкой мелких капс и
+    сливались с полями; шапки аккордеонов — тем же фоном, что и форма.
+    У длинных подсказок — свёртка: короткая строка и подробности по клику.
+    """
+
+    def test_group_titles_have_an_accent_bar_and_a_rule(self):
+        assert ".group-title::before{" in STYLE
+        assert ".group-title::after{" in STYLE
+        bar = STYLE[STYLE.index(".group-title::before{"):]
+        bar = bar[:bar.index("}")]
+        assert "background:var(--c)" in bar
+
+    def test_accordion_header_is_a_separate_surface(self):
+        assert ".acc-hdr{background:var(--panel)}" in STYLE
+        # Открытая шапка — --acc-soft, а не --cl: в тёмной теме --cl
+        # (#1B2028) и --panel (#1C1F26) отличаются на единицу, и открытый
+        # блок выглядел закрытым (видно в браузере, ловится тестом ниже).
+        assert ".acc.open>.acc-hdr{background:var(--acc-soft)}" in STYLE
+        assert ".card-hdr{background:var(--panel)}" in STYLE
+
+    def test_open_accordion_band_is_visible_in_dark(self):
+        """Подсветка открытой шапки должна читаться, а не совпадать с фоном."""
+        block = DARK_TOKEN_BLOCK[:DARK_TOKEN_BLOCK.index("/*/TOK*/")]
+
+        def token(name):
+            m = re.search(rf"--{name}:\s*([^;]+);", block)
+            assert m, f"токен --{name} не найден в тёмной теме"
+            return m.group(1).strip()
+
+        def rgba(value):
+            if value.startswith("#"):
+                return (*[int(value[i:i + 2], 16) for i in (1, 3, 5)], 1.0)
+            nums = [float(n) for n in re.findall(r"[\d.]+", value)]
+            return (*nums[:3], nums[3] if len(nums) > 3 else 1.0)
+
+        card = rgba(token("card"))
+        closed = rgba(token("panel"))
+        wash = rgba(token("acc-soft"))
+        blended = [wash[i] * wash[3] + card[i] * (1 - wash[3]) for i in range(3)]
+        delta = max(abs(blended[i] - closed[i]) for i in range(3))
+        assert delta >= 8, (
+            f"открытая шапка почти не отличается от закрытой: "
+            f"{tuple(round(v) for v in blended)} vs {closed[:3]}")
+
+    def test_basic_parameters_groups_are_separated(self):
+        # Три группы «Основных параметров» шли подряд без границ.
+        assert "#acc-basic-body > .acc-inner > div + div{" in STYLE
+        block = STYLE[STYLE.index("#acc-basic-body > .acc-inner > div + div{"):]
+        assert "border-top:1px solid var(--bdr)" in block[:block.index("}")]
+
+    def test_subheaders_have_a_short_accent(self):
+        assert ".sec::before{" in STYLE
+        bar = STYLE[STYLE.index(".sec::before{"):]
+        assert "height:12px" in bar[:bar.index("}")]
+
+    def test_long_hints_are_collapsed_by_default(self):
+        for lead in ("Поиск сам пойдёт дальше",
+                     "Ключи платных API не нужны",
+                     "Старые файлы удаляются",
+                     "Что попадает в историю",
+                     "Вежливый режим",
+                     "Журнал источников",
+                     "Где хранятся отметки"):
+            assert lead in TEMPLATE, lead
+        assert TEMPLATE.count('<details class="hint-more') >= 6
+
+    def test_collapsible_hint_needs_no_javascript(self):
+        assert 'class="hm-more"' in TEMPLATE and 'class="hm-less"' in TEMPLATE
+        assert ".hint-more[open] .hm-less{display:inline}" in STYLE
+        assert "hint-more" not in APP_JS, "свёртка должна работать без JS"

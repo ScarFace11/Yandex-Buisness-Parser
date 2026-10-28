@@ -7,6 +7,51 @@
    цвета, мягче тени, единый ритм. Все значения через токены.
    ══════════════════════════════════════════════════════════ */
 
+/* ── Иерархия разделов: границы видны, а не угадываются ──────────
+   Раньше группа отличалась только строкой мелких капс: «Сбор данных»
+   и «Вывод и фильтрация» сливались с полями формы. Теперь у группы
+   акцентная черта, название и линия до края; у подзаголовка внутри
+   блока — тоже черта, но короче. */
+.group-title{
+  display:flex;align-items:center;gap:10px;
+  color:var(--txt);font-weight:800;
+}
+.group-title::before{
+  content:"";flex:0 0 3px;width:3px;height:14px;border-radius:2px;
+  background:var(--c);
+}
+.group-title::after{
+  content:"";flex:1 1 auto;height:1px;background:var(--bdr);
+}
+[data-theme="dark"] .group-title{color:var(--txt)}
+.sec{
+  display:flex;align-items:center;gap:8px;
+  color:var(--txt);font-weight:800;
+}
+.sec::before{
+  content:"";flex:0 0 3px;width:3px;height:12px;border-radius:2px;
+  background:var(--c);
+}
+
+/* Шапка аккордеона — своя полоса, а не продолжение полей. Открытая
+   подсвечена мягче, номер становится акцентным.
+   Подсветка — --acc-soft, а не --cl: в тёмной теме --cl (#1B2028) и
+   --panel (#1C1F26) отличаются на единицу, и открытый блок выглядел
+   закрытым. */
+.acc-hdr{background:var(--panel)}
+.acc.open>.acc-hdr{background:var(--acc-soft)}
+/* --brand, а не --c: в тёмной теме --c светлый, и белые цифры на нём
+   дают 2.3:1 (проверяет тест контраста). */
+.acc.open>.acc-hdr .acc-num{background:var(--brand);color:var(--on-accent)}
+.card-hdr{background:var(--panel)}
+
+/* В «Основных параметрах» три группы шли подряд без границ: что ищем,
+   где ищем, источник данных читались одной простынёй. Линия и шаг
+   сверху дают глазу точку опоры, не разрывая общий ритм (gap 16). */
+#acc-basic-body > .acc-inner > div + div{
+  border-top:1px solid var(--bdr);padding-top:14px;
+}
+
 /* ── Типографика: чуть плотнее заголовки, ровнее подписи ── */
 h1,h2,h3,.acc-title,.card-hdr,.panel-title{
   letter-spacing:-.018em;

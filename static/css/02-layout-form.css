@@ -85,6 +85,41 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,texta
 textarea{display:block;resize:vertical;min-height:76px;line-height:1.5}
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 
+/* ── Длинная подсказка: одна строка + «Подробнее» ─────────────────
+   Абзац на 4–5 строк читался как часть формы и делал колонку
+   монотонной. Короткий вывод остаётся на виду, остальное — по клику;
+   <details> даёт это без JS, с клавиатурой и поиском по странице. */
+.hint-more{
+  margin-top:8px;border:1px solid var(--bdr);border-radius:9px;
+  background:var(--panel);font-size:12px;line-height:1.5;
+}
+.hint-more>summary{
+  /* Текст и «Подробнее» — две колонки: при переносе строка не разрывает
+     фразу пополам, а кнопка остаётся справа. */
+  display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
+  padding:9px 11px;cursor:pointer;list-style:none;
+  color:var(--sub);font-weight:600;
+}
+.hint-more>summary::-webkit-details-marker{display:none}
+.hint-more>summary:hover{background:var(--cl);border-radius:9px}
+.hint-more>summary:focus-visible{outline:2px solid var(--c);outline-offset:-2px;border-radius:9px}
+.hint-more[open]>summary{
+  border-bottom:1px solid var(--bdr);border-radius:9px 9px 0 0;
+}
+.hm-cta{flex:0 0 auto;color:var(--c);font-weight:700;white-space:nowrap;line-height:1.5}
+/* Шеврон — двумя границами, как у аккордеонов: символ «▾» в Manrope
+   рисовался крошечным дефисом. */
+.hm-cta::after{
+  content:"";display:inline-block;width:6px;height:6px;margin-left:5px;
+  border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;
+  transform:translateY(-2px) rotate(45deg);transition:transform .15s;
+}
+.hint-more[open] .hm-cta::after{transform:translateY(1px) rotate(225deg)}
+.hint-more .hm-less{display:none}
+.hint-more[open] .hm-more{display:none}
+.hint-more[open] .hm-less{display:inline}
+.hm-body{padding:9px 11px 10px;color:var(--muted)}
+
 /* ── 2-col rows inside form ── */
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 /* Align label+stepper pairs: both cells top-aligned, steppers on one line.
