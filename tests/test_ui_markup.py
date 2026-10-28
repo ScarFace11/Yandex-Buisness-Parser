@@ -2044,3 +2044,27 @@ class TestRequiredFieldsAndDockHint:
         assert 'font-size:12px' in hint
         assert '.run-hint[hidden]{display:none}' in STYLE
         assert 'color:var(--c)' in STYLE[STYLE.index('.req{'):][:80]
+
+
+class TestFirstScreenCopy:
+    """Первый экран: справка вместо тревоги и короткие подсказки.
+
+    «API-ключи ⚠ 0/1» новичок читал как «настройка не закончена» и шёл
+    искать ключи, хотя поиску они не нужны. Абзац про пресеты занимал
+    четыре строки и отодвигал два обязательных поля вниз.
+    """
+
+    def test_api_badge_is_neutral_when_nothing_is_configured(self):
+        assert "cls = 'off'; txt = 'необязательно'" in APP_JS
+        assert "UI_ICONS.warn + `${have}/${total}`" not in APP_JS
+        assert '.api-badge.off{background:var(--cl);color:var(--sub)' in STYLE
+        # Пояснение остаётся в подсказке: что именно теряется без ключа.
+        assert 'Поиск работает и без ключей.' in APP_JS
+
+    def test_preset_hints_are_one_short_line(self):
+        line = 'Сохраните текущий поиск кнопкой «+ Новый» — вернётесь к нему одним кликом.'
+        assert line in TEMPLATE
+        assert line in APP_JS
+        assert 'Выберите пресет — настройки подставятся автоматически.' in APP_JS
+        # Запуск без интерфейса — не первый экран для новичка.
+        assert 'Тот же пресет запускается без интерфейса' not in APP_JS

@@ -51,10 +51,12 @@ function renderPresets() {
   if (!presets.length) {
     wrap.hidden = true;
     list.innerHTML = '';                      // drop stale items from the last render
-    if (hint) hint.textContent = 'Пресетов пока нет — настройте поиск и сохраните его кнопкой «+ Новый». Пресет хранится и в браузере, и в настройках приложения: его можно запустить и без интерфейса.';
+    // Одна строка вместо абзаца: до первого пресета блок объяснял больше,
+    // чем нужно, и отодвигал форму с двумя обязательными полями.
+    if (hint) hint.textContent = 'Сохраните текущий поиск кнопкой «+ Новый» — вернётесь к нему одним кликом.';
     return;
   }
-  if (hint) hint.textContent = 'Выберите пресет — настройки подставятся автоматически. Тот же пресет запускается без интерфейса: app.py --run --preset «Имя».';
+  if (hint) hint.textContent = 'Выберите пресет — настройки подставятся автоматически.';
   wrap.hidden = false;
   list.innerHTML = presets.map((p, i) => {
     const safeName = String(p.name).replace(/"/g, '&quot;');

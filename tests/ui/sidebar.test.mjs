@@ -604,12 +604,15 @@ test('updateApiKeysStatus: единственный ключ есть → «Го
   assert.match(b.innerHTML, /#i-check/);
   assert.match(b.innerHTML, /Готово 1\/1/);
 });
-test('updateApiKeysStatus: ключа нет → «0/1» + предупреждение', () => {
+test('updateApiKeysStatus: ключа нет → «необязательно», без тревоги', () => {
+  // Ключ ВК нужен только для проверки активности сообществ. Жёлтое «⚠ 0/1»
+  // читалось как незавершённая настройка и пугало до первого поиска.
   globalThis.updateApiKeysStatus(false);
   const b = els['api-status-badge'];
-  assert.ok(b._classes.has('warn'));
-  assert.match(b.innerHTML, /0\/1/);
-  assert.match(b.innerHTML, /#i-warn/);
+  assert.ok(b._classes.has('off'), 'спокойная плашка');
+  assert.ok(!b._classes.has('warn'), 'без предупреждения');
+  assert.match(b.innerHTML, /необязательно/);
+  assert.match(b.title, /Поиск работает и без ключей/);
 });
 test('updateApiKeysStatus: точка у поля следует за токеном', () => {
   globalThis.updateApiKeysStatus(true);

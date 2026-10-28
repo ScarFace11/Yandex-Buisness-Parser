@@ -3279,6 +3279,9 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 }
 .key-where:hover{text-decoration:underline}
 .api-badge.err{background:var(--err-bg);color:var(--err-txt);border:1px solid var(--err-bdr)}
+/* Ключ не указан — это норма, а не поломка: спокойная плашка вместо
+   жёлтого предупреждения, которое читалось как «настройка не закончена». */
+.api-badge.off{background:var(--cl);color:var(--sub);border:1px solid var(--bdr)}
 .api-chev{
   flex:0 0 auto;width:8px;height:8px;
   border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
