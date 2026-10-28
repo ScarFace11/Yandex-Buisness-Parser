@@ -811,6 +811,22 @@ function cityHistoryLine(name) {
   return `<div class="city-option-hist" title="Искали: ${escapeHtml(full)} · ${dateStr}">🕒 ${dateStr} · ${escapeHtml(kw)}</div>`;
 }
 
+// Город из поля ввода становится чипом. Enter делал это давно, а уход
+// фокуса — только при совпадении со справочником: «Уфа, Башкортостан»
+// молча исчезал, и новичок видел, что введённый город пропал.
+function commitCityInput() {
+  const inp = document.getElementById('f-city-input');
+  if (!inp) return;
+  const text = (citySearchText || inp.value || '').trim();
+  if (!text) return;
+  const match = _citiesByName.get(text.toLowerCase());
+  addCity(match ? match.name : text);
+  citySearchText = '';
+  inp.value = '';
+  const clr = document.querySelector('.city-clear');
+  if (clr) clr.classList.remove('visible');
+}
+
 function initCitySelect() {
   const box = document.getElementById('city-select-box');
   box.innerHTML = '';
@@ -856,6 +872,14 @@ function initCitySelect() {
   dd.className = 'city-dropdown'; dd.id = 'city-dropdown';
   document.body.appendChild(dd);
 
+  // Клик мимо поля фиксирует город ДО обработки клика. Без этого первый клик
+  // по серой «Найти компании» пропадал: неактивная кнопка не получает фокус,
+  // поле не теряет его — и город становится чипом только через 200мс.
+  document.addEventListener('pointerdown', e => {
+    if (e.target === inp || dd.contains(e.target)) return;
+    commitCityInput();
+  }, true);
+
   // ── Events (attached once) ──
   inp.addEventListener('input', e => {
     citySearchText = e.target.value;
@@ -863,17 +887,18 @@ function initCitySelect() {
     updateCityDropdown();
   });
   inp.addEventListener('focus', () => { updateCityDropdown(); });
-  inp.addEventListener('blur', () => {
+  inp.addEventListener('blur', e => {
+    // Ушли не в список подсказок — фиксируем сразу: клик по серой «Найти
+    // компании» иначе уходил в никуда, а чип появлялся только через 200мс,
+    // уже после клика. Второй клик — единственный способ запустить поиск.
+    if (!(e.relatedTarget && dd.contains(e.relatedTarget))) {
+      dd.classList.remove('open');
+      commitCityInput();
+    }
     setTimeout(() => {
       if (dd.contains(document.activeElement)) return; // focus moved into the dropdown
       dd.classList.remove('open');
-      if (citySearchText.trim()) {
-        const match = _citiesByName.get(citySearchText.trim().toLowerCase());
-        if (match && !selectedCities.includes(match.name)) addCity(match.name);
-        citySearchText = '';
-        inp.value = '';
-        clr.classList.remove('visible');
-      }
+      commitCityInput();           // Safari не фокусирует пункт списка на клике
     }, 200);
   });
   inp.addEventListener('keydown', e => {

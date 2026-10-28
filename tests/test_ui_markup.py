@@ -2151,3 +2151,24 @@ class TestEmptyStates:
         for text in (TEMPLATE, APP_JS):
             assert 'собрал парсер' not in text
             assert 'парсер не остановится' not in text
+
+
+class TestCityInputCommit:
+    """Город не теряется и фиксируется до клика по кнопке.
+
+    Раньше уход фокуса сохранял только совпадение со справочником, а
+    «Уфа, Башкортостан» молча стирал. И чип появлялся через 200мс — уже
+    после клика по серой «Найти компании», поэтому первый клик пропадал.
+    """
+
+    def test_unknown_names_are_added_not_dropped(self):
+        assert 'function commitCityInput()' in APP_JS
+        body = APP_JS.split('function commitCityInput()')[1][:600]
+        assert 'addCity(match ? match.name : text)' in body
+        assert "citySearchText = ''" in body
+
+    def test_blur_commits_before_the_dropdown_delay(self):
+        assert "e.relatedTarget && dd.contains(e.relatedTarget)" in APP_JS
+        # Первый клик должен застать уже готовую кнопку.
+        assert 'commitCityInput();' in APP_JS
+        assert 'setTimeout(() => {\n      if (dd.contains(document.activeElement)) return;' in APP_JS
