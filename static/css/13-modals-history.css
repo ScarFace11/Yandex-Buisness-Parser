@@ -1,0 +1,387 @@
+/* 13-modals-history.css · Модалки, диагностика, отчёт о проблеме, история
+   Часть 14 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ── Modern confirm dialog (replaces window.confirm) ── */
+.ui-modal-overlay{
+  position:fixed;inset:0;background:var(--scrim);z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  animation:modal-in .18s ease;
+}
+@keyframes modal-in{from{opacity:0}to{opacity:1}}
+.ui-modal{
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);
+  padding:22px 24px;max-width:420px;width:90%;
+  box-shadow:var(--sh-lg);
+  animation:modal-pop .2s cubic-bezier(.34,1.4,.64,1);
+  /* Окно выше экрана не бывает: содержимое прокручивается внутри, а не
+     уезжает за край вместе с формой (раньше длинная форма — «Сообщить
+     о проблеме» — не помещалась на экран и её нельзя было доскроллить). */
+  max-height:calc(100vh - 32px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+@keyframes modal-pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+.ui-modal h3{margin:0 0 10px;font-size:16px;font-weight:800;color:var(--txt)}
+
+/* ── 🩺 Диагностика: самопроверка приложения ──
+   Оболочка — общая (.ui-modal-overlay/.ui-modal), здесь только содержимое:
+   пояснение, кнопки запуска, итоговая строка и строки проверок. Цвета —
+   только через токены, поэтому тёмная тема работает без отдельных правил. */
+.diag-modal{max-width:620px;width:min(620px,94vw);max-height:86vh;overflow:auto}
+.diag-lead{font-size:12.5px;line-height:1.55;color:var(--sub);margin:0 0 8px}
+.diag-note{
+  font-size:12px;line-height:1.5;color:var(--muted);
+  background:var(--row-alt);border:1px solid var(--bdr);border-radius:8px;
+  padding:8px 10px;margin:0 0 12px;
+}
+.diag-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.diag-actions .diag-run{font-weight:600}
+.diag-summary{
+  font-size:12.5px;line-height:1.55;color:var(--sub);
+  border-left:3px solid var(--bdr);padding:2px 0 2px 10px;margin-bottom:12px;
+}
+.diag-summary b{color:var(--txt)}
+.diag-summary-ok{border-left-color:var(--grn)}
+.diag-summary-warn{border-left-color:var(--yel)}
+.diag-summary-error{border-left-color:var(--red)}
+/* Легенда: три статуса одним взглядом. Цвет живёт в полосе и значке, а не
+   в тексте — мелкая зелёная/жёлтая надпись не проходит по контрасту. */
+.diag-legend{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+  margin:0 0 12px;font-size:12px;color:var(--sub);
+}
+.diag-legend-item{
+  display:inline-flex;align-items:center;gap:5px;
+  padding-left:8px;border-left:3px solid var(--muted);
+}
+.diag-legend-item[data-status="ok"]{border-left-color:var(--grn)}
+.diag-legend-item[data-status="warn"]{border-left-color:var(--yel)}
+.diag-legend-item[data-status="error"]{border-left-color:var(--red)}
+.diag-legend-tip{flex:1 1 100%;color:var(--muted);line-height:1.45}
+/* Копирование отчёта: одна кнопка и объяснение, что в отчёте нет секретов. */
+.diag-copy-row{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;
+  margin:10px 0 14px;padding-top:10px;border-top:1px solid var(--bdr);
+}
+.diag-copy-hint{font-size:12px;line-height:1.45;color:var(--muted);flex:1 1 180px}
+.diag-note code{
+  font-family:var(--mono, ui-monospace, SFMono-Regular, Consolas, monospace);
+  font-size:.95em;background:var(--card);border:1px solid var(--bdr);
+  border-radius:4px;padding:1px 4px;color:var(--txt);
+}
+.diag-group{margin-bottom:14px}
+.diag-group-title{
+  font-size:12px;font-weight:800;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;
+}
+.diag-row{
+  border:1px solid var(--bdr);border-radius:9px;padding:9px 11px;
+  margin-bottom:7px;background:var(--card);
+}
+.diag-row[data-status="ok"]{border-left:4px solid var(--grn)}
+.diag-row[data-status="warn"]{border-left:4px solid var(--yel)}
+.diag-row[data-status="error"]{border-left:4px solid var(--red)}
+.diag-row-head{display:flex;align-items:baseline;gap:7px}
+.diag-ico{flex:0 0 auto;font-size:13px;line-height:1.3}
+.diag-title{font-size:13px;font-weight:700;color:var(--txt);line-height:1.35}
+/* Статус словами — для скринридера: цвет и цвет полосы ему не видны. */
+.diag-sr{
+  margin-left:auto;flex:0 0 auto;font-size:12px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+}
+.diag-detail{font-size:12px;line-height:1.5;color:var(--sub);margin-top:4px;word-break:break-word}
+.diag-hint{font-size:12px;line-height:1.5;color:var(--muted);margin-top:4px}
+.diag-empty{font-size:12.5px;color:var(--muted);padding:12px 0}
+@media(max-width:860px){
+  .diag-modal{max-height:92vh;padding:18px 16px}
+  .diag-actions .diag-run{flex:1 1 100%}
+  .diag-sr{display:none}
+}
+.ui-modal p{margin:0 0 18px;font-size:13px;color:var(--sub);line-height:1.6}
+.ui-modal-btns{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap}
+
+/* ── «Сообщить о проблеме»: метки, контекст, скриншот ── */
+/* Шире базового окна и с прокруткой: форма длинная, а окно выше экрана
+   не бывает — упирается в max-height у .ui-modal. */
+.report-modal{max-width:560px;width:min(560px,94vw);position:relative}
+/* Крестик справа сверху — быстрое закрытие окна. */
+.rep-x{
+  position:absolute;top:12px;right:13px;width:28px;height:28px;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid transparent;border-radius:7px;
+  color:var(--muted);font-size:15px;line-height:1;cursor:pointer;
+  transition:color .12s,background .12s;
+}
+.rep-x:hover{color:var(--txt);background:var(--track)}
+.rep-x:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+/* Предупреждение «GitHub не подключён» + ссылка на вход. */
+.rep-gh-login{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;
+  background:var(--row-alt);border:1px solid var(--bdr);border-left:3px solid var(--yel);
+  border-radius:8px;padding:8px 10px;margin:0 0 10px;
+  font-size:12px;line-height:1.5;color:var(--sub);
+}
+.rep-gh-txt{flex:1 1 220px}
+.rep-gh-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rep-gh-link{font-weight:700;color:var(--c);white-space:nowrap}
+/* Код device flow: отдельной строкой, крупно и с разрядкой — его надо
+   перенести глазами со страницы GitHub в это окно и обратно. */
+.rep-gh-code{
+  flex:1 1 100%;font-size:12px;line-height:1.5;color:var(--sub);
+  border-top:1px solid var(--bdr);padding-top:7px;
+}
+.rep-gh-usercode{
+  font-family:var(--mono, ui-monospace, SFMono-Regular, Consolas, monospace);
+  font-size:14px;letter-spacing:.1em;color:var(--txt);
+}
+/* Поле-дропдаун меток: поле с выбранными пилюлями + выпадающий список. */
+.rep-label-select{position:relative}
+.rep-label-field{
+  display:flex;align-items:center;gap:8px;width:100%;min-height:38px;
+  padding:7px 10px;border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--txt);font-family:inherit;font-size:13px;
+  text-align:left;cursor:pointer;
+}
+.rep-label-field:hover{border-color:var(--bdr-h)}
+.rep-label-field:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+.rep-label-caret{margin-left:auto;color:var(--muted);flex:0 0 auto}
+.rep-label-pills{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.rep-label-ph{color:var(--muted);font-size:12.5px}
+.rep-label-menu{
+  position:absolute;z-index:6;top:calc(100% + 4px);left:0;right:0;
+  background:var(--card);border:1px solid var(--bdr);border-radius:9px;
+  box-shadow:var(--sh-lg);padding:5px;max-height:250px;overflow-y:auto;
+  scrollbar-width:thin;
+}
+.rep-label-opt{
+  display:grid;grid-template-columns:16px auto 1fr;align-items:center;gap:8px;
+  padding:7px 8px;border-radius:6px;cursor:pointer;
+}
+.rep-label-opt:hover{background:var(--row-alt)}
+.rep-label-desc{font-size:12px;color:var(--sub);line-height:1.35}
+/* Цветная пилюля метки — как на самом GitHub. Цвет задаётся инлайн-стилем
+   из _ghPillCss (09-ui-extras.js) — там же выбирается контрастный текст. */
+.gh-pill{
+  display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
+  font-size:12px;font-weight:700;line-height:1.5;white-space:nowrap;
+}
+.rep-label-opt .gh-pill{justify-self:start}
+.rep-checks{display:flex;flex-direction:column;gap:5px;margin:2px 0 4px}
+.rep-sec-lbl{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.05em;margin:12px 0 4px}
+.rep-sec-lbl label{cursor:pointer}
+.report-modal input[type="text"],.report-modal input[type="password"],
+.report-modal textarea{width:100%;box-sizing:border-box}
+.report-modal textarea{resize:vertical;min-height:84px;line-height:1.45}
+.rep-preview-wrap{margin-top:6px;border:1px solid var(--bdr);border-radius:var(--r-sm);
+  background:var(--panel);padding:6px 9px}
+.rep-preview-wrap summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--sub);list-style:none}
+.rep-preview-wrap summary::-webkit-details-marker{display:none}
+.rep-preview-wrap summary::before{content:'▸ ';color:var(--muted)}
+.rep-preview-wrap[open] summary::before{content:'▾ '}
+.rep-preview{margin:7px 0 2px;max-height:230px;overflow:auto;white-space:pre-wrap;
+  word-break:break-word;font-size:12px;line-height:1.45;color:var(--sub);
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-sm);padding:8px 9px;
+  scrollbar-width:thin}
+.rep-shot{border:1px dashed var(--bdr-h);border-radius:var(--r-sm);padding:12px 10px;
+  font-size:12px;color:var(--sub);text-align:center;cursor:pointer;transition:border-color .14s,background .14s}
+.rep-shot:hover,.rep-shot:focus-visible{border-color:var(--c);background:var(--cl)}
+.rep-shot img{max-width:100%;max-height:200px;border-radius:var(--r-sm);display:block;margin:0 auto 6px}
+.rep-shot-note{font-size:12px;color:var(--muted);margin-top:5px}
+/* Кнопка копирования — вне rep-shot (у того роль button, и кнопка внутри
+   была бы вложенным элементом управления). [hidden] глобально её гасит. */
+.rep-shot-actions{display:flex;gap:8px;margin-top:8px}
+
+.rep-shot-del{color:var(--red);border-color:var(--err-bdr)}
+.rep-shot-del:hover{border-color:var(--red);color:var(--red);background:var(--err-bg)}
+/* Модалка сброса уже есть (.reset-modal), здесь только её ширина. */
+.reset-modal{max-width:460px}
+.ui-modal-btns button{
+  padding:9px 20px;border-radius:8px;font-size:13px;font-weight:700;
+  cursor:pointer;border:none;font-family:inherit;transition:filter .12s;
+}
+.ui-modal-btns button:hover{filter:brightness(1.08)}
+.ui-modal .m-cancel{background:var(--track);color:var(--sub)}
+/* «Отменить» в окне сообщения — неактивной выглядеть не должна: это
+   полноценное действие с подтверждением, а не приглушённый остаток. */
+.ui-modal .m-cancel.rep-cancel{
+  background:var(--card);border:1px solid var(--bdr-h);color:var(--txt);
+}
+.ui-modal .m-cancel.rep-cancel:hover{border-color:var(--c);color:var(--txt)}
+/* «Открыть форму на GitHub» — слева, отмена и создание — справа. */
+.ui-modal-btns .rep-form-btn{margin-right:auto}
+.ui-modal .m-ok{background:var(--grn-btn);color:var(--on-accent)}
+.ui-modal .m-ok.neutral{background:var(--brand)}
+.ui-modal .m-ok.danger{background:var(--red)}
+/* Выключенная кнопка должна выглядеть выключенной: «Продолжить» в окне
+   соглашения активна только после галочки, и без приглушения это неочевидно. */
+.ui-modal .m-ok:disabled,.ui-modal .m-cancel:disabled{filter:grayscale(.55);opacity:.55;cursor:not-allowed}
+[data-theme="dark"] .ui-modal .m-cancel{background:var(--track);color:var(--txt)}
+[data-theme="dark"] .hist-dl{background:var(--panel)}
+
+/* ── Управление сохранёнными списками исключений ──────────
+   (Здесь раньше дублировались .bl-tpl-act / .bl-tpl-del — они определены
+   выше, в секции «🚫 Исключить по словам». Дубли удалены.) */
+/* ── «Сохранить пресет» in-app modal ─────────────────────── */
+.preset-modal input[type=text]{
+  width:100%;padding:10px 12px;border:1px solid var(--bdr);border-radius:8px;
+  font-size:14px;font-family:inherit;color:var(--txt);background:var(--card);
+  margin-bottom:8px;box-sizing:border-box;
+}
+.preset-modal input[type=text]:focus{border-color:var(--c);outline:none;box-shadow:0 0 0 3px var(--focus-ring)}
+.preset-modal input.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgba(196,64,64,.12) !important}
+.preset-modal-meta{font-size:12px;color:var(--muted);margin-bottom:16px}
+
+/* ══════════════════════════════════════════════════════════
+   PRESETS BLOCK — static section at the top of the sidebar
+   (under API keys). A dropdown replaces the old chip bar so
+   presets are discoverable before any accordion is opened.
+   ══════════════════════════════════════════════════════════ */
+.preset-block{
+  border:1px solid var(--bdr);border-radius:var(--r-md);
+  /* Отступ одинаков с заголовками аккордеонов и API (11px 13px):
+     текст всех блоков колонки начинается с одной вертикали. */
+  background:var(--card);padding:11px 13px;
+}
+.preset-block-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin-bottom:8px;
+}
+.preset-block-title{font-size:12px;font-weight:800;color:var(--txt)}
+.preset-head-actions{display:flex;align-items:center;gap:6px}
+.preset-act-btn{
+  border:1px solid var(--bdr);background:transparent;color:var(--muted);
+  font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;
+  padding:4px 10px;border-radius:7px;transition:all .13s;
+}
+.preset-act-btn:hover{background:var(--cl);border-color:var(--c);color:var(--c)}
+.preset-new-btn{
+  border:1px solid var(--bdr);background:transparent;color:var(--c);
+  font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;
+  padding:4px 10px;border-radius:7px;transition:all .13s;
+}
+.preset-new-btn:hover{background:var(--cl);border-color:var(--c)}
+.preset-dd-wrap{position:relative}
+.preset-dd-btn{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  border:1px solid var(--bdr);border-radius:8px;background:var(--card);
+  padding:9px 12px;font-size:13px;font-family:inherit;color:var(--txt);
+  cursor:pointer;transition:border-color .13s,box-shadow .13s;text-align:left;
+}
+.preset-dd-btn:hover{border-color:var(--c)}
+.preset-dd-btn:focus-visible{outline:2px solid var(--c);outline-offset:-2px}
+.preset-dd-btn.open{border-color:var(--c)}
+.preset-dd-btn.has-selection{border-color:var(--c);background:var(--cl)}
+.preset-dd-btn.has-selection .preset-dd-current{color:var(--c);font-weight:700}
+.preset-dd-current{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preset-dd-chev{
+  width:8px;height:8px;flex-shrink:0;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);transition:transform .18s;margin-right:2px;
+}
+.preset-dd-btn.open .preset-dd-chev{transform:rotate(225deg);border-color:var(--c)}
+.preset-dd-list{
+  position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:80;
+  background:var(--card);border:1px solid var(--bdr);border-radius:9px;
+  box-shadow:var(--sh-lg);overflow-y:auto;max-height:220px;padding:4px;
+}
+.preset-dd-item{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 10px;border-radius:7px;cursor:pointer;font-size:13px;
+  color:var(--txt);transition:background .12s;
+}
+.preset-dd-item:hover,.preset-dd-item:focus-visible{background:var(--cl);outline:none}
+.preset-dd-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preset-dd-actions{display:flex;gap:2px;flex-shrink:0}
+.preset-dd-edit{
+  flex-shrink:0;width:22px;height:22px;border:none;border-radius:6px;
+  background:transparent;color:var(--muted);cursor:pointer;font-size:12px;
+  line-height:1;transition:all .12s;font-family:inherit;
+}
+.preset-dd-edit:hover{background:var(--c-soft);color:var(--c)}
+.preset-dd-del{
+  flex-shrink:0;width:22px;height:22px;border:none;border-radius:6px;
+  background:transparent;color:var(--muted);cursor:pointer;font-size:12px;
+  line-height:1;transition:all .12s;font-family:inherit;
+}
+.preset-dd-del:hover{background:rgba(196,64,64,.12);color:var(--red)}
+.preset-block-hint{font-size:12px;color:var(--muted);line-height:1.45;margin-top:7px}
+[data-theme="dark"] .preset-block{background:var(--panel);border-color:var(--bdr)}
+[data-theme="dark"] .preset-dd-btn{background:var(--term)}
+[data-theme="dark"] .preset-dd-btn.has-selection{background:var(--hdr)}
+[data-theme="dark"] .preset-dd-list{background:var(--panel)}
+[data-theme="dark"] .preset-dd-item:hover{background:var(--row-hover)}
+[data-theme="dark"] .preset-dd-edit:hover{background:var(--c-soft);color:var(--c)}
+[data-theme="dark"] .preset-dd-del:hover{background:rgba(239,68,68,.18);color:var(--red)}
+[data-theme="dark"] .preset-act-btn{border-color:var(--bdr);color:var(--sub)}
+[data-theme="dark"] .preset-act-btn:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
+
+/* Empty state inside «Мои пресеты» — teaches where presets live */
+.preset-empty{
+  font-size:12px;color:var(--muted);line-height:1.5;
+  padding:8px 10px;border:1px dashed var(--bdr);border-radius:8px;
+}
+
+/* History tab inner scroll fix */
+#p-history,#p-excel{min-height:0}
+
+/* ══════════════════════════════════════════════════════════
+   STATS — numbers vs labels contrast
+   ══════════════════════════════════════════════════════════ */
+.bar-val{font-size:13.5px;color:var(--txt);width:38px;text-align:right;font-weight:800}
+.bar-lbl{font-size:12px;width:150px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR 01 — hint row, counters, clear-all, separators, summary
+   ══════════════════════════════════════════════════════════ */
+.hint-row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.hint-count{color:var(--muted);white-space:nowrap}
+/* Строка «подпись + кнопки»: подпись живёт по центру вместе с кнопками,
+   поэтому её 5px margin-bottom (работающий только когда label стоит над
+   полем) здесь лишь приподнимал текст относительно кнопок — строка «плыла».
+   Воздух перед полем даёт сама строка (8px — половина шага сетки 16px). */
+.lbl-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.lbl-row .lbl{margin-bottom:0}
+.lbl-count{font-size:12px;color:var(--muted);font-weight:500}
+.clear-all-btn{
+  background:transparent;
+  border:1px solid var(--bdr);
+  color:var(--muted);
+  padding:4px 10px;
+  border-radius:6px;
+  font-size:12px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  transition:all 0.15s;
+  font-family:inherit;white-space:nowrap;line-height:1.4;
+}
+/* Ховер раньше красился литеральным бирюзовым rgba(0,126,140,.05) — единственная
+   точка в светлой теме, где остался старый бренд. Теперь цвет берётся из
+   токена --c-soft, как и все остальные подложки. */
+.clear-all-btn:hover{
+  border-color:var(--c);
+  color:var(--c);
+  background:var(--c-soft);
+}
+.acc-summary{font-size:12px;color:var(--muted);padding:8px 13px 2px;line-height:1.45}
+
+/* Thin separators between field groups (all but the last) */
+#acc-basic .acc-inner>div{border-bottom:1px solid var(--bdr);padding-bottom:16px;margin-bottom:16px}
+#acc-basic .acc-inner>div:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+/* Разделитель групп: padding даёт 16px сверху линии, а flex-gap добавлял
+   свои 13 к margin — линия стояла на 16/29 и строка читалась сбитой. */
+#acc-basic .acc-inner{gap:0}
+/* Раньше здесь стоял невалидный селектор `var(--sub)-basic` — правило молча
+   не применялось вообще. Правильный — #acc-basic. */
+[data-theme="dark"] #acc-basic .acc-inner>div{border-bottom-color:var(--bdr)}
+[data-theme="dark"] .hint-count,[data-theme="dark"] .lbl-count,
+[data-theme="dark"] .clear-all-btn{color:var(--sub);border-color:var(--bdr-h)}
+[data-theme="dark"] .clear-all-btn:hover{color:var(--c);border-color:var(--c);background:var(--c-soft)}
+[data-theme="dark"] .acc-summary{color:var(--sub)}
+
+/* Chip fade-out on «Очистить всё» */
+#city-select-box .city-tag{transition:opacity .18s,transform .18s}
+#city-select-box .city-tag.chip-out{opacity:0;transform:translateX(-6px)}
+

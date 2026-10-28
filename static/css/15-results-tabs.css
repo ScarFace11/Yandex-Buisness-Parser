@@ -1,0 +1,287 @@
+/* 15-results-tabs.css · Результаты: подвкладки, массовый обход, файлы
+   Часть 16 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   RESULTS TAB
+   Sub-tabs · city tabs · bulk outreach · file browser
+   ════════════════════════════════ */
+
+/* ── Sub-tabs: «Текущий результат» / «История файлов» ── */
+.results-subtabs{
+  display:flex;align-items:center;gap:6px;padding:8px 15px 0;
+  border-bottom:1px solid var(--bdr);background:var(--card);flex:0 0 auto;
+}
+.subt-tab{
+  padding:8px 14px;border:none;background:transparent;border-bottom:2.5px solid transparent;
+  color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:color .12s,border-color .12s;
+}
+.subt-tab:hover{color:var(--c)}
+.subt-tab.active{color:var(--c);border-bottom-color:var(--c);font-weight:700}
+.subt-spacer{flex:1}
+.subt-link{
+  padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;background:transparent;
+  color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:border-color .12s,color .12s,background .12s;margin-bottom:6px;
+}
+.subt-link:hover{border-color:var(--c);color:var(--c)}
+
+/* Both sub-tab bodies; the current one behaves like the old #p-table child.
+   Панель «Результаты» прокручивается целиком: панель массового обхода и
+   таблица больше не конкурируют за высоту — на небольших мониторах всё
+   доступно без потери строк таблицы. */
+#rs-current{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto}
+#rs-history{flex:1;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;padding:15px 15px 24px}
+#rs-current[hidden],#rs-history[hidden],#bulk-body[hidden],#bulk-progress[hidden],
+#bulk-warn[hidden],.city-tabs[hidden]{display:none}
+
+/* ── Bulk social outreach ── */
+.bulk-panel{
+  margin:10px 15px 0;border:1px solid var(--bdr);border-radius:var(--r-md);
+  background:var(--card);overflow:hidden;flex:0 0 auto;
+}
+.bulk-header{
+  display:flex;align-items:center;gap:8px;padding:10px 13px;
+  cursor:pointer;user-select:none;background:var(--cl);
+}
+.bulk-header:hover{filter:brightness(.985)}
+.bulk-icon{font-size:15px}
+.bulk-title{font-size:13px;font-weight:800;color:var(--txt);white-space:nowrap}
+.bulk-sub{
+  font-size:12px;color:var(--sub);font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.bulk-collapse{
+  margin-left:auto;border:none;background:transparent;color:var(--sub);
+  font-size:13px;cursor:pointer;padding:2px 6px;font-family:inherit;
+}
+.bulk-body{padding:10px 13px 11px;display:grid;gap:7px}
+.bulk-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--sub);flex-wrap:wrap}
+.bulk-lbl{font-weight:700;color:var(--sub);white-space:nowrap}
+#bulk-social{
+  padding:5px 8px;border:1px solid var(--bdr);border-radius:6px;
+  font-family:inherit;font-size:12.5px;background:var(--card);color:var(--txt);min-width:200px;
+}
+.bulk-count-group{display:flex;gap:4px;align-items:center}
+.bulk-preset{
+  padding:4px 10px;border:1px solid var(--bdr);border-radius:5px;background:var(--card);
+  color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:background .12s,border-color .12s,color .12s;
+}
+.bulk-preset:hover{border-color:var(--c);color:var(--c)}
+.bulk-preset.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
+#bulk-count{
+  width:76px;padding:4px 8px;border:1px solid var(--bdr);border-radius:5px;
+  font-family:inherit;font-size:12.5px;background:var(--card);color:var(--txt);
+}
+.bulk-checks{gap:16px;flex-wrap:wrap}
+.bulk-chk{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--sub);cursor:pointer}
+.bulk-chk input{accent-color:var(--c);cursor:pointer}
+.bulk-actions{flex-wrap:wrap;gap:7px}
+.bulk-open-btn{
+  padding:9px 15px;border:none;border-radius:7px;background:var(--cta);color:var(--on-accent);
+  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:var(--cta-shadow);
+}
+.bulk-open-btn:hover:not(:disabled){filter:brightness(1.06)}
+.bulk-open-btn:disabled{background:var(--bdr);box-shadow:none;cursor:not-allowed;color:var(--tip-txt)}
+.bulk-copy-btn,.bulk-persist-btn{
+  padding:8px 12px;border:1px solid var(--bdr);border-radius:7px;background:transparent;
+  color:var(--sub);font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  transition:border-color .12s,color .12s,background .12s;
+}
+.bulk-copy-btn:hover,.bulk-persist-btn:hover{border-color:var(--c);color:var(--c)}
+.bulk-persist-btn:disabled{opacity:.6;cursor:progress}
+.bulk-stats{font-size:12px;color:var(--muted);font-weight:600}
+.bulk-stats b{color:var(--txt);font-size:13px}
+/* Порядок обхода = порядок строк таблицы (иначе вкладки открывались вразброс) */
+.bulk-tpl-note{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+.bulk-order{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px}
+.bulk-order:empty{display:none}
+/* Статус автосохранения отметок «Просмотрено» */
+.rev-save-row{min-height:16px}
+.rev-save-status{font-size:12px;font-weight:700}
+.rev-save-status.ok{color:var(--grn)}
+.rev-save-status.dirty,.rev-save-status.busy{color:var(--yel)}
+.rev-save-status.err{color:var(--red)}
+.bulk-progress{display:flex;align-items:center;gap:9px}
+.bulk-progress-bar{flex:1;height:7px;border-radius:4px;background:var(--bdr);overflow:hidden}
+.bulk-progress-fill{height:100%;width:0;background:var(--c);transition:width .25s}
+.bulk-progress-txt{font-size:12px;color:var(--sub);font-weight:700;white-space:nowrap}
+.bulk-reset{
+  border:1px solid var(--bdr);background:transparent;border-radius:5px;color:var(--sub);
+  cursor:pointer;font-size:12px;padding:1px 7px;font-family:inherit;
+}
+.bulk-reset:hover{border-color:var(--c);color:var(--c)}
+.bulk-warn{
+  font-size:12px;color:var(--yel);font-weight:600;line-height:1.5;
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.32);
+  border-radius:7px;padding:8px 10px;
+}
+
+/* ── City tabs ── */
+.city-tabs{
+  display:flex;gap:2px;overflow-x:auto;padding:0 15px;margin-top:10px;
+  border-bottom:1px solid var(--bdr);flex:0 0 auto;
+}
+.city-tab{
+  padding:7px 14px;background:transparent;border:none;border-bottom:2.5px solid transparent;
+  color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;
+  font-family:inherit;transition:color .12s,border-color .12s;
+}
+.city-tab:hover{color:var(--c)}
+.city-tab.active{color:var(--c);border-bottom-color:var(--c);font-weight:800}
+.city-count{color:var(--muted);font-size:12px;font-weight:700}
+.city-tab.active .city-count{color:var(--c)}
+/* Вкладка города вместе со звёздочкой: звезда — отдельный элемент РЯДОМ с
+   кнопкой (вложенные кнопки невалидны), клик по ней только закрепляет город. */
+.city-tab-wrap{display:inline-flex;align-items:stretch}
+.city-tab-wrap.fav .city-tab{color:var(--c);font-weight:700}
+.fav-star{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;color:var(--muted);
+  cursor:pointer;opacity:.5;align-self:center;
+  transition:color .12s,opacity .12s,background .12s;
+}
+.fav-star:hover{opacity:1;color:var(--c);background:var(--panel)}
+.fav-star:focus-visible{outline:2px solid var(--c);outline-offset:1px;opacity:1}
+.fav-star.on{opacity:1;color:var(--yel)}
+.fav-star .ico{margin-right:0}
+.fav-star.on .ico{fill:currentColor;stroke:currentColor}
+
+/* Полоса города в таблице «Все»: одна ячейка на всю ширину строки. */
+#results-table tr.city-group>td{
+  background:var(--panel);color:var(--txt);font-weight:800;font-size:12px;
+  letter-spacing:.02em;padding:6px 12px;
+  border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr-soft);
+}
+#results-table tr.city-group .fav-star{vertical-align:-5px}
+.city-group-name{margin:0 6px 0 2px}
+.city-group-count{color:var(--muted);font-weight:700;font-size:12px}
+
+/* Прогресс обхода рядом с названием города: сколько уже просмотрено
+   из скольких («✓12/42»). В подсказке — то же и остаток. */
+.city-done{
+  color:var(--grn);font-size:12px;font-weight:800;margin-left:6px;
+  font-variant-numeric:tabular-nums;
+}
+.city-group-done{
+  color:var(--grn);font-weight:800;font-size:12px;
+  margin:0 9px 0 5px;font-variant-numeric:tabular-nums;
+}
+
+/* Звезда избранного в выпадающем списке «Где ищем?» — тот же стиль, что
+   во вкладках городов; избранный город подсвечивается и первым в списке. */
+.city-option-left{display:flex;align-items:center;gap:5px;min-width:0}
+.city-option .fav-star{width:20px;height:20px;flex-shrink:0}
+.city-option.fav .city-option-name{color:var(--c);font-weight:700}
+
+/* Заголовок колонки «✓» — фильтр показа (всё / непросмотренные /
+   просмотренные). Кнопка «Непросмотренные» убрана: фильтр живёт здесь. */
+#results-table th[data-col="rev"]{cursor:pointer}
+#results-table th[data-col="rev"]:hover{color:var(--c)}
+#results-table th[data-col="rev"].rev-filter{
+  color:var(--c);background:var(--cl);border-bottom-color:var(--c);
+}
+
+/* Метка в заголовке «Рейтинг»: колонка одна, а сортировки две —
+   по оценке или по числу отзывов (направление показывает стрелка). */
+.sort-mode{
+  font-size:12px;font-weight:700;color:var(--muted);margin-left:4px;
+  letter-spacing:.01em;
+}
+#results-table th.asc .sort-mode,#results-table th.desc .sort-mode{color:var(--c)}
+
+/* ── Показ по отметке «Просмотрено» ── */
+.tbl-filter-btn{
+  padding:5px 11px;border:1px solid var(--bdr);border-radius:6px;background:var(--card);
+  color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:background .12s,border-color .12s,color .12s;white-space:nowrap;
+}
+.tbl-filter-btn:hover{border-color:var(--c);color:var(--c)}
+.tbl-filter-btn.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
+
+
+/* Число новых записей на кнопке «Только новые»: тихая плашка, на активной
+   кнопке — полупрозрачная, чтобы цифра читалась на фоне бренда в обеих темах. */
+.tbl-filter-count{
+  display:inline-block;min-width:16px;margin-left:5px;padding:0 4px;
+  border-radius:8px;background:var(--track);color:var(--sub);
+  font-size:12px;font-weight:800;line-height:15px;text-align:center;
+  vertical-align:1px;
+}
+.tbl-filter-btn.active .tbl-filter-count{background:rgba(255,255,255,.24);color:inherit}
+
+/* ── File browser (RAW / PROCESSED / ARCHIVE) ── */
+.files-toolbar{display:flex;align-items:center;gap:9px;margin-bottom:15px;flex-wrap:wrap}
+.files-toolbar input{
+  flex:1;min-width:180px;max-width:340px;padding:8px 12px;border:1px solid var(--bdr);
+  border-radius:8px;font-family:inherit;font-size:13px;background:var(--card);color:var(--txt);
+  transition:border-color .12s,box-shadow .12s;
+}
+.files-toolbar input:focus{
+  outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring);
+}
+.files-toolbar input::placeholder{color:var(--muted)}
+.files-found{font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap}
+.files-count{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:var(--muted);font-weight:700}
+.files-badge{
+  font-size:12px;font-weight:800;padding:3px 9px;border-radius:999px;
+  border:1px solid transparent;white-space:nowrap;
+}
+.files-badge.raw{background:var(--track);color:var(--sub);border-color:var(--bdr)}
+.files-badge.processed{background:var(--ok-bg);color:var(--grn);border-color:var(--ok-bdr)}
+.files-badge.archive{background:var(--warn-bg);color:var(--warn-txt);border-color:var(--warn-bdr)}
+.history-panel{display:grid;gap:22px;min-width:0}
+.history-section{display:grid;gap:8px;min-width:0}
+/* Разделы «Истории файлов» сворачиваются по клику на заголовок. */
+.history-collapse{cursor:pointer;user-select:none;border-radius:6px}
+.history-collapse:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.history-caret{margin-left:auto;font-size:12px;color:var(--muted);transition:transform .15s}
+.history-section.is-collapsed .history-caret{transform:rotate(-90deg)}
+.history-section.is-collapsed .history-hint,
+.history-section.is-collapsed .history-list{display:none}
+.history-title{
+  font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--sub);
+  font-weight:800;padding-left:9px;border-left:3px solid var(--c);
+}
+.history-hint{font-size:12px;color:var(--muted);padding-left:12px}
+.history-list{display:grid;gap:10px;min-width:0}
+.file-card{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 14px;background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-sm);
+  transition:border-color .15s,box-shadow .15s;min-width:0;
+}
+.file-card:hover{border-color:var(--bdr-h);box-shadow:var(--sh)}
+.file-info{display:flex;align-items:center;gap:11px;min-width:0;flex:1 1 0}
+/* Значок типа файла — SVG из спрайта: он один на сто с лишним строк списка,
+   и цвет берёт из темы. Эмодзи тут были цветными и разной ширины. */
+.file-icon{flex:0 0 auto;display:inline-flex;color:var(--muted)}
+.file-icon .ico{width:17px;height:17px;margin-right:0}
+.file-text{min-width:0;flex:1 1 0}
+.file-name{
+  font-size:12.5px;font-weight:700;color:var(--txt);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;
+}
+.file-meta{font-size:12px;color:var(--muted);margin-top:2px;font-weight:600}
+.file-actions{display:flex;gap:3px;flex-shrink:0}
+/* Resting state is visible on purpose: bare icons read as decoration.
+   The glyphs are inline SVGs with stroke="currentColor", so one `color`
+   rule colours them in both themes (emoji ignored the colour entirely). */
+.file-btn{
+  width:34px;height:34px;border:1px solid var(--bdr);background:var(--cl);
+  border-radius:8px;cursor:pointer;font-size:16px;line-height:1;
+  display:inline-flex;align-items:center;justify-content:center;
+  color:var(--sub);
+  transition:background .12s,border-color .12s,color .12s,transform .12s;
+}
+.file-btn:hover{background:var(--card);border-color:var(--c);color:var(--c);transform:translateY(-1px)}
+.file-btn.danger{color:var(--err-strong)}
+.file-btn.danger:hover{background:var(--err-bg);border-color:var(--red);color:var(--red)}
+.links-modal textarea{
+  width:100%;min-height:170px;font-family:ui-monospace,Menlo,Consolas,monospace;
+  font-size:12px;line-height:1.6;padding:9px 11px;border:1px solid var(--bdr);border-radius:7px;
+  background:var(--term);color:var(--txt);resize:vertical;margin-bottom:16px;
+}
+.links-modal .ui-modal-btns{flex-wrap:wrap}
+.ui-modal .m-mark{background:var(--brand);color:var(--on-accent)}
+

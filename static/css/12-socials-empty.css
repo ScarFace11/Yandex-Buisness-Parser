@@ -1,0 +1,179 @@
+/* 12-socials-empty.css · Плитки соцсетей, пустые состояния, валидация
+   Часть 13 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ══════════════════════════════════════════════════════════
+   3. SOCIAL NETWORK TILES
+   ══════════════════════════════════════════════════════════ */
+/* Tiles sit in the stage-2 «Фильтрация результата» accordion and are revealed
+   only for «С соцсетями» — leaving the mode clears the selection. */
+#social-network-filter{margin-top:2px}
+.tiles-reveal{
+  display:grid;grid-template-rows:0fr;overflow:hidden;
+  transition:grid-template-rows .26s cubic-bezier(.4,0,.2,1);
+}
+.tiles-reveal.open{grid-template-rows:1fr}
+.tiles-reveal>*{overflow:hidden;min-height:0}
+/* Верхний отступ только у ОТКРЫТОЙ секции: в закрытом виде (grid-template-rows
+   0fr) тот же padding давал 2-пиксельную полоску содержимого. */
+.tiles-reveal.open>.tiles-inner{padding-top:2px}
+.tiles-title{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
+.tiles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:7px}
+.soc-tile{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:10px 6px;border:1px solid var(--bdr);border-radius:10px;
+  background:var(--card);cursor:pointer;user-select:none;
+  font-size:12px;font-weight:700;color:var(--sub);text-align:center;
+  transition:border-color .13s,background .13s,color .13s,transform .13s,box-shadow .13s;
+}
+.soc-tile:hover{border-color:var(--tile,var(--bdr));transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.07)}
+.soc-tile.on{border-color:var(--tile,var(--c));background:var(--tile-bg,var(--cl));color:var(--txt)}
+.soc-tile.on .soc-mark{background:var(--tile,var(--c));color:var(--on-accent);border-color:var(--tile,var(--c))}
+.soc-ico{
+  width:26px;height:26px;border-radius:8px;flex-shrink:0;
+  display:grid;place-items:center;
+  background:var(--tile,var(--bdr));color:var(--on-accent);
+  font-size:12px;font-weight:800;letter-spacing:.01em;
+}
+.soc-mark{
+  width:15px;height:15px;border-radius:5px;border:1px solid var(--bdr);
+  display:grid;place-items:center;font-size:12px;line-height:1;
+  color:transparent;transition:all .13s;
+}
+.soc-tile.on .soc-mark::after{content:"✓";color:var(--on-accent)}
+/* Compact variant used in step 02 — square, icon + short name + checkmark */
+.soc-tile-sm{padding:8px 4px;gap:4px;border-radius:9px}
+.soc-tile-sm .soc-name{
+  font-size:12px;font-weight:600;line-height:1.2;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.soc-tile-sm .soc-ico{width:24px;height:24px;border-radius:7px;font-size:12px}
+.soc-tile-sm .soc-mark{width:13px;height:13px;border-radius:4px}
+
+/* ══════════════════════════════════════════════════════════
+   4. EMPTY STATE (onboarding) — SVG art
+   ══════════════════════════════════════════════════════════ */
+.onboarding-mark{width:110px;height:auto;margin:0 auto 20px;display:block}
+.onboarding-mark svg{width:100%;height:auto;display:block}
+.es-map{fill:var(--cl);stroke:var(--c);stroke-width:2;opacity:.55}
+.es-grid{stroke:var(--c);stroke-width:1;opacity:.18}
+.es-route{stroke:var(--c);stroke-width:2.2;stroke-dasharray:5 5;stroke-linecap:round;fill:none;opacity:.7;animation:es-dash 1.6s linear infinite}
+@keyframes es-dash{to{stroke-dashoffset:-20}}
+.es-pin-a{fill:var(--c);opacity:.5}
+.es-pin-b{fill:var(--c);opacity:.75}
+.es-pin-c{fill:var(--c)}
+.es-lens{fill:var(--card);stroke:var(--c);stroke-width:2.6}
+.es-lens-handle{stroke:var(--c);stroke-width:3;stroke-linecap:round}
+.es-star{fill:var(--warn-txt)}
+.onboarding h2{font-size:24px}
+
+/* ── Log skeleton (shown on run start) ── */
+.log-skeleton{padding:6px 0}
+.sk-row{display:flex;gap:10px;margin-bottom:11px}
+.sk-bar{height:12px;border-radius:6px;background:linear-gradient(90deg,var(--track) 25%,var(--panel) 45%,var(--track) 65%);background-size:400% 100%;animation:sk-shimmer 1.15s ease infinite}
+.sk-ico{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:0}
+.sk-w20{width:20%}.sk-w35{width:35%}.sk-w50{width:50%}.sk-w65{width:65%}.sk-w80{width:80%}
+@keyframes sk-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+[data-theme="dark"] .sk-bar{background:linear-gradient(90deg,var(--panel) 25%,var(--bdr-h) 45%,var(--panel) 65%);background-size:400% 100%}
+
+/* ══════════════════════════════════════════════════════════
+   5. INLINE VALIDATION
+   ══════════════════════════════════════════════════════════ */
+.field-error{
+  font-size:12px;font-weight:700;color:var(--red);
+  margin-top:5px;display:flex;align-items:center;gap:4px;
+  animation:err-in .18s ease;
+}
+@keyframes err-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgba(196,64,64,.1) !important}
+#fw-city.field-invalid .city-input-wrap input,
+#fw-city.field-invalid,
+#f-queries.field-invalid,
+textarea.field-invalid,
+input.field-invalid,
+select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgba(196,64,64,.1) !important}
+.shake{animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+
+/* ══════════════════════════════════════════════════════════
+   6. HISTORY — collapsible cards
+   ══════════════════════════════════════════════════════════ */
+.history-body{padding:18px 20px;overflow-y:auto;flex:1}
+.history-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.history-toolbar h3{margin:0;font-size:17px;font-weight:800;color:var(--txt);letter-spacing:-.02em}
+.history-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-sm.danger{border-color:var(--err-bdr);color:var(--red)}
+.btn-sm.danger:hover{background:var(--err-bg);border-color:var(--red)}
+.btn-sm.warn{border-color:var(--warn-bdr);color:var(--warn-strong)}
+.btn-sm.warn:hover{background:var(--warn-bg);border-color:var(--yel)}
+.panel-title{margin:0 0 4px;font-size:17px;font-weight:800;color:var(--txt);letter-spacing:-.02em}
+.panel-desc{margin:0 0 14px;color:var(--sub);font-size:13px;line-height:1.55}
+.panel-note{font-size:12px;color:var(--muted);font-weight:600}
+.seen-status{padding:9px 13px;background:var(--warn-bg);border:1px solid var(--warn-bdr);border-radius:9px;margin-bottom:12px;font-size:12px;color:var(--warn-txt);line-height:1.5}
+[data-theme="dark"] .seen-status{background:var(--warn-bg);border-color:var(--warn-bdr);color:var(--warn-txt)}
+
+/* ── History cards: hover highlight + roomier header actions ── */
+.hist-card{
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);
+  margin-bottom:10px;overflow:hidden;
+  transition:border-color .14s,box-shadow .14s;
+}
+/* Наведение меняет рамку и тень, а не фон: карточка не «мигает», а
+   раскрытая (.open) отличается от наведённой — акцент и тень крупнее. */
+.hist-card:hover{border-color:var(--bdr-h);box-shadow:var(--sh)}
+.hist-card.open{border-color:var(--c);box-shadow:var(--sh-lg)}
+.hist-hdr{
+  width:100%;display:flex;align-items:center;gap:11px;
+  padding:12px 15px;background:transparent;border:none;
+  cursor:pointer;font-family:inherit;text-align:left;user-select:none;
+}
+.hist-status{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:grid;place-items:center;font-size:14px}
+.hist-status.completed{background:var(--ok-bg);color:var(--ok-txt)}
+.hist-status.stopped{background:var(--err-bg);color:var(--red)}
+.hist-status.unknown{background:var(--track);color:var(--muted)}
+.hist-head{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hist-title{font-size:13.5px;font-weight:800;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-weight:600}
+.hist-meta b{color:var(--sub);font-weight:700}
+.hist-chip{font-size:12px;font-weight:800;padding:2px 8px;border-radius:20px;letter-spacing:.02em;flex-shrink:0}
+.hist-chip.completed{background:var(--ok-bg);color:var(--ok-txt)}
+.hist-chip.stopped{background:var(--err-bg);color:var(--err-txt)}
+.hist-chip.unknown{background:var(--track);color:var(--muted)}
+.hist-chev{
+  width:9px;height:9px;flex-shrink:0;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);transition:transform .2s;
+}
+.hist-card.open .hist-chev{transform:rotate(225deg);border-color:var(--c)}
+.hist-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .24s ease}
+.hist-card.open .hist-body{grid-template-rows:1fr}
+.hist-body>div{overflow:hidden;min-height:0}
+.hist-detail{padding:2px 15px 13px;border-top:1px solid var(--bdr)}
+.hist-dl-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 2px}
+.hist-dl-lbl{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.04em}
+.hist-dl-all{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 12px;
+  border-radius:7px;border:1.5px solid var(--brand);background:var(--brand);
+  color:var(--on-accent);font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;
+  transition:background .13s,filter .13s;font-family:inherit;
+}
+.hist-dl-all:hover{background:var(--brand-dark);filter:brightness(1.06)}
+.hist-dl-all[aria-disabled="true"]{opacity:.55;cursor:default;filter:none}
+.hist-dl{
+  display:inline-flex;align-items:center;gap:5px;padding:5px 11px;
+  border-radius:7px;border:1px solid var(--bdr);background:var(--card);
+  color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;
+  transition:border-color .13s,color .13s;font-family:inherit;
+}
+.hist-dl:hover{border-color:var(--c);color:var(--c)}
+.hist-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 14px;
+  border-radius:8px;border:none;font-size:12.5px;font-weight:800;
+  cursor:pointer;text-decoration:none;font-family:inherit;transition:filter .12s;
+}
+.hist-btn.blue{background:var(--blu-btn);color:var(--on-accent)}
+.hist-btn.red{background:var(--red-btn);color:var(--on-accent)}
+.hist-btn:hover{filter:brightness(1.1)}
+.hist-sub{font-size:12px;color:var(--sub);padding-top:9px}
+.hist-empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+.hist-summary{font-size:12px;color:var(--sub);margin-bottom:12px;font-weight:600}
+

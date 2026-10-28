@@ -24,7 +24,7 @@ def test_watched_files_cover_everything_that_draws_the_interface():
     """Вёрстка, стили, фронтенд-скрипты и сам сценарий аудита — под наблюдением."""
     names = {p.name for p in a11y_watch.watched_files()}
     assert "index.html" in names, "правка вёрстки не запускает аудит"
-    assert "style.css" in names, "правка стилей не запускает аудит"
+    assert any(n.endswith(".css") for n in names), "правка стилей не запускает аудит"
     assert any(n.endswith(".js") and n[0].isdigit() for n in names), \
         "правка фронтенд-скриптов не запускает аудит"
     assert "a11y_audit.js" in names, "правка самих проверок не запускает аудит"

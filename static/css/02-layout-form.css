@@ -1,0 +1,207 @@
+/* 02-layout-form.css · Каркас страницы, карточка, форма, пресеты, кнопка запуска
+   Часть 3 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   PAGE LAYOUT
+   ════════════════════════════════ */
+/* App-shell scrolling: the viewport never scrolls — each column scrolls
+   independently, so the sidebar and the content keep their positions. */
+.layout{
+  display:grid;grid-template-columns:358px 1fr;
+  gap:18px;padding:18px 22px 14px;
+  flex:1;min-height:0;overflow:hidden;   /* clip → children scroll, body doesn't */
+}
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr;padding:12px;overflow:visible}
+  aside,.right-col{overflow:visible;max-height:none}
+  /* На узких экранах панель не имеет фиксированной высоты — держим таблицу
+     компактной (внутренний скролл), как и раньше. */
+  .tbl-wrap{max-height:60vh}
+}
+
+/* left column stacks and scrolls on its own — the sticky run-button dock
+   stays pinned to its bottom edge while the cards travel underneath */
+aside{
+  display:flex;flex-direction:column;gap:10px;align-self:stretch;
+  overflow-y:auto;min-height:0;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;
+}
+aside::-webkit-scrollbar{width:6px}
+aside::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+
+/* ════════════════════════════════
+   CARD
+   ════════════════════════════════ */
+.card{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r-lg);overflow:visible;box-shadow:var(--sh);
+}
+.card-hdr{
+  padding:14px 18px 13px;
+  font-size:13px;font-weight:700;color:var(--txt);letter-spacing:-.01em;
+  border-bottom:1px solid var(--bdr-soft);
+  background:var(--card);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+}
+
+/* ════════════════════════════════
+   FORM
+   ════════════════════════════════ */
+/* Единая сетка вертикального ритма: gap задаёт шаг 16px между блоками,
+   собственные margin у блоков убраны — иначе зазоры складывались
+   (15+12, 15+10, 15+18) и колонка «плыла» разной высоты между секциями. */
+.form-body{padding:18px;display:flex;flex-direction:column;gap:16px}
+.intro-copy{font-size:13px;line-height:1.55;color:var(--sub)}
+/* Подписи поля — и <label>, и <span class="lbl"> у радиогрупп («Источник
+   данных», «Тип организаций»…): у span не было никаких стилов, и эти четыре
+   строки набирались 14px обычным начертанием — на фоне 12px/700 подписей
+   колонка читалась плывущей, а зазор до контрола схлопывался в 1px. */
+label.lbl,span.lbl{
+  font-size:12px;font-weight:700;color:var(--sub);
+  /* 6px, не 5: шаг сетки 6 (подпись → поле) и тот же шаг даёт flex-gap
+     контейнеров ниже, так что пара «подпись → поле» читается одинаково
+     и в блочном потоке, и в gap-колонке. */
+  display:block;margin-bottom:6px;
+}
+/* Маркер обязательного поля: только у двух полей, без которых запуск
+   невозможен. Настоящее требование озвучивает aria-label, звёздочка —
+   подсказка для глаз (и объяснение в подсказке у кнопки запуска). */
+.req{
+  color:var(--c);font-weight:800;margin-left:2px;cursor:help;
+}
+input[type=text],input[type=number],input[type=password],textarea,select{
+  border:1px solid var(--bdr);border-radius:8px;padding:9px 11px;
+  font-size:13px;width:100%;font-family:inherit;
+  background:var(--card);color:var(--txt);
+  transition:border-color .14s,box-shadow .14s;
+  -webkit-appearance:none;appearance:none;
+}
+input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--c);
+  box-shadow:0 0 0 3px var(--focus-ring);
+}
+/* display:block: как inline-block textarea стояла на базовой линии — под ней
+   оставалось ~4px пустого «хвоста», и зазор до подсказки получался 9 вместо 4. */
+textarea{display:block;resize:vertical;min-height:76px;line-height:1.5}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+/* ── 2-col rows inside form ── */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* Align label+stepper pairs: both cells top-aligned, steppers on one line.
+   Labels can wrap to 2 lines (e.g. «Страниц ×50 результатов»), so the
+   steppers themselves are pushed to the bottom of each cell. */
+.row2-align{align-items:stretch}
+.row2-align>div{display:flex;flex-direction:column}
+.row2-align .stepper{margin-top:auto}
+.sec{
+  font-size:12px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.055em;
+  padding-bottom:8px;border-bottom:1px solid var(--bdr);
+}
+.chk-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.chk{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;
+  border:1px solid var(--bdr);border-radius:8px;
+  cursor:pointer;font-size:13px;font-weight:500;
+  color:var(--sub);user-select:none;
+  transition:border-color .13s,background .13s,color .13s;
+}
+.chk:hover{border-color:var(--c);background:var(--cl);color:var(--c)}
+.chk.on{border-color:var(--c);background:var(--cl);color:var(--c)}
+.chk input{width:14px;height:14px;accent-color:var(--c);cursor:pointer;flex-shrink:0}
+
+/* ── Advanced accordion ── */
+details.advanced-settings{
+  border:1px solid var(--bdr);border-radius:9px;overflow:hidden;
+}
+details.advanced-settings>summary{
+  cursor:pointer;list-style:none;user-select:none;
+  font-size:12px;font-weight:700;color:var(--sub);
+  padding:9px 13px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--panel);
+  transition:background .13s,color .13s;
+}
+details.advanced-settings>summary:hover{background:var(--cl);color:var(--c)}
+details.advanced-settings>summary::-webkit-details-marker{display:none}
+details.advanced-settings>summary::after{
+  content:"▾";font-size:13px;color:var(--muted);
+  transition:transform .18s;
+}
+details.advanced-settings[open]>summary::after{transform:rotate(180deg)}
+details.advanced-settings>.dbody{
+  padding:14px;
+  display:grid;grid-template-columns:1fr 1fr;gap:11px;
+  background:var(--row-alt);border-top:1px solid var(--bdr);
+}
+details.advanced-settings>.dbody>*{grid-column:span 2}
+details.advanced-settings>.dbody>.row2{grid-column:span 2}
+details.advanced-settings>.dbody>.chk-grid{grid-column:span 2}
+details.advanced-settings>.dbody>.chk{grid-column:span 2}
+
+/* ── Presets ── */
+.preset-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.preset-chip{
+  font-size:12px;padding:4px 10px;border-radius:20px;font-weight:600;
+  border:1.5px solid var(--c);background:var(--cl);color:var(--c);
+  cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;
+  transition:background .12s;
+}
+.preset-chip:hover{background:var(--cl)}
+.preset-chip .del{color:var(--red);font-size:12px;line-height:1;margin-left:2px;font-weight:700}
+.btn-sm{
+  font-size:12px;padding:5px 10px;border:1px solid var(--bdr);border-radius:6px;
+  background:var(--card);cursor:pointer;color:var(--sub);font-weight:600;
+  transition:border-color .12s,color .12s;font-family:inherit;
+}
+.btn-sm:hover{border-color:var(--c);color:var(--c)}
+
+/* ── Run button ── */
+/* Единственный источник правды для #btn-run: база, hover, disabled и
+   состояния run-ready/run-active/run-paused. Раньше блок дублировался ниже
+   («CTA button»), и цвета/тени зависели от порядка правил в файле. */
+#btn-run{
+  width:100%;padding:15px 18px;border:none;border-radius:var(--r-md);
+  /* Красочный CTA (токены темы — см. --run-grad): прежний графитовый
+     --cta в тёмной теме читался как выключенная кнопка. */
+  background:var(--run-grad);
+  color:var(--on-accent);font-size:15.5px;font-weight:700;letter-spacing:-.01em;
+  cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:var(--run-shadow);
+  transition:transform .14s,box-shadow .14s,filter .14s;
+}
+/* The [hidden] attribute must beat the display:flex above — without this
+   the main button stays visible next to the stop segment. */
+#btn-run[hidden]{display:none}
+#btn-stop[hidden]{display:none}
+#btn-stop{
+  flex:0 0 auto;width:46px;border:none;border-radius:var(--r-md);
+  background:var(--red-btn);
+  color:var(--on-accent);font-size:16px;cursor:pointer;font-family:inherit;
+  box-shadow:0 1px 2px var(--glow-red);
+  transition:filter .14s,transform .14s;
+}
+#btn-stop:hover{filter:brightness(1.08);transform:translateY(-1px)}
+#btn-stop:disabled{filter:grayscale(.6);cursor:not-allowed;transform:none}
+[data-theme="dark"] #btn-stop{background:var(--red);box-shadow:0 4px 14px var(--glow-red)}
+#btn-run:hover:not(:disabled){
+  transform:translateY(-1px);
+  box-shadow:var(--sh-lg);
+  filter:brightness(1.07);
+}
+#btn-run:active:not(:disabled){transform:translateY(0)}
+/* Выключенная кнопка раньше оставалась с белой подписью на светло-серой
+   плашке (≈1.2:1 — текста не видно). Выключенное состояние — это серый тон
+   плюс читаемый текст, а не только снятая тень. */
+#btn-run:disabled{background:var(--track);color:var(--sub);cursor:not-allowed;box-shadow:none}
+.spin{
+  display:inline-block;width:15px;height:15px;flex-shrink:0;
+  /* Кольцо — текущим цветом текста: белое пропадало на светлых подложках
+     (выключенная «Найти», инлайн-статус в карточке живого прогресса).
+     Прозрачный сегмент и даёт вращение. */
+  border:2px solid currentColor;border-top-color:transparent;
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+

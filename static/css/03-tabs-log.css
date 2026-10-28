@@ -1,0 +1,177 @@
+/* 03-tabs-log.css · Правая колонка, вкладки, журнал
+   Часть 4 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   RIGHT COLUMN & TABS
+   ════════════════════════════════ */
+.right-col{
+  display:flex;flex-direction:column;gap:0;min-height:0;
+  overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;
+}
+.right-col::-webkit-scrollbar{width:6px}
+.right-col::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+
+/* Tab bar and panels are ALWAYS visible — История / Выгрузка Excel reachable
+   before launching a search. The «Как это работает» onboarding card lives
+   inside the log tab and is removed when the first log line arrives. */
+#onboarding-screen{display:block}
+/* Первый экран живёт внутри #log-output, а тот — моноширинный (это лог).
+   Без этой строки H2 «Как это работает» и все подписи приветствия рисовались
+   терминальным шрифтом — то есть выглядели как чужая страница. */
+#onboarding-screen,.onboarding,.flow-step{font-family:var(--font-ui)}
+#p-log #onboarding-screen{margin:0;padding:34px 26px}
+#p-log .onboarding-mark{width:52px;height:52px;font-size:20px;margin-bottom:16px}
+#p-log .onboarding-lead{margin-bottom:24px}
+#p-log .flow-step b{font-size:12px}
+
+.playwright-notice{
+  background:var(--warn-bg);border:1px solid var(--warn-txt);border-radius:var(--r);
+  padding:10px 16px;margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:8px;
+  flex-wrap:wrap;
+}
+.playwright-notice code{background:var(--panel);padding:2px 6px;border-radius:4px;font-size:12px}
+.playwright-notice button{background:none;border:none;cursor:pointer;font-size:16px;margin-left:auto;padding:0 4px}
+[data-theme="dark"] .playwright-notice{background:var(--warn-on);border-color:var(--warn-strong)}
+
+.onboarding{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r);box-shadow:var(--sh);
+  padding:52px 40px;align-items:center;justify-content:center;width:100%;
+}
+.onboarding-inner{max-width:660px;width:100%;text-align:center;margin:0 auto}
+.onboarding-mark{
+  width:56px;height:56px;margin:0 auto 20px;
+  border-radius:var(--r-lg);
+  background:var(--acc-soft);
+  color:var(--c);display:grid;place-items:center;
+  font-size:24px;font-weight:800;
+}
+.onboarding h2{
+  font-size:22px;font-weight:700;color:var(--txt);
+  margin-bottom:8px;letter-spacing:-.02em;line-height:1.25;
+}
+.onboarding-lead{color:var(--sub);font-size:13.5px;margin-bottom:32px;line-height:1.6}
+.flow-steps{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:left;
+}
+.flow-step{
+  width:100%;padding:16px;border-radius:var(--r-md);
+  border:1px solid var(--bdr);background:var(--card);
+  display:flex;flex-direction:column;gap:6px;
+  /* Шаг — не картинка, а кнопка: подсказка «с чего начать» сразу и делает
+     это (ведёт к полю, запускает поиск, открывает результаты). Раньше это
+     были div'ы с тенью при наведении, но клик по ним не делал ничего. */
+  font-family:inherit;text-align:left;cursor:pointer;
+  transition:border-color .14s,box-shadow .14s,transform .1s;
+}
+.flow-step:hover{border-color:var(--bdr-h);box-shadow:var(--sh);transform:translateY(-1px)}
+.flow-step:active{transform:translateY(0)}
+.flow-step:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.flow-step b{
+  font-size:12px;font-weight:800;color:var(--c);
+  letter-spacing:.07em;text-transform:uppercase;
+}
+.flow-step strong{font-size:13.5px;font-weight:700;color:var(--txt);line-height:1.3}
+.flow-step span{font-size:12px;color:var(--sub);line-height:1.5}
+
+/* ── Tab bar ── */
+.tab-bar{
+  display:flex;gap:2px;padding:5px 6px;
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r) var(--r) 0 0;border-bottom:none;
+  overflow-x:auto;
+}
+.tab-btn{
+  padding:8px 15px;font-size:12px;font-weight:700;cursor:pointer;
+  border:none;border-radius:7px;background:transparent;color:var(--muted);
+  transition:color .12s,background .12s,box-shadow .12s;white-space:nowrap;font-family:inherit;
+}
+.tab-btn:hover{background:var(--track);color:var(--txt)}
+/* Активная вкладка — мягкая акцентная подложка вместо плотной плашки:
+   восемь плашек подряд читались как ряд крупных кнопок. */
+.tab-btn.active{background:var(--acc-soft);color:var(--c);font-weight:700}
+
+/* ── Tab panels ── */
+.tab-panels{
+  flex:1;border:1px solid var(--bdr);border-top:none;
+  border-radius:0 0 var(--r) var(--r);
+  background:var(--card);overflow:hidden;min-height:520px;
+  box-shadow:var(--sh);
+}
+.tab-panel{display:none;height:100%}
+.tab-panel.active{display:flex;flex-direction:column}
+
+/* ════════════════════════════════
+   LOG PANEL
+   ════════════════════════════════ */
+/* ── Terminal-style log (console look, bounded container) ── */
+.term-top{
+  background:var(--panel);padding:9px 15px;
+  display:flex;align-items:center;gap:8px;row-gap:6px;flex-wrap:wrap;
+  border-bottom:1px solid var(--bdr);
+}
+.dot{width:9px;height:9px;border-radius:50%}
+.dot.r{background:var(--err-bdr)}.dot.y{background:var(--warn-bdr)}.dot.g{background:var(--grn)}
+.term-lbl{font-size:12px;font-weight:600;color:var(--muted);margin-left:auto;letter-spacing:.02em}
+.term-clear{
+  font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;
+  border:1px solid var(--bdr);background:var(--card);color:var(--sub);
+  cursor:pointer;font-family:inherit;white-space:nowrap;
+  transition:border-color .12s,color .12s,background .12s;
+}
+.term-clear:hover{border-color:var(--c);color:var(--c);background:var(--cl)}
+/* only «Очистить лог» is destructive — it is the one that goes red */
+.term-clear.danger:hover{border-color:var(--red);color:var(--red);background:var(--err-bg)}
+[data-theme="dark"] .term-clear{background:var(--panel)}
+[data-theme="dark"] .term-clear:hover{background:var(--c-soft);border-color:var(--c);color:var(--c)}
+[data-theme="dark"] .term-clear.danger:hover{background:var(--err-on);border-color:var(--red);color:var(--red)}
+#log-output{
+  flex:1;min-height:0;overflow-y:auto;padding:10px 12px;
+  background:var(--term);
+  font-family:ui-monospace,"Cascadia Mono",Consolas,"JetBrains Mono",monospace;
+  font-size:12px;line-height:1.45;
+  scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;
+}
+#log-output::-webkit-scrollbar{width:8px}
+#log-output::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
+#log-output::-webkit-scrollbar-thumb:hover{background:var(--sub)}
+.ll-time{color:var(--muted);font-size:12px;margin-right:7px;font-variant-numeric:tabular-nums}
+[data-theme="dark"] #log-output::-webkit-scrollbar-thumb{background:var(--bdr-h)}
+[data-theme="dark"] #log-output::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+.ll{
+  padding:2px 8px;margin:0;
+  border-left:2px solid transparent;border-radius:3px;
+  font-size:12px;line-height:1.5;word-break:break-word;
+}
+/* system / neutral — quiet grey */
+.ll,.ll.sys{color:var(--sub);background:transparent;border-left-color:transparent}
+/* successful operations — green */
+.ll.ok{color:var(--grn);background:rgba(44,133,96,.07);border-left-color:var(--grn)}
+/* informational — brand teal, subtle */
+.ll.info{color:var(--c);background:var(--c-soft);border-left-color:var(--glow)}
+.ll.warn{color:var(--warn-txt);background:rgba(176,117,40,.08);border-left-color:var(--yel)}
+.ll.error{color:var(--red);background:rgba(196,64,64,.08);border-left-color:var(--red)}
+/* Лимиты внешних сервисов: визуально громче обычных предупреждений */
+.ll.quota-warn{
+  color:var(--warn-txt);background:rgba(176,117,40,.16);border-left-color:var(--yel);
+  border-left-width:4px;font-weight:700;
+}
+.ll.quota-critical{
+  color:var(--on-accent);background:rgba(196,64,64,.85);border-left-color:var(--err-bdr);font-weight:700;
+}
+[data-theme="dark"] .ll.quota-warn{background:rgba(204,146,48,.22)}
+[data-theme="dark"] .ll.quota-critical{background:rgba(222,82,82,.55)}
+[data-theme="dark"] .ll{color:var(--sub)}
+[data-theme="dark"] .ll.ok{background:rgba(56,168,116,.1)}
+[data-theme="dark"] .ll.info{background:rgba(58,182,200,.07)}
+[data-theme="dark"] .ll.warn{background:rgba(204,146,48,.1)}
+[data-theme="dark"] .ll.error{background:rgba(222,82,82,.12)}
+#log-ph{padding:56px 20px;color:var(--muted);text-align:center;font-size:13px;line-height:1.6}
+#log-ph::before{
+  content:"⌕";display:flex;align-items:center;justify-content:center;
+  width:42px;height:42px;margin:0 auto 14px;border-radius:50%;
+  background:var(--cl);border:2px solid var(--bdr);
+  color:var(--c);font-size:21px;font-weight:800;
+}
+

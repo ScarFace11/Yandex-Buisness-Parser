@@ -1,0 +1,225 @@
+/* 07-sender-city.css · Рассылка, бейдж версии, выбор города, сферы
+   Часть 8 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   VK SENDER TAB
+   ════════════════════════════════ */
+.sender-layout{display:flex;flex-direction:column;height:100%;overflow-y:auto}
+.sender-intro{
+  padding:18px 20px 14px;border-bottom:1px solid var(--bdr);
+  background:var(--cl);
+}
+.sender-intro h2{font-size:19px;font-weight:700;color:var(--txt);letter-spacing:-.02em;margin-bottom:4px}
+.sender-intro p{font-size:13px;color:var(--sub)}
+.sender-config{padding:15px 18px;display:flex;flex-direction:column;gap:11px}
+.sender-config-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.sender-config-hdr h3{font-size:13px;font-weight:700;color:var(--c);margin:0}
+.sender-config-toggle{
+  font-size:12px;color:var(--muted);padding:3px 9px;
+  border:1px solid var(--bdr);border-radius:5px;
+  background:none;cursor:pointer;font-weight:600;font-family:inherit;
+  transition:border-color .12s,color .12s;
+}
+.sender-config-toggle:hover{border-color:var(--c);color:var(--c)}
+.sender-config-body{display:flex;flex-direction:column;gap:11px}
+.sender-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.sender-row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.sender-actions{display:flex;gap:8px;align-items:center;margin-top:4px}
+.sender-part{
+  border:1px solid var(--bdr);border-radius:9px;
+  padding:13px 15px;background:var(--row-alt);
+  display:flex;flex-direction:column;gap:10px;
+}
+.sender-part-title{
+  font-size:12px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--c);font-weight:800;
+}
+.sender-advanced summary{
+  list-style:none;cursor:pointer;user-select:none;
+  font-size:12px;font-weight:700;color:var(--sub);padding:2px 0;
+}
+.sender-advanced summary::-webkit-details-marker{display:none}
+.sender-advanced summary::before{content:"▶  ";font-size:12px}
+details[open].sender-advanced summary::before{content:"▼  "}
+#btn-send-run{
+  flex:1;padding:11px 15px;border:none;border-radius:var(--r-sm);
+  background:var(--cta);
+  color:var(--on-accent);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  box-shadow:var(--cta-shadow);
+  transition:transform .14s,box-shadow .14s;
+}
+#btn-send-run:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--sh-lg)}
+#btn-send-run:disabled{background:var(--track);cursor:not-allowed;box-shadow:none}
+#btn-send-stop{
+  padding:11px 15px;border:none;border-radius:8px;
+  background:var(--red-btn);color:var(--on-accent);font-size:13px;font-weight:700;
+  cursor:pointer;display:none;font-family:inherit;transition:filter .12s;
+}
+#btn-send-stop:hover{filter:brightness(1.1)}
+.sender-stats{
+  display:none;gap:16px;padding:9px 18px;
+  background:var(--cl);border-bottom:1px solid var(--bdr);
+  font-size:13px;align-items:center;
+}
+.sender-stat{display:flex;align-items:center;gap:5px}
+.sender-stat .snum{font-weight:800;font-size:16px}
+.sender-stat.s-sent .snum{color:var(--grn)}
+.sender-stat.s-skip .snum{color:var(--yel)}
+.sender-stat.s-err  .snum{color:var(--red)}
+.sender-log{flex:1;display:flex;flex-direction:column;min-height:180px;border-top:1px solid var(--bdr)}
+#send-log-output{
+  flex:1;overflow-y:auto;padding:14px 18px;
+  /* Лог — моноширинный, как и #log-output: столбцы времени/уровня
+     выравниваются, а не «пляшут» пропорциональным шрифтом. */
+  background:var(--term);font-family:var(--font-mono);font-size:13px;line-height:1.65;
+  scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;
+}
+#send-log-output::-webkit-scrollbar{width:5px}
+#send-log-output::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px}
+#send-log-ph{padding:36px 20px;color:var(--muted);text-align:center;font-size:13px}
+
+/* ════════════════════════════════
+   VERSION BADGE
+   ════════════════════════════════ */
+#app-version{
+  font-size:12px;font-weight:700;padding:3px 8px;border-radius:4px;
+  background:rgba(255,255,255,.14);color:rgba(255,255,255,.8);
+  letter-spacing:.02em;font-family:monospace;
+}
+/* Метка сборки разработчика — сборку видно с первого взгляда */
+#app-dev{
+  font-size:12px;font-weight:800;padding:3px 8px;border-radius:4px;
+  background:var(--warn-bdr);color:var(--txt);letter-spacing:.04em;
+  font-family:monospace;text-transform:uppercase;
+}
+
+/* ════════════════════════════════
+   CITY SELECT (multi-combobox)
+   ════════════════════════════════ */
+#city-select-box{display:flex;flex-direction:column;gap:6px;position:relative}
+
+/* Tags row — wraps when many cities */
+.city-tags-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#city-select-box .city-tag{
+  display:inline-flex !important;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:6px;
+  font-size:12px;font-weight:600;line-height:1.2;
+  background:var(--cl) !important;color:var(--c) !important;
+  border:1.5px solid var(--c) !important;
+  white-space:nowrap;margin:0;
+}
+#city-select-box .city-tag .city-tag-x{
+  cursor:pointer;font-size:13px;font-weight:800;
+  color:var(--red);margin-left:3px;line-height:1;
+  opacity:.6;transition:opacity .12s;
+  display:inline !important;
+}
+#city-select-box .city-tag .city-tag-x:hover{opacity:1;color:var(--err-strong)}
+#city-select-box .city-tag .city-tag-x .ico{width:10px;height:10px;margin-right:0;vertical-align:-1px}
+
+/* Input row — always full width, below tags */
+.city-input-wrap{position:relative;width:100%}
+.city-input-wrap input{
+  width:100%;padding:9px 32px 9px 11px;font-size:13px;
+  border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--txt);font-family:inherit;
+  transition:border-color .14s,box-shadow .14s;
+}
+.city-input-wrap input:focus{
+  outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring);
+}
+.city-input-wrap .city-clear{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;border:none;border-radius:50%;
+  background:var(--bdr);color:var(--sub);font-size:12px;font-weight:800;
+  cursor:pointer;display:none;align-items:center;justify-content:center;
+  transition:background .12s;
+}
+.city-input-wrap .city-clear:hover{background:var(--red-btn);color:var(--on-accent)}
+.city-input-wrap .city-clear.visible{display:flex}
+
+/* Dropdown */
+.city-dropdown{
+  /* detached to <body> and pinned via JS (position:fixed) so nothing clips it */
+  position:fixed;z-index:9999;
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r-md);max-height:400px;overflow-y:auto;
+  box-shadow:var(--sh-lg);display:none;
+}
+.city-dropdown.open{display:block}
+.city-option{
+  padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:5px;
+  transition:background .1s;border-bottom:1px solid var(--bdr-soft);
+}
+.city-option:last-child{border-bottom:none}
+.city-option:hover{background:var(--row-hover)}
+.city-option.selected{background:var(--cl);color:var(--c);font-weight:700}
+.city-option-top{display:flex;align-items:center;justify-content:space-between;width:100%}
+.city-option-name{font-size:13px;font-weight:500;color:var(--txt)}
+.city-option-pop{font-size:12px;color:var(--muted);font-weight:700;flex-shrink:0;margin-left:8px}
+.city-option-hist{
+  font-size:12px;color:var(--ok,var(--tip-ok));font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;
+  display:flex;align-items:center;gap:3px;min-height:13px;
+}
+[data-theme="dark"] .city-option-hist{color:var(--tip-ok)}
+.city-option-bar{width:100%;height:5px;background:var(--bdr);border-radius:3px;overflow:hidden}
+.city-option-bar-fill{height:100%;border-radius:3px;transition:width .2s}
+
+/* ── Сферы бизнеса: кнопка у поля запросов и её список ─────────────
+   Список использует те же .city-option/.city-dropdown: это такой же
+   выпадающий список, и две разные вёрстки для одного элемента читались бы
+   как ошибка. Здесь только то, что у сфер иное: кнопка и строки-опции. */
+.spheres-btn{
+  flex-shrink:0;display:inline-flex;align-items:center;gap:5px;
+  /* Высота считается так же, как у «Очистить» (line-height 1.4, padding 4px),
+     чтобы пара кнопок в строке была одного размера, а не «пила» на 1–3px. */
+  padding:4px 11px;border:1px solid var(--bdr);border-radius:999px;
+  background:var(--field);color:var(--txt);font:inherit;font-size:12px;
+  line-height:1.4;font-weight:600;cursor:pointer;
+  transition:background .12s,border-color .12s;
+}
+.spheres-btn:hover{background:var(--row-hover);border-color:var(--c)}
+.spheres-btn:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.sphere-dropdown .sphere-option{width:100%;text-align:left}
+.sphere-dropdown .city-option-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sphere-empty{padding:10px 12px;font-size:12px;color:var(--muted)}
+
+/* Кнопки у поля запросов: «Очистить» и «Сферы» стоят вместе справа. */
+.hint-actions{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+
+/* ── Редактор сфер (окно «Сферы ✎») ─────────────
+   Список правится прямо в окне: название + слова через запятую. */
+.spheres-modal{max-width:620px}
+.spheres-hint{font-size:12px;color:var(--sub);line-height:1.5;margin-bottom:10px}
+.spheres-list{display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow:auto;
+  padding-right:2px;scrollbar-width:thin}
+.sphere-edit-row{display:grid;grid-template-columns:minmax(120px,1fr) minmax(150px,1.6fr) auto;
+  gap:6px;align-items:center}
+.sphere-edit-row input{width:100%;min-width:0;padding:6px 8px;border:1px solid var(--bdr);
+  border-radius:6px;background:var(--field);color:var(--txt);font:inherit;font-size:12px}
+.sphere-edit-row input:focus{outline:2px solid var(--c);outline-offset:1px;border-color:var(--c)}
+.sphere-edit-del{width:26px;height:26px;border:1px solid var(--bdr);border-radius:6px;
+  background:transparent;color:var(--muted);cursor:pointer;font-size:12px;line-height:1}
+.sphere-edit-del:hover{border-color:var(--red);color:var(--red);background:var(--err-bg)}
+.spheres-add{margin:8px 0 4px;width:100%;border-style:dashed}
+.spheres-reset{margin-right:auto}
+
+/* «Только данные компании» в блоке персональных данных */
+.pd-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.pd-actions-note{font-size:12px;color:var(--muted);margin:0}
+
+[data-theme="dark"] .city-input-wrap input{background:var(--panel);border-color:var(--bdr);color:var(--txt)}
+[data-theme="dark"] .city-input-wrap input:focus{background:var(--tip-field)}
+[data-theme="dark"] .city-dropdown{background:var(--tip-bg);border-color:var(--bdr);box-shadow:0 8px 28px rgba(0,0,0,.5)}
+[data-theme="dark"] .city-option:hover{background:var(--track)}
+[data-theme="dark"] .city-option.selected{background:var(--row-hover)}
+[data-theme="dark"] #city-select-box .city-tag{background:var(--tip-bg) !important;border-color:var(--c) !important;color:var(--c) !important}
+[data-theme="dark"] .city-option-bar{background:var(--track)}
+
+/* NOTE: the old «fixed height» log rule lived here — `#log-output{max-height:460px}`
+   capped the log at 460px, so a taller panel kept ~300px of empty space below it.
+   The flex chain above (#p-log column + flex:1 + min-height:0) sizes it correctly,
+   so the cap is gone — the log now fills the panel and scrolls inside it. */
+

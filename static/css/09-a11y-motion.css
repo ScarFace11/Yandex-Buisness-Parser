@@ -1,0 +1,63 @@
+/* 09-a11y-motion.css · Скроллбары, фокус, выделение, уменьшенное движение
+   Часть 10 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   DESIGN POLISH
+   ════════════════════════════════ */
+
+/* Thin themed scrollbars everywhere */
+*{scrollbar-width:thin;scrollbar-color:var(--bdr) transparent}
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{
+  background:var(--bdr);border-radius:8px;
+  border:2px solid transparent;background-clip:content-box;
+}
+*::-webkit-scrollbar-thumb:hover{background:var(--c);background-clip:content-box}
+*::-webkit-scrollbar-corner{background:transparent}
+
+/* Stable gutters: no width jump when a scrollbar appears */
+#log-output,#send-log-output,.tbl-wrap,#col-dropdown{scrollbar-gutter:stable}
+
+/* Keyboard focus rings (accessibility). The ring colour lives in a token:
+   the same literal in both themes was invisible on the dark field. */
+button:focus-visible,summary:focus-visible,a:focus-visible,.sf-tag:focus-visible,
+.col-item:focus-visible,.preset-chip:focus-visible,.score-preset:focus-visible{
+  outline:2px solid var(--c);outline-offset:2px;border-radius:6px;
+}
+/* Tiles («Только без сайтов», «Все», сети, режим покрытия) are labels with a
+   hidden radio inside — without this the keyboard focus had no visual state.
+   Только для КЛАВИАТУРЫ (`:has(input:focus-visible)`): с `:focus-within`
+   обычный клик мышью по подписи фокусировал радио и обводил плитку целиком —
+   выделение, которого пользователь не просил. */
+.soc-tile:has(input:focus-visible),.parse-mode-opt:has(input:focus-visible),
+.social-mode-opt:has(input:focus-visible),.vk-mode-opt:has(input:focus-visible),
+.source-mode-opt:has(input:focus-visible),.grid-mode-opt:has(input:focus-visible){
+  outline:2px solid var(--c);outline-offset:2px;
+}
+/* Чекбоксы и радио: на коробке 14px свечение токена неразличимо, а в светлой
+   теме у сфокусированного чекбокса не было видимого состояния вообще.
+   У чекбокса — обычное видимое поле, поэтому рамка есть и по клику мышью;
+   радио спрятаны внутри плиток (1×1, clip-path) — им рамку даём только
+   при клавиатурной навигации, иначе она светилась бы у самой плитки. */
+input[type=checkbox]:focus{outline:2px solid var(--c);outline-offset:2px;border-radius:4px}
+input[type=radio]:focus-visible{outline:2px solid var(--c);outline-offset:2px;border-radius:4px}
+/* Range sliders (покрытие города) rendered without any focus indication. */
+input[type=range]:focus-visible{outline:2px solid var(--c);outline-offset:4px;border-radius:6px}
+input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:2px solid var(--focus-ring);outline-offset:1px;
+}
+
+/* Text selection tint */
+::selection{background:var(--glow);color:inherit}
+
+/* Respect users who disable motion */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+

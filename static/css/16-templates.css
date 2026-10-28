@@ -1,0 +1,305 @@
+/* 16-templates.css · Шаблоны сообщений
+   Часть 17 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ── Шаблоны сообщений («📝 Шаблоны») ── */
+/* Панель вкладки — flex-колонка; контент скроллится внутри рамки таба.
+   Без этого длинный список карточек уезжал за нижнюю кромку и его
+   нельзя было прокрутить. */
+#p-templates{overflow:hidden}
+.tpl-scroll{flex:1;min-height:0;overflow-y:auto}
+.tpl-wrap{max-width:820px;margin:0 auto;padding:18px 16px 28px}
+.tpl-intro h2{margin:0 0 6px;font-size:18px}
+.tpl-intro p{margin:0 0 16px;color:var(--muted);font-size:12.5px;line-height:1.6}
+.tpl-cat-filter{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tpl-cat{
+  padding:6px 12px;border:1px solid var(--bdr);border-radius:999px;
+  background:var(--card);color:var(--sub);font:inherit;font-size:12px;font-weight:700;cursor:pointer;
+  transition:background .12s,border-color .12s,color .12s;
+}
+.tpl-cat:hover{border-color:var(--c);color:var(--c)}
+.tpl-cat.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
+.tpl-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.tpl-missing-chk{margin-left:auto;font-size:12px;color:var(--sub)}
+.tpl-list{display:flex;flex-direction:column;gap:12px}
+.template-card{
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);
+  padding:16px;transition:border-color .15s,box-shadow .15s;
+}
+.template-card:hover{border-color:var(--bdr-h);box-shadow:var(--sh)}
+.template-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.template-name{font-weight:800;font-size:13.5px;color:var(--txt)}
+.template-cat{
+  font-size:12px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--c);background:var(--c-soft);border-radius:999px;padding:2px 8px;
+}
+.template-actions{margin-left:auto;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.template-card:hover .template-actions,
+.template-card:focus-within .template-actions{opacity:1}
+.template-more{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:4px 8px;border:1px solid var(--bdr);border-radius:6px;background:transparent;
+  color:var(--sub);font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .12s;
+}
+.template-more svg{display:block}
+.template-more:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
+.template-more.danger:hover{border-color:var(--err-strong);color:var(--err-strong);background:var(--err-bg)}
+.template-text{white-space:pre-wrap;font-size:12.5px;line-height:1.6;color:var(--txt);margin-bottom:8px;word-break:break-word}
+.template-vars{font-size:12px;color:var(--muted)}
+.template-vars code{background:var(--chip-bg);color:var(--chip-txt);border-radius:4px;padding:1px 5px;font-size:12px}
+.tpl-empty{padding:26px;text-align:center;color:var(--muted);border:1px dashed var(--bdr);border-radius:8px}
+/* «+ Добавить шаблон» живёт в тулбаре (btn-sm) — крупные стили больше не
+   нужны, кнопка внизу списка удалена. */
+/* Поиск по шаблонам */
+.tpl-search{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.tpl-search input{
+  flex:1;min-width:0;padding:8px 12px;font-size:12.5px;font-family:inherit;
+  border:1px solid var(--bdr);border-radius:8px;background:var(--field);color:var(--txt);
+}
+.tpl-search input:focus{outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring)}
+.tpl-search-count{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap}
+/* Пустое состояние — канвас вместо заглушки */
+.tpl-empty-box{
+  border:1px dashed var(--bdr);border-radius:10px;padding:28px 20px;text-align:center;
+  color:var(--muted);background:var(--panel);
+}
+.tpl-empty-box[hidden]{display:none}
+.tpl-empty-title{font-size:14px;font-weight:800;color:var(--sub);margin-bottom:6px}
+.tpl-empty-box p{font-size:12px;line-height:1.6;margin:0 auto 14px;max-width:420px}
+.tpl-empty-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+/* Мета-строка карточки: переменные + дата обновления */
+.template-meta{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.template-upd{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+/* Меню «ещё» (⋮) — дублирование спрятано сюда, чтобы карточка не тонула в кнопках */
+.tpl-more-wrap{position:relative;display:inline-flex}
+.tpl-menu{
+  position:absolute;top:calc(100% + 4px);right:0;z-index:20;min-width:140px;
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-sm);box-shadow:var(--sh-lg);
+  padding:4px;display:flex;flex-direction:column;
+}
+.tpl-menu[hidden]{display:none}
+.tpl-menu button{
+  text-align:left;padding:7px 10px;border:none;border-radius:6px;background:transparent;
+  color:var(--sub);font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;
+}
+.tpl-menu button:hover{background:var(--c-soft);color:var(--c)}
+/* Подсказки внутри модалки и интро */
+.tpl-hint{font-size:12px;line-height:1.5;color:var(--muted);margin-top:5px}
+.tpl-preview-note{font-size:12px;line-height:1.5;color:var(--muted);margin-top:6px}
+.tpl-intro-hint{
+  font-size:12px;line-height:1.6;color:var(--sub);background:var(--panel);
+  border:1px solid var(--bdr);border-radius:8px;padding:8px 12px;margin-bottom:16px;
+}
+/* Подвкладки «Шаблоны» / «Переменные» внутри вкладки */
+.tpl-subtabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--bdr)}
+.tpl-subtab{
+  padding:8px 14px;border:none;border-bottom:2px solid transparent;background:transparent;
+  color:var(--sub);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;
+  transition:color .12s,border-color .12s;
+}
+.tpl-subtab:hover{color:var(--c)}
+.tpl-subtab.active{color:var(--c);border-bottom-color:var(--c)}
+/* Чекбокс выбора на карточке шаблона (массовое удаление) */
+.tpl-card-chk{display:inline-flex;align-items:center;margin-right:2px}
+.tpl-card-chk input{width:15px;height:15px;accent-color:var(--c);cursor:pointer}
+/* Кнопка массового удаления — красная, как остальные danger-действия */
+#btn-tpl-del-selected{color:var(--err-strong);border-color:var(--err-strong)}
+#btn-tpl-del-selected:hover{background:var(--err-bg)}
+#btn-tpl-del-selected:disabled{opacity:.5;cursor:not-allowed}
+/* Ссылка «управлять переменными» под списком встроенных */
+.tpl-vars-manage{
+  margin-top:10px;border:none;background:transparent;color:var(--c);
+  font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0;
+}
+.tpl-vars-manage:hover{text-decoration:underline}
+/* Подвкладка «Переменные» */
+.tpl-vars-intro h3{margin:0 0 6px;font-size:16px}
+.tpl-var-count{font-size:12px;font-weight:700;color:var(--muted);margin-left:8px}
+.tpl-vars-intro p{margin:0 0 12px;color:var(--muted);font-size:12.5px;line-height:1.6;max-width:640px}
+.tpl-var-cards{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.tpl-var-empty{padding:20px;text-align:center;color:var(--muted);border:1px dashed var(--bdr);border-radius:8px;font-size:12.5px}
+.tpl-var-card{
+  background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:12px 14px;
+}
+.tpl-var-card code{color:var(--c);font-weight:700;font-size:12.5px}
+.tpl-var-card-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tpl-var-kind{
+  font-size:12px;font-weight:700;color:var(--sub);background:var(--panel);
+  border:1px solid var(--bdr);border-radius:999px;padding:2px 8px;
+}
+.tpl-var-actions{margin-left:auto;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.tpl-var-card:hover .tpl-var-actions,.tpl-var-card:focus-within .tpl-var-actions{opacity:1}
+.tpl-var-desc{font-size:12px;color:var(--sub);margin-top:5px}
+.tpl-var-val{font-size:12px;color:var(--muted);margin-top:4px;word-break:break-word}
+/* Форма переменной: имя между фигурными скобками */
+.tpl-var-name-row{display:flex;align-items:center;gap:6px}
+.tpl-var-name-row input{flex:1;min-width:0}
+.tpl-var-brace{font-size:18px;font-weight:800;color:var(--muted);font-family:monospace}
+/* Автодополнение переменных под textarea */
+.tpl-text-wrap{position:relative}
+.tpl-ac-box{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:30;
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);box-shadow:var(--sh-lg);
+  max-height:240px;overflow:auto;padding:4px;
+}
+.tpl-ac-box[hidden]{display:none}
+.tpl-ac-item{
+  display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+  padding:7px 9px;border:none;border-radius:var(--r-sm);background:transparent;
+  color:var(--txt);font:inherit;font-size:12px;cursor:pointer;
+}
+.tpl-ac-item:hover,.tpl-ac-item.active{background:var(--row-hover)}
+.tpl-ac-item code{color:var(--c);font-weight:700;white-space:nowrap}
+.tpl-ac-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sub)}
+.tpl-ac-own{font-size:12px;font-weight:800;text-transform:uppercase;color:var(--c);background:var(--c-soft);border-radius:999px;padding:1px 7px}
+.tpl-ac-hint{padding:5px 9px 3px;font-size:12px;color:var(--muted);border-top:1px solid var(--bdr);margin-top:3px}
+
+/* Select категории — явный dropdown: стрелка справа, не «поле ввода» */
+.tpl-modal select{
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2352686f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 11px center;padding-right:32px;
+}
+.tpl-vars{margin-top:22px;border-top:1px solid var(--bdr);padding-top:14px}
+.tpl-vars-title{font-size:12px;font-weight:800;color:var(--sub);margin-bottom:8px}
+.tpl-var-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 16px;font-size:12px;color:var(--sub)}
+.tpl-var-list code{color:var(--c);font-weight:700}
+/* Модалка редактирования */
+.tpl-modal-overlay{
+  position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  background:var(--scrim);padding:16px;
+}
+.tpl-modal-overlay[hidden]{display:none}
+.tpl-modal{
+  width:min(560px,100%);max-height:90vh;overflow:auto;background:var(--card);
+  border:1px solid var(--bdr);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:20px;
+}
+.tpl-modal h3{margin:0 0 14px;font-size:15px}
+.tpl-modal input[type=text],.tpl-modal select,.tpl-modal textarea{
+  width:100%;padding:9px 11px;font-size:13px;border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--txt);font-family:inherit;margin-top:4px;
+}
+.tpl-modal textarea{resize:vertical;min-height:110px;line-height:1.6}
+.tpl-modal input:focus,.tpl-modal select:focus,.tpl-modal textarea:focus{
+  outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring);
+}
+.tpl-insert-row{display:flex;align-items:center;gap:8px;margin-top:10px}
+.tpl-insert-row select{width:auto;flex:0 0 auto;margin-top:0}
+.tpl-preview{margin-top:12px}
+.tpl-preview-title{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.tpl-preview-body{
+  white-space:pre-wrap;font-size:12.5px;line-height:1.6;color:var(--txt);
+  background:var(--panel);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;
+}
+.tpl-modal-err{margin-top:10px;font-size:12px;color:var(--err-strong);font-weight:600}
+.tpl-modal-err[hidden]{display:none}
+/* Очередь сообщений в массовом обходе */
+.bulk-queue{margin:8px 0;border:1px solid var(--bdr);border-radius:8px;overflow:hidden}
+.bulk-queue[hidden]{display:none}
+.bulk-queue-head{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);font-size:12px;font-weight:700;color:var(--sub)}
+.bulk-queue-head button{margin-left:auto}
+.bulk-queue-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--bdr);font-size:12px}
+.bulk-queue-item .bqi-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bulk-queue-item button{border:1px solid var(--bdr);border-radius:6px;background:transparent;color:var(--sub);cursor:pointer;padding:3px 8px;font:inherit;font-size:12px;font-weight:700}
+.bulk-queue-item button:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
+.bulk-queue-item.done{opacity:.5}
+.tbl-tpl-wrap{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
+.tbl-tpl-wrap select{padding:5px 8px;border:1px solid var(--bdr);border-radius:7px;background:var(--card);color:var(--txt);font-size:12px;font-family:inherit;max-width:190px}
+.sender-tpl-row{display:flex;gap:8px;align-items:center}
+.sender-tpl-row select{flex:1;min-width:0}
+
+/* ── Режим выбора шаблона (один / случайный из выбранных) ── */
+.tpl-pick{
+  margin:14px 0;border:1px solid var(--bdr);border-radius:10px;background:var(--panel);
+  padding:12px 14px;
+}
+.tpl-pick-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tpl-pick-title{font-size:12.5px;font-weight:700;color:var(--txt)}
+.tpl-pick-head select{
+  margin-left:auto;padding:5px 26px 5px 9px;border:1px solid var(--bdr);border-radius:7px;
+  background:var(--card);color:var(--txt);font-size:12px;font-family:inherit;cursor:pointer;
+}
+.tpl-pick-modes{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.tpl-pick-mode{font-weight:600}
+.tpl-pick-body .chk{width:100%;justify-content:flex-start;font-weight:500}
+.tpl-pick-count{font-size:12px;color:var(--muted);font-weight:600;margin-top:8px}
+.tpl-pick-foot{margin-top:10px}
+.tpl-pick .ghost{background:transparent}
+.tpl-pick-list-empty{font-size:12px;color:var(--muted);padding:6px 0}
+.tpl-pick-avoid{margin-top:12px;justify-content:flex-start}
+.tpl-pick-avoid .tpl-hint-inline{margin-left:2px}
+.tpl-pick-modal-list{
+  margin-top:10px;border:1px solid var(--bdr);border-radius:8px;background:var(--panel);
+  padding:8px 10px;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;
+}
+.tpl-pick-modal-list .chk{border:none;background:transparent;padding:2px 0;font-weight:500}
+.tpl-pick-modal-list .chk:hover{border:none;background:transparent;color:var(--txt)}
+/* Составной шаблон: чекбокс + список вложенных шаблонов в модалке редактирования. */
+.tpl-variants-block{margin:10px 0;border:1px solid var(--bdr);border-radius:8px;padding:10px 12px}
+.tpl-variants-block .chk{font-weight:500}
+#tpl-variants-wrap[hidden]{display:none}
+/* Бейдж составного шаблона в карточке списка. */
+.tpl-comp-badge{display:inline-flex;align-items:center;gap:4px;color:var(--muted);font-size:12px;font-weight:500}
+.tpl-pick-modal-hint{margin-top:8px;font-size:12px;color:var(--muted)}
+.tpl-pick-modal-hint[hidden]{display:none}
+.sender-random-chk{margin-top:8px;font-weight:500}
+
+/* ── Dark theme ── */
+[data-theme="dark"] .template-card{background:var(--card);border-color:var(--bdr)}
+[data-theme="dark"] .template-card:hover{border-color:var(--c)}
+[data-theme="dark"] .tpl-modal{background:var(--card);border-color:var(--bdr)}
+[data-theme="dark"] .tpl-modal input[type=text],[data-theme="dark"] .tpl-modal select,[data-theme="dark"] .tpl-modal textarea{
+  background:var(--field);border-color:var(--bdr);color:var(--txt)}
+[data-theme="dark"] .tpl-pick{background:var(--panel);border-color:var(--bdr)}
+[data-theme="dark"] .tpl-pick-head select{background:var(--field);border-color:var(--bdr);color:var(--txt)}
+[data-theme="dark"] .tpl-pick-modal-list{background:var(--panel);border-color:var(--bdr)}
+[data-theme="dark"] .tpl-preview-body{background:var(--panel);border-color:var(--bdr)}
+[data-theme="dark"] .tpl-search input{background:var(--field);border-color:var(--bdr);color:var(--txt)}
+[data-theme="dark"] .tpl-empty-box{background:var(--panel);border-color:var(--bdr)}
+[data-theme="dark"] .tpl-menu{background:var(--card);border-color:var(--bdr)}
+[data-theme="dark"] .tpl-menu button:hover{background:var(--c-soft);color:var(--c)}
+[data-theme="dark"] .tpl-intro-hint{background:var(--panel);border-color:var(--bdr)}
+[data-theme="dark"] .tbl-tpl-wrap select{background:var(--field);border-color:var(--bdr);color:var(--txt)}
+[data-theme="dark"] .template-more{border-color:var(--bdr-h);color:var(--sub)}
+[data-theme="dark"] .bulk-queue{border-color:var(--bdr)}
+[data-theme="dark"] .bulk-queue-head{background:var(--panel)}
+[data-theme="dark"] .bulk-queue-item button{border-color:var(--bdr-h);color:var(--sub)}
+[data-theme="dark"] .results-subtabs{background:var(--card);border-color:var(--bdr)}
+[data-theme="dark"] .subt-tab{color:var(--sub)}
+[data-theme="dark"] .subt-link{border-color:var(--bdr-h);color:var(--sub)}
+[data-theme="dark"] .subt-link:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
+[data-theme="dark"] .bulk-panel{background:var(--card);border-color:var(--bdr)}
+[data-theme="dark"] .bulk-header{background:var(--panel)}
+[data-theme="dark"] .bulk-open-btn{background:var(--brand);box-shadow:0 4px 14px var(--glow)}
+[data-theme="dark"] .bulk-open-btn:disabled{background:var(--bdr);color:var(--muted);box-shadow:none}
+[data-theme="dark"] .bulk-preset{background:var(--panel);border-color:var(--bdr);color:var(--sub)}
+[data-theme="dark"] .bulk-preset.active{background:var(--brand);border-color:var(--c);color:var(--bg)}
+[data-theme="dark"] #bulk-count,[data-theme="dark"] #bulk-social{
+  background:var(--field);border-color:var(--bdr);color:var(--txt)}
+[data-theme="dark"] .bulk-copy-btn,[data-theme="dark"] .bulk-persist-btn,
+[data-theme="dark"] .bulk-reset,[data-theme="dark"] .tbl-filter-btn{
+  border-color:var(--bdr-h);color:var(--sub);background:transparent}
+[data-theme="dark"] .bulk-copy-btn:hover,[data-theme="dark"] .bulk-persist-btn:hover,
+[data-theme="dark"] .bulk-reset:hover,[data-theme="dark"] .tbl-filter-btn:hover{
+  border-color:var(--c);color:var(--c);background:var(--c-soft)}
+/* Надпись на активном фильтре — --on-accent: раньше здесь стоял --bg, и
+   в тёмной теме текст был почти чёрным на тёмном --brand (1.9:1). */
+[data-theme="dark"] .tbl-filter-btn.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
+[data-theme="dark"] .city-tabs{border-color:var(--bdr)}
+[data-theme="dark"] .city-tab{color:var(--sub)}
+[data-theme="dark"] .history-title{color:var(--sub);border-left-color:var(--c)}
+[data-theme="dark"] .file-card{background:var(--card);border-color:var(--bdr)}
+/* Тень наведения — общий --glow (сланцевый). Здесь оставался rgba(20,184,166)
+   от бирюзовой темы: единственное место, где hover-тень ушла в зелёно-синий,
+   пока рамка и текст уже были сланцевыми. */
+[data-theme="dark"] .file-card:hover{border-color:var(--c);box-shadow:0 2px 12px var(--glow)}
+[data-theme="dark"] .file-name{color:var(--txt)}
+[data-theme="dark"] .file-btn:hover{background:var(--c-soft);border-color:var(--c);color:var(--c)}
+[data-theme="dark"] .file-btn.danger{color:var(--err-txt)}
+[data-theme="dark"] .file-btn.danger:hover{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red)}
+[data-theme="dark"] .files-toolbar input{background:var(--field);border-color:var(--bdr);color:var(--txt)}
+[data-theme="dark"] .files-toolbar input:focus{border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring)}
+[data-theme="dark"] .files-badge.raw{background:var(--field);color:var(--sub);border-color:var(--bdr)}
+[data-theme="dark"] .file-btn{background:var(--panel);border-color:var(--bdr);color:var(--sub)}
+[data-theme="dark"] .file-btn:hover{background:var(--field);border-color:var(--c)}
+[data-theme="dark"] .links-modal textarea{background:var(--term);border-color:var(--bdr);color:var(--txt)}
+

@@ -23,7 +23,8 @@ from flask import Flask
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
-APP_CSS = (ROOT / "static" / "css" / "style.css").read_text(encoding="utf-8")
+from tests._css import read_css
+APP_CSS = read_css()
 APP_INIT_JS = (ROOT / "static" / "js" / "11-app-init.js").read_text(encoding="utf-8")
 
 
@@ -344,7 +345,7 @@ class TestNoStaleUi:
         html = client.get("/")
         assert html.status_code == 200
         assert html.headers["Cache-Control"] == "no-store"
-        css = client.get("/static/css/style.css")
+        css = client.get("/static/css/00-tokens.css")
         assert css.status_code == 200
         assert "no-cache" in css.headers["Cache-Control"]
 

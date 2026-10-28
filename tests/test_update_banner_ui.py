@@ -9,7 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 JS = (ROOT / "static" / "js" / "09-ui-extras.js").read_text(encoding="utf-8")
-CSS = (ROOT / "static" / "css" / "style.css").read_text(encoding="utf-8")
+from tests._css import read_css
+CSS = read_css()
 HTML = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
 
 

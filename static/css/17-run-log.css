@@ -1,0 +1,190 @@
+/* 17-run-log.css · Панель хода поиска, уровни и фильтры журнала
+   Часть 18 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ══════════════════════════════════════════════════════════
+   «ХОД ПОИСКА» — LIVE RUN PANEL
+   ══════════════════════════════════════════════════════════ */
+
+/* Placeholder shown inside the empty log after «Очистить лог» */
+.log-empty{
+  padding:14px 4px;color:var(--muted);font-size:12px;
+  font-family:'Inter',system-ui,sans-serif;
+}
+[data-theme="dark"] .log-empty{color:var(--muted)}
+
+/* Below the desktop breakpoint the app shell scrolls with the page, so the
+   log needs a bound of its own — on desktop the flex chain sizes it exactly. */
+@media(max-width:860px){
+  #log-output{max-height:60vh}
+}
+
+/* Aggregate run progress above the log */
+.term-progress{padding:9px 15px;background:var(--card);border-bottom:1px solid var(--bdr)}
+.term-progress[hidden]{display:none}
+.term-progress-info{
+  display:flex;justify-content:space-between;gap:10px;
+  font-size:12px;font-weight:600;color:var(--sub);margin-bottom:6px;
+}
+.term-progress-info b{color:var(--txt)}
+.term-progress-eta{color:var(--muted)}
+.term-progress-bar{height:6px;border-radius:3px;background:var(--cl);overflow:hidden}
+.term-progress-fill{height:100%;width:0;border-radius:3px;background:var(--c);transition:width .3s ease}
+[data-theme="dark"] .term-progress-bar{background:var(--bdr)}
+
+/* Pulsing dot on the «Ход поиска» tab while a run is active */
+/* display:inline-block обязателен: <span> инлайновый, и без него width/
+   height игнорируются — точка оставалась нулевой. */
+.tab-dot{
+  display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--yel);
+  margin-right:6px;flex:0 0 auto;animation:tabPulse 1.5s ease-in-out infinite;
+}
+@keyframes tabPulse{0%,100%{opacity:1}50%{opacity:.25}}
+[data-theme="dark"] .tab-dot{background:var(--yel)}
+
+/* Structured stats card (stats.py event) — replaces the ASCII-bar lines */
+.log-stats{
+  margin:10px 0;padding:14px 16px;border-radius:9px;
+  background:var(--cl);border:1px solid var(--bdr);display:grid;gap:14px;
+  font-family:'Inter',system-ui,sans-serif;
+}
+.log-stats-head{font-size:12.5px;font-weight:800;color:var(--c);display:flex;align-items:baseline;gap:8px}
+.log-stats-head span{font-size:12px;font-weight:600;color:var(--muted)}
+.log-stats-section{display:grid;gap:7px}
+.log-stats-title{
+  font-size:12px;text-transform:uppercase;letter-spacing:.05em;
+  font-weight:800;color:var(--muted);
+}
+.log-stats-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.log-stats-label{min-width:104px;color:var(--txt);font-weight:600}
+.log-stats-track{
+  flex:1;max-width:260px;height:8px;border-radius:4px;
+  background:var(--card);overflow:hidden;
+}
+.log-stats-bar{display:block;height:100%;border-radius:4px;background:var(--c)}
+.log-stats-value{color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
+[data-theme="dark"] .log-stats{background:var(--panel);border-color:var(--bdr)}
+[data-theme="dark"] .log-stats-track{background:var(--field)}
+
+/* ════════════════════════════════
+   LOG: УРОВНИ, ФИЛЬТРЫ, ИЕРАРХИЯ
+   Журнал читают глазами — цвет, вес и отступ несут смысл раньше текста.
+   ════════════════════════════════ */
+/* ── Фильтры в шапке журнала: одна строка состояния, не перерисовка ── */
+.log-filters{display:flex;gap:4px;margin:0 6px 0 10px;flex-wrap:wrap}
+.log-filter{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:12px;font-weight:700;padding:3px 9px;border-radius:6px;
+  border:1px solid var(--bdr);background:var(--card);color:var(--sub);
+  cursor:pointer;font-family:inherit;white-space:nowrap;
+  transition:border-color .12s,color .12s,background .12s;
+}
+.log-filter:hover{border-color:var(--c);color:var(--c)}
+.log-filter.active{background:var(--brand);border-color:var(--brand);color:var(--on-accent)}
+.log-filter-count{
+  min-width:15px;padding:0 4px;border-radius:999px;font-size:12px;
+  background:var(--err-bg);color:var(--err-txt);
+}
+[data-theme="dark"] .log-filter{background:var(--panel)}
+[data-theme="dark"] .log-filter:hover{background:var(--c-soft);border-color:var(--c);color:var(--c)}
+[data-theme="dark"] .log-filter.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
+[data-theme="dark"] .log-filter-count{background:var(--err-bg);color:var(--err-txt)}
+
+/* Вердикт фильтра («✅ Ошибок нет») — там же, где нажали фильтр */
+#log-filter-empty{
+  padding:7px 15px;border-bottom:1px solid var(--bdr);background:var(--panel);
+  font-size:12px;font-weight:600;
+}
+#log-filter-empty[hidden]{display:none}
+
+/* ── Уровни: вес и цвет ─────────────────────────────────────────────── */
+#log-output .ll.ok{font-weight:700}
+#log-output .ll.error{font-weight:700}
+#log-output .ll.info{font-weight:600}
+/* Временная метка: колонка сохраняется, но текст виден только при смене
+   секунды — иначе «14:30:15» повторялось бы десятки раз подряд. */
+#log-output .ll-time{display:inline-block;min-width:64px}
+/* В строке-городе фон — --brand, но метка времени наследовала тихий --muted
+   и пропадала: в светлой теме 2.03:1. На плотном фоне метка читается
+   только светлой. */
+#log-output .ll.city .ll-time{color:var(--on-accent);opacity:.78}
+#log-output .ll-time.same{visibility:hidden}
+/* Иерархия: подстроки конфигурации сдвинуты под своей строкой */
+#log-output .ll.ind-1{padding-left:26px;color:var(--muted)}
+/* ── Сворачиваемый блок города ──────────────────────────────────────── */
+#log-output .ll.city{
+  margin-top:7px;font-weight:800;color:var(--on-accent);background:var(--brand);
+  border-left-color:var(--brand);cursor:pointer;
+}
+#log-output .ll.city .ll-caret{display:inline-block;margin-right:7px;font-size:12px;opacity:.85}
+#log-output .ll.city:hover{filter:brightness(1.07)}
+#log-output .ll.city.collapsed .ll-caret{transform:rotate(-90deg)}
+#log-output .ll.city.collapsed::after{content:' (свёрнуто)';font-weight:600;opacity:.8}
+/* ── Фильтры: скрытие — чистое CSS, строки никогда не теряются ──────── */
+#log-output .ll.tech{display:none}
+#log-output.show-tech .ll.tech{display:block}
+/* «Важные» — ТОЛЬКО итоги: зелёные summary-строки и карточка «Статистика».
+   Ошибки/предупреждения — во вкладке «Ошибки», механика — в «Технических». */
+#log-output.f-important .ll:not(.sum){display:none}
+/* Карточка «Статистика» — итог прогона: видна во «Все» и «Важные».
+   В «Ошибки»/«Технические» не показывается вовсе. */
+#log-output.f-errors .log-stats,
+#log-output.f-tech .log-stats{display:none}
+#log-output.f-errors .ll:not(.warn):not(.error):not(.quota-warn):not(.quota-critical){display:none}
+#log-output.f-tech .ll:not(.tech){display:none}
+#log-output.f-tech .ll.tech{display:block;font-style:normal;opacity:1}
+/* ── «⬇️ К последней строке» ────────────────────────────────────────── */
+#p-log{position:relative}
+.log-jump{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:5;
+  padding:6px 13px;border-radius:999px;border:1px solid var(--c);
+  background:var(--brand);color:var(--on-accent);
+  font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;
+  box-shadow:var(--sh);
+}
+.log-jump:hover{filter:brightness(1.08)}
+.log-jump[hidden]{display:none}
+
+/* ── Прогресс: город крупно (полоски по городам живут в верхней полосе) ── */
+.term-progress-info .tp-city{font-size:13px;font-weight:800;color:var(--txt);letter-spacing:-.01em}
+
+/* Режим выбора шаблона: на телефоне — стек, модалка на всю ширину */
+@media(max-width:860px){
+  .tpl-pick{padding:10px 12px}
+  .tpl-pick-head select{margin-left:0;width:100%}
+  .tpl-pick-modes{gap:8px}
+  .tpl-pick-foot .btn-sm{width:100%}
+  .tpl-pick-modal-list{max-height:34vh}
+  .tpl-modal{width:100%;max-width:100%;padding:14px}
+}
+
+/* Тёмная тема: новые элементы вкладки шаблонов */
+[data-theme="dark"] .tpl-subtab.active{border-bottom-color:var(--c)}
+[data-theme="dark"] .tpl-var-card{background:var(--panel)}
+[data-theme="dark"] .tpl-ac-box{background:var(--panel)}
+[data-theme="dark"] .tpl-var-kind{background:var(--field)}
+/* Узкое окно и планшет (≤1120px): подписи кнопок шапки скрыты раньше
+   телефона. Седьмая кнопка («Проблема») довела ряд .hdr-right до 815px —
+   при окне 764px страница уходила в горизонтальный скролл (аудит: 826 > 764).
+   Следом подписи четырёх кнопок («Логи», «Диагностика», «Проблема»,
+   «Обновления») держали ряд в 939px: при окне 980px шапка требовала 1043px и
+   страница снова уезжала вбок (замер: 1043 > 980). Порог 1120px оставляет
+   запас на другой шрифт и масштаб системы: на 1047px заголовок с подписями
+   ещё влезал, но впритык. У каждой кнопки есть aria-label и title, поэтому
+   значок без подписи остаётся доступным; полностью правила включаются на
+   ≤620px ниже. */
+@media(max-width:1120px){
+  .hdr-right > button .hdr-lbl{display:none}
+  .hdr-right .hdr-tools > button .hdr-lbl{display:none}
+}
+@media(max-width:620px){
+  header{padding:0 12px}
+  header h1{font-size:12.5px}
+  .hdr-right{gap:4px}
+  .hdr-right > button{padding:6px 9px}
+  .hdr-right .hdr-tools > button{padding:6px 9px}
+  .hdr-right > button .hdr-lbl{display:none}
+  .hdr-right .ico{width:15px;height:15px}
+  /* Подпись скрыта — кнопка снова только со значком: центрируем без зазора. */
+  .hdr-right .ico{margin-right:0}
+}
+

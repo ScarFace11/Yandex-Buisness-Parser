@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { readAppSrc } from './_src.mjs';
+import { readCss } from './_css.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const src = readAppSrc(root);
@@ -592,7 +593,7 @@ test('the log panel never repeats the city list (top strip owns it)', () => {
   const tpl = readFileSync(join(root, 'templates', 'index.html'), 'utf8');
   assert.ok(!/id="tp-cities"/.test(tpl), 'tp-cities markup is gone');
   assert.ok(!/tp-chip/.test(src), 'per-city chips are not rendered any more');
-  const css = readFileSync(join(root, 'static', 'css', 'style.css'), 'utf8');
+  const css = readCss(root);
   assert.ok(!/\.tp-chip/.test(css), 'chip styles are gone too');
   // …while the top strip caps its height and scrolls instead of growing.
   assert.match(css, /#city-progress-list\{[^}]*max-height/);

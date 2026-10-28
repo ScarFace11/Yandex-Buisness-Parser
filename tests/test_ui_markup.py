@@ -11,9 +11,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
 from tests._appjs import read_app_js
+from tests._css import css_files, read_css
 APP_JS = read_app_js()
 API_PY = (ROOT / "routes" / "api.py").read_text(encoding="utf-8")
-STYLE = (ROOT / "static" / "css" / "style.css").read_text(encoding="utf-8")
+STYLE = read_css()
 
 DARK_MARKER = '[data-theme="dark"]'
 DARK_TOKEN_BLOCK = STYLE[STYLE.index(DARK_MARKER + "{"):]
@@ -103,7 +104,7 @@ class TestThemeInit:
         head = TEMPLATE[:TEMPLATE.index("</head>")]
         assert "yp_theme_v1" in head, "тема должна ставиться до загрузки CSS"
         assert "document.documentElement.setAttribute('data-theme'" in head
-        assert head.index("yp_theme_v1") < head.index("css/style.css")
+        assert head.index("yp_theme_v1") < head.index('"00-tokens.css"')
 
     def test_switch_is_animated_for_a_quarter_second(self):
         assert "theme-anim" in STYLE
@@ -2200,3 +2201,25 @@ class TestOpenResultFolder:
         rule = rule[:rule.index('}')]
         assert 'border:1px solid var(--bdr)' in rule
         assert 'color:var(--sub)' in rule
+
+
+class TestCssParts:
+    """Стили разбиты на части, и порядок ссылок — это каскад.
+
+    Один style.css на 4700 строк невозможно читать; части названы с
+    двумя цифрами, поэтому sorted() — тот же порядок, что в шаблоне.
+    """
+
+    def test_monolith_is_gone(self):
+        assert not (ROOT / "static" / "css" / "style.css").exists()
+
+    def test_template_links_every_part_in_cascade_order(self):
+        linked = re.findall(r'"(\d{2}-[a-z0-9-]+\.css)"', TEMPLATE)
+        assert linked, "в шаблоне нет списка частей"
+        assert linked == [p.name for p in css_files()], (
+            "порядок ссылок в шаблоне должен совпадать с порядком файлов")
+
+    def test_every_part_is_small_enough_to_read(self):
+        big = [(p.name, p.read_text(encoding="utf-8").count("\n"))
+               for p in css_files() if p.read_text(encoding="utf-8").count("\n") > 450]
+        assert not big, f"часть разрослась: {big}"

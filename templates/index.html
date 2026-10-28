@@ -18,9 +18,9 @@
     } catch (e) { /* приватный режим — останемся на светлой */ }
   })();
 </script>
-<!-- Шрифт лежит рядом (static/fonts) и подключается из style.css: приложение
-     не должно зависеть от доступности Google Fonts — иначе у части
-     пользователей интерфейс тихо уезжал на системный запасной шрифт. -->
+<!-- Шрифт лежит рядом (static/fonts) и подключается из 00-tokens.css:
+     приложение не должно зависеть от доступности Google Fonts — иначе у
+     части пользователей интерфейс тихо уезжал на системный запасной шрифт. -->
 <!-- Карты: Leaflet лежит рядом (static/vendor/leaflet) и подключается только
      при открытии вкладки «На карте». Пути отдаёт Flask — префикс /static не
      захардкожен в модулях static/js. -->
@@ -31,7 +31,19 @@
   };
 </script>
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='icon.png') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<!-- Порядок частей — это каскад: поздние перекрывают ранние. Менять
+     порядок можно только осознанно, вместе с правками правил.
+     Карта частей — static/css/README.md. -->
+{% for sheet in [
+     "00-tokens.css",       "01-header.css",      "02-layout-form.css",
+     "03-tabs-log.css",     "04-results-table.css", "05-controls.css",
+     "06-map-stats.css",    "07-sender-city.css", "08-stats-updates.css",
+     "09-a11y-motion.css",  "10-dark-responsive.css", "11-redesign-sidebar.css",
+     "12-socials-empty.css", "13-modals-history.css", "14-dock-pipeline.css",
+     "15-results-tabs.css", "16-templates.css",   "17-run-log.css",
+     "18-html-classes.css", "19-polish.css",      "20-terms-grid.css"] %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/' ~ sheet) }}">
+{% endfor %}
 </head>
 <body>
 

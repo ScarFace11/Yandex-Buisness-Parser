@@ -1,0 +1,249 @@
+/* 20-terms-grid.css · Соглашение, хранение, единая сетка, живая сводка
+   Часть 21 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ══════════════════════════════════════════════════════════
+   Пользовательское соглашение (первый вход)
+   ══════════════════════════════════════════════════════════ */
+.terms-body{
+  max-height:46vh;overflow-y:auto;font-size:12.5px;line-height:1.6;color:var(--sub);
+  border:1px solid var(--bdr);border-radius:var(--r,8px);padding:12px 14px;margin-bottom:12px;
+}
+.terms-body b{color:var(--txt)}
+.terms-body ol{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:8px}
+.terms-accept-row{margin-bottom:10px}
+/* Версия редакции: мелкая строка над чекбоксом — видно, что именно
+   принимаешь и что уже принято. */
+.terms-meta{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 8px}
+.terms-body .terms-meta{margin-top:8px}
+#terms-declined{position:fixed;inset:0;background:var(--term);z-index:10000;
+  display:flex;align-items:center;justify-content:center}
+.terms-declined-box{max-width:440px;text-align:center;padding:32px;color:var(--txt)}
+.terms-declined-box h2{font-size:16px;margin-bottom:10px}
+.terms-declined-box p{font-size:13px;color:var(--sub);line-height:1.6}
+/* Выход с экрана отказа: соглашение можно перечитать и принять, а закрыть
+   приложение — только осознанным нажатием, а не единственным вариантом. */
+.terms-declined-btns{display:flex;flex-direction:column;gap:8px;margin-top:18px}
+.terms-declined-btns button{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 14px;border-radius:var(--r,8px);font:inherit;font-size:13px;
+  font-weight:700;cursor:pointer;border:1px solid transparent;
+}
+.terms-declined-btns .m-ok{background:var(--brand);color:var(--on-accent)}
+.terms-declined-btns .m-cancel{background:transparent;border-color:var(--bdr);color:var(--sub)}
+.terms-declined-btns .m-cancel:hover{border-color:var(--bdr-h);color:var(--txt)}
+
+/* ══════════════════════════════════════════════════════════
+   Соглашение (полный текст): заголовки разделов и лид
+   ══════════════════════════════════════════════════════════ */
+.terms-lead{font-size:12.5px;color:var(--sub);line-height:1.6;
+  border-left:3px solid var(--c);padding-left:12px;margin:0 0 14px}
+.terms-body h4{font-size:13px;margin:18px 0 6px;color:var(--txt);letter-spacing:-.01em}
+.terms-body h4:first-of-type{margin-top:4px}
+.terms-body p{font-size:12px;color:var(--sub);line-height:1.6;margin:6px 0}
+
+/* ══════════════════════════════════════════════════════════
+   02 · Что парсить: обычные/персональные поля + гейтинг
+   ══════════════════════════════════════════════════════════ */
+.parse-intro{font-size:12px;color:var(--sub);line-height:1.55;margin:0 0 12px}
+.pd-warn{color:var(--warn-txt);font-weight:700}
+.parse-pd-note{margin-bottom:10px}
+.parse-pd-note b{color:var(--warn-txt)}
+/* Заблокированное поле (мастер соцсетей выключен / нет ключа ВК) */
+.chk.disabled{opacity:.5;cursor:not-allowed}
+.chk.disabled input{cursor:not-allowed}
+.flt-group.vk-gated{opacity:.55}
+.flt-group.vk-gated .chk input{cursor:not-allowed}
+.flt-group.vk-gated .chk{cursor:not-allowed}
+/* Панель массового обхода скрывается целиком, когда соцсети не собираются */
+.bulk-panel[hidden]{display:none}
+
+/* ══════════════════════════════════════════════════════════
+   Хранение результатов (срок автоудаления) + блок «Данные»
+   ══════════════════════════════════════════════════════════ */
+/* Разделитель между блоками внутри секции 05: отступ сверху даёт flex-gap
+   аккордеона (16px), под линией — свои 16px: линия посередине, а не на 32/14. */
+.retention-block,.data-block{margin-top:0;padding-top:16px;border-top:1px solid var(--bdr)}
+/* Заголовок «.sec» отделён от строки под ним (здесь блочный поток, а не
+   flex-gap, как в соседнем .out-dir-block, где этот же зазор даёт gap:6). */
+.retention-block .sec+*,.data-block .sec+*{margin-top:6px}
+.retention-row{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap}
+.retention-custom{display:inline-flex;align-items:center;gap:6px}
+.retention-custom input{width:84px}
+#retention-status:empty{display:none}
+
+/* ══════════════════════════════════════════════════════════
+   Единая сетка: где зазор уже задаёт flex-gap, margin у детей
+   только складывался с ним (6+5, 8+4, 12+4, 16+16) — и ритм
+   «плыл»: одна и та же связка «подпись → поле → подсказка»
+   получала то 5+4, то 11, то 21. Задержку задаёт сам gap.
+   Селекторы — только ПРЯМЫЕ дети: подпись во вложенном блоке
+   («Тип организаций», «Соцсети в результате») уже отделена
+   gap'ом контейнера, и её margin нужен — иначе строка
+   прилипает к переключателю (зазор 0 вместо 5).
+   Правила с ID (#acc-basic, #acc-filters) выше по приоритету:
+   там gap = 0 и margin — единственный источник ритма.
+   ══════════════════════════════════════════════════════════ */
+#acc-parse .acc-inner>*,#acc-tech .acc-inner>*,#acc-formats .acc-inner>*{margin-top:0;margin-bottom:0}
+.flt-group-body>*,.out-dir-block>*,.tiles-inner>*,.tech-box>*,.bl-block>*{margin-top:0;margin-bottom:0}
+/* label.lbl/span.lbl специфичнее сбока выше (0-1-1 против 0-1-0), поэтому
+   для подписей нужен парный селектор :where() — он держит ту же
+   специфичность и, стоя позже, всё же гасит margin: иначе получается
+   gap + 5 («Минимальная оценка» → 17px, «Папка» → 11px). */
+:where(.flt-group-body,.out-dir-block,.tiles-inner,.tech-box,.bl-block)>label.lbl,
+:where(.flt-group-body,.out-dir-block,.tiles-inner,.tech-box,.bl-block)>span.lbl{margin-top:0;margin-bottom:0}
+
+/* Выпадающий список браузера идёт после подсказки об источнике данных:
+   у подсказки свой margin обнулён (gap), поэтому отступ задаёт блок. */
+#browser-pick-wrap{margin-top:8px}
+
+/* ══════════════════════════════════════════════════════════
+   ЖИВАЯ СВОДКА НАСТРОЙКИ (верх боковой панели)
+   ══════════════════════════════════════════════════════════ */
+/* Главное (что ищем, где, что собираем, какие файлы на выходе) показано
+   здесь, а длинная форма остаётся «вторым уровнем»: её раскрывают, только
+   если хотят что-то изменить. Каждый чип — кнопка и ведёт в свой раздел. */
+.setup-sum{
+  /* Две колонки, а не поток: в колонке 300px пять чипов подряд занимали
+     пять строк и сводка сама становилась «много информации». */
+  display:grid;grid-template-columns:1fr 1fr;gap:6px;
+  /* Внутренний отступ сводки = отступу остальных блоков колонки (13px):
+     рамки чипов и заголовки блоков стоят на одной вертикали. */
+  padding:8px 13px;margin:0;
+  background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r-md);
+  animation:setup-sum-in .22s ease both;
+}
+.setup-chip{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  min-width:0;padding:6px 9px;border-radius:var(--r-sm);overflow:hidden;
+  background:var(--card);border:1px solid var(--bdr);
+  color:var(--txt);font-family:inherit;font-size:12px;font-weight:600;
+  cursor:pointer;text-align:left;
+  transition:border-color .14s,background .14s,transform .1s,box-shadow .14s;
+}
+.setup-chip:hover{
+  border-color:var(--c);background:var(--cl);transform:translateY(-1px);
+  box-shadow:var(--sh);
+}
+.setup-chip:active{transform:translateY(0)}
+.setup-chip:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+/* Шесть чипов живут в ровную сетку 2×3: раньше «Объём» занимал всю ширину
+   и под ним оставалась пустая ячейка — ряды читались как сбитые.
+   Длинное значение переносится на две строки (см. .setup-chip-val),
+   полный текст — в подсказке чипа. */
+.setup-chip-lbl{
+  font-size:12px;font-weight:800;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.setup-chip-lbl,.setup-chip-val{max-width:100%}
+.setup-chip-val{width:100%;font-size:12px;font-weight:700;color:var(--txt);
+  /* Значение до двух строк вместо жёсткого «…»: текст не режется
+     посередине, а высота ряда выравнивается по самому длинному чипу. */
+  white-space:normal;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* «Не заполнено» — предупреждение, а не просто текст: этот чип ведёт туда,
+   без чего запуск не начнётся (запрос, город, формат выгрузки). */
+.setup-chip.is-missing{border-color:var(--warn-bdr);background:var(--warn-bg)}
+.setup-chip.is-missing .setup-chip-val{color:var(--warn-txt)}
+.setup-chip.is-missing .setup-chip-lbl{color:var(--warn-txt)}
+/* Изменившееся значение отмечается один раз — «форма живая». */
+.setup-chip.bump .setup-chip-val{animation:setup-val-pop .3s ease}
+@keyframes setup-sum-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@keyframes setup-val-pop{
+  0%{color:var(--c);transform:scale(1)}
+  40%{color:var(--c);transform:scale(1.09)}
+  100%{transform:scale(1)}
+}
+
+/* ── Скачок к содержимому (первый Tab) ── */
+.skip-link{
+  position:fixed;top:-60px;left:12px;z-index:900;
+  padding:9px 14px;border-radius:0 0 var(--r-sm) var(--r-sm);
+  background:var(--brand);color:var(--on-accent);
+  font-size:12.5px;font-weight:700;text-decoration:none;
+  transition:top .16s ease;
+}
+.skip-link:focus-visible,.skip-link:focus{top:0;outline:2px solid var(--c);outline-offset:2px}
+
+/* ══════════════════════════════════════════════════════════
+   НЕГЛАВНОЕ — ПО НАВЕДЕНИЮ
+   ══════════════════════════════════════════════════════════ */
+/* Пояснение рядом с названием раздела («технические параметры» и т. п.)
+   в покое прячется: список из пяти разделов читался как десять строк текста.
+   Открывается при наведении и с клавиатуры; на тач-устройствах показывается
+   всегда (там «наведения» нет вовсе). */
+@media (hover:hover) and (pointer:fine){
+  .acc-sub{opacity:0;transition:opacity .18s}
+  .acc-hdr:hover .acc-sub,
+  .acc-hdr:focus-visible .acc-sub,
+  .acc.open .acc-sub{opacity:1}
+}
+
+/* ── Микро-движения: нажатие и появление ── */
+.tab-btn,.acc-hdr,.log-filter,.sf-tag,.setup-chip{transition-property:border-color,background,color,transform,box-shadow,opacity}
+.tab-btn:active,.acc-hdr:active,.log-filter:active,.sf-tag:active{transform:translateY(1px)}
+/* Появление панели при переключении вкладки: проявление + лёгкий подъём.
+   fill-mode BACKWARDS, а не BOTH: «both» держит анимацию в силе и навсегда
+   оставляет панели собственный stacking context (z-index:auto). Из-за него
+   z-index:900 списка «Столбцы» оказывался заперт внутри панели и уходил под
+   липкую шапку (sticky, z-index:200 в корневом контексте) — список был
+   перекрыт другими слоями. С fill backwards контекст живёт только 0.2 с
+   анимации, и список перекрывает шапку, как ему и положено.
+   Проверено в браузере: elementFromPoint над областью шапки отдаёт кнопку
+   списка, а не шапку. */
+.tab-panel.active{animation:panel-in .2s ease backwards}
+@keyframes panel-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* Нажатие кнопок тулбара результатов: короткий «отклик» сжатием.
+   Список селекторов точечный — общий button:active задел бы чекбоксы и
+   переключатели, где нажатие не является отдельным действием. */
+#btn-cols,#btn-scope-all,.tbl-filter-btn,.export-sel-btn,.col-all-btn,.sf-clear,
+.pager button,.bulk-copy-btn,.bulk-persist-btn,.preset-chip{
+  transition:transform .08s ease,background .14s,color .14s,border-color .14s,box-shadow .14s;
+}
+#btn-cols:active:not(:disabled),#btn-scope-all:active:not(:disabled),
+.tbl-filter-btn:active:not(:disabled),.export-sel-btn:active:not(:disabled),
+.col-all-btn:active:not(:disabled),.sf-clear:active:not(:disabled),
+.pager button:active:not(:disabled),.bulk-copy-btn:active:not(:disabled),
+.bulk-persist-btn:active:not(:disabled),.preset-chip:active:not(:disabled){
+  transform:scale(.96);
+}
+
+/* Число «найдено» подпрыгивает, когда меняется (см. handleProgress). */
+#ls-found-num{display:inline-block}
+#ls-found-num.pop{animation:found-pop .34s ease}
+@keyframes found-pop{
+  0%{transform:scale(1)}
+  35%{transform:scale(1.22)}
+  100%{transform:scale(1)}
+}
+
+/* Полоса прогресса: пока поиск идёт, по ней едет светлая волна — видно,
+   что процесс живой, а не замер на одной цифре. Активность определяется по
+   видимой строке «Прямо сейчас». */
+body:has(.live-stats:not(.is-hidden)) #prog-bar{position:relative;overflow:hidden}
+body:has(.live-stats:not(.is-hidden)) #prog-bar::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent);
+  animation:prog-sheen 1.5s linear infinite;
+}
+@keyframes prog-sheen{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+/* Сама полоса пока сбор идёт — дышит: подтверждение, что движение не
+   застряло на одной цифре (волна едет и по пустой полосе). */
+body:has(.live-stats:not(.is-hidden)) #prog-bar{animation:prog-breathe 1.6s ease-in-out infinite}
+@keyframes prog-breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+
+/* ── Уважать «уменьшенное движение» ── */
+@media (prefers-reduced-motion:reduce){
+  .setup-sum,.setup-chip.bump .setup-chip-val,.tab-panel.active,
+  #ls-found-num.pop{animation:none}
+  body:has(.live-stats:not(.is-hidden)) #prog-bar::after{animation:none;opacity:0}
+  body:has(.live-stats:not(.is-hidden)) #prog-bar{animation:none}
+  .setup-chip:hover{transform:none}
+  .tab-btn:active,.acc-hdr:active,.log-filter:active,.sf-tag:active{transform:none}
+  #btn-cols:active:not(:disabled),#btn-scope-all:active:not(:disabled),
+  .tbl-filter-btn:active:not(:disabled),.export-sel-btn:active:not(:disabled),
+  .col-all-btn:active:not(:disabled),.sf-clear:active:not(:disabled),
+  .pager button:active:not(:disabled),.bulk-copy-btn:active:not(:disabled),
+  .bulk-persist-btn:active:not(:disabled),.preset-chip:active:not(:disabled){transform:none}
+  .skip-link{transition:none}
+}

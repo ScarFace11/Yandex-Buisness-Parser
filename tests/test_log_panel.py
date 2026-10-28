@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE = (ROOT / "templates" / "index.html").read_text(encoding="utf-8")
 from tests._appjs import JS_MODULES, read_app_js
 APP_JS = read_app_js()
-STYLE = (ROOT / "static" / "css" / "style.css").read_text(encoding="utf-8")
+from tests._css import css_files, read_css
+STYLE = read_css()
 RUNNER = (ROOT / "yandex_maps_parser" / "runner.py").read_text(encoding="utf-8")
 STATS = (ROOT / "yandex_maps_parser" / "stats.py").read_text(encoding="utf-8")
 
@@ -197,9 +198,10 @@ class TestJournalFilterRegexIsIntact:
             assert "\x00" not in line, f"{name}: NUL в шаблоне"
 
     def test_no_control_characters_anywhere_in_frontend_sources(self):
-        for path in ["static/js/" + m for m in JS_MODULES] + [
-                "static/css/style.css", "templates/index.html"]:
-            text = (ROOT / path).read_text(encoding="utf-8")
+        paths = [ROOT / "static" / "js" / m for m in JS_MODULES] + css_files() + [
+                ROOT / "templates" / "index.html"]
+        for path in paths:
+            text = path.read_text(encoding="utf-8")
             bad = {c: text.count(c) for c in ("\x08", "\x07", "\x00") if c in text}
             assert not bad, f"{path}: управляющие символы {bad}"
 

@@ -1,0 +1,192 @@
+/* 05-controls.css · Переключатели соцсетей, источника, покрытия; тосты
+   Часть 6 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ── API key ── */
+/* ── Social mode toggle ── */
+.social-mode-bar{display:flex;gap:0;border:1px solid var(--bdr);border-radius:8px;overflow:hidden}
+.social-mode-opt{position:relative;flex:1;padding:8px 6px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);background:var(--card);transition:all .13s;border-right:1px solid var(--bdr);margin:0}
+/* Hidden radios stay inside their labels (see .grid-mode-opt input note):
+   display:none inputs are fine here, but inline-styled visible-position
+   radios would escape — clip them for safety. */
+.social-mode-opt input[type="radio"]{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
+.social-mode-opt:last-child{border-right:none}
+.social-mode-opt:hover{background:var(--cl);color:var(--c)}
+.social-mode-opt.active{background:var(--brand);color:var(--on-accent);border-color:var(--c)}
+[data-theme="dark"] .social-mode-opt{background:var(--panel)}
+/* Same segmented control for the «Тип организаций» toggle (separate class
+   so setSocialMode()'s querySelectorAll doesn't touch it) */
+.parse-mode-opt{position:relative;flex:1;padding:8px 6px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);background:var(--card);transition:all .13s;border-right:1px solid var(--bdr);margin:0}
+.parse-mode-opt input[type="radio"]{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
+.parse-mode-opt:last-child{border-right:none}
+.parse-mode-opt:hover{background:var(--cl);color:var(--c)}
+.parse-mode-opt.active{background:var(--brand);color:var(--on-accent);border-color:var(--c)}
+[data-theme="dark"] .parse-mode-opt{background:var(--panel)}
+
+/* ── VK-activity controls (accordion 04) ──
+   Same segmented control as the socials one, but a separate class so
+   setSocialMode() and setVkMode() never touch each other's radios. */
+.vk-mode-opt{position:relative;flex:1;padding:8px 6px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);background:var(--card);transition:all .13s;border-right:1px solid var(--bdr);margin:0}
+.vk-mode-opt input[type="radio"]{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
+.vk-mode-opt:last-child{border-right:none}
+.vk-mode-opt:hover{background:var(--cl);color:var(--c)}
+.vk-mode-opt.active{background:var(--brand);color:var(--on-accent);border-color:var(--c)}
+/* Активный пункт в «Фильтрация результата» — заливка как у кнопок способа
+   парсинга: в тёмной теме --brand сливается с фоном, поэтому тот же паттерн
+   --cd с белым текстом (см. .source-mode-opt[data-engine].active). */
+[data-theme="dark"] .parse-mode-opt.active,
+[data-theme="dark"] .social-mode-opt.active,
+[data-theme="dark"] .vk-mode-opt.active{background:var(--brand);border-color:var(--brand);color:var(--on-accent)}
+[data-theme="dark"] .vk-mode-opt{background:var(--panel)}
+/* Numeric row under the VK segmented control */
+.num-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.num-row .lbl{margin:0}
+.num-row input[type="number"]{width:78px;flex:0 0 auto}
+.num-unit{font-size:12px;color:var(--sub)}
+
+/* ── Переключатель источника данных ──
+   Один источник — Яндекс.Карты; вёрстка оставлена переключателем, чтобы
+   интерфейс не переделывался, если источник вернётся. */
+.source-mode-bar{display:flex;gap:0;border:1px solid var(--bdr);border-radius:8px;overflow:hidden; flex-wrap:wrap;}
+.source-mode-opt{position:relative;flex:1;padding:8px 6px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub);background:var(--card);transition:all .13s;border-right:1px solid var(--bdr);margin:0;display:flex;align-items:center;justify-content:center;gap:5px;}
+.source-mode-opt input[type="radio"]{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
+.source-mode-opt:last-child{border-right:none}
+.source-mode-opt:hover{background:var(--cl);color:var(--c)}
+.source-mode-opt .src-dot{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.35;transition:all .13s}
+.source-mode-opt.active{color:var(--on-accent);border-color:var(--c)}
+.source-mode-opt.active .src-dot{opacity:1;background:var(--card)}
+.source-mode-opt.active[data-src="yandex"]{background:var(--red-btn);border-color:var(--red)}
+[data-theme="dark"] .source-mode-opt{background:var(--panel)}
+[data-theme="dark"] .source-mode-opt:hover{background:var(--row-hover)}
+[data-theme="dark"] .source-mode-opt.active[data-src="yandex"]{background:var(--red-btn);border-color:var(--red);color:var(--on-accent)}
+.source-hint-key{color:var(--sub);font-weight:600}
+.source-hint-key.missing{color:var(--red)}
+/* «Способ парсинга» (engine-mode-bar): переиспользует .source-mode-*,
+   но без брендовых фонов — активный пункт подсвечивается плашкой
+   акцента, чтобы выбор читался в обеих темах. Прежняя версия красила
+   только ТЕКСТ активного пункта в белый (--on-accent), а фона не было
+   вовсе: в светлой теме получался белый на белом. */
+.source-mode-opt[data-engine].active{background:var(--brand);border-color:var(--brand)}
+[data-theme="dark"] .source-mode-opt[data-engine].active{background:var(--brand);border-color:var(--brand);color:var(--on-accent)}
+/* Доступность движка: бейдж под селектором («Chrome найден/не найден»). */
+.engine-badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.engine-badge.ok{background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr)}
+.engine-badge.miss{background:var(--err-bg);color:var(--red);border:1px solid var(--red)}
+/* «?» — кнопка сравнения способов рядом с заголовком. */
+.engine-help-btn{border:1px solid var(--bdr);background:var(--card);color:var(--sub);border-radius:50%;width:18px;height:18px;line-height:1;font-size:12px;font-weight:800;cursor:pointer;padding:0;margin-left:6px;flex:none}
+.engine-help-btn:hover{background:var(--cl);color:var(--c);border-color:var(--c)}
+/* «рекоменд.» — бейдж рекомендованного варианта в переключателе способа
+   парсинга. Текст — var(--ok-on), не --on-accent: в светлой теме бейдж
+   --ok-strong (#0b6b45) с белым текстом читается, а в тёмной остаётся
+   контрастным за счёт --ok-on. */
+.src-rec{font-size:12px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;background:var(--ok-strong);color:var(--ok-on);border-radius:4px;padding:1px 4px;line-height:1.4}
+
+/* ── Grid coverage: radio modes + range sliders ──
+   Replaces the old checkbox+steppers block: «Весь город» keeps everything
+   hidden; «Настроить вручную» reveals two range sliders with live values,
+   a plain-language ratio hint and a per-run page estimate. */
+.grid-mode-row{display:flex;gap:0;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:8px}
+.grid-mode-opt{position:relative;flex:1;padding:8px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;background:var(--card);transition:all .13s;border-right:1px solid var(--bdr)}
+.grid-mode-opt:last-child{border-right:none}
+.grid-mode-opt:hover{background:var(--cl)}
+.grid-mode-opt .gm-top{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12px;color:var(--sub)}
+/* Hidden radio lives INSIDE its label (clip-path, not position:absolute):
+   an absolutely-positioned radio without a positioned ancestor escapes the
+   label to the document edge — focusing it on tile click scrolled the
+   sidebar to that stray position (the «интерфейс подпрыгивает» bug). */
+.grid-mode-opt input[type="radio"]{position:absolute;inset:auto;bottom:auto;width:1px;height:1px;margin:0;opacity:0;pointer-events:none;clip-path:inset(50%)}
+.grid-mode-opt .gm-dot{width:9px;height:9px;border-radius:50%;border:2px solid var(--bdr);background:transparent;transition:all .13s;flex:none}
+.grid-mode-opt.active{background:var(--cl)}
+.grid-mode-opt.active .gm-lbl{color:var(--c)}
+.grid-mode-opt.active .gm-dot{border-color:var(--c);background:var(--c);box-shadow:inset 0 0 0 2px var(--card)}
+.grid-mode-opt .gm-note{font-size:12px;color:var(--muted)}
+[data-theme="dark"] .grid-mode-opt{background:var(--panel)}
+[data-theme="dark"] .grid-mode-opt:hover{background:var(--row-hover)}
+[data-theme="dark"] .grid-mode-opt.active{background:var(--row-hover)}
+.grid-slider-row{margin:10px 0 4px}
+.grid-slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.grid-slider-sub{font-size:12px;line-height:1.45;color:var(--muted);margin:-1px 0 4px}
+.grid-slider-val{font-size:12px;color:var(--sub)}
+.grid-slider-val b{color:var(--c);font-size:14px}
+input[type="range"]{width:100%;height:22px;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;margin:0}
+input[type="range"]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--c) var(--fill,50%),var(--bdr) var(--fill,50%))}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--card);border:2.5px solid var(--c);margin-top:-5px;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .1s}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+input[type="range"]::-moz-range-track{height:6px;border-radius:3px;background:var(--bdr)}
+input[type="range"]::-moz-range-progress{height:6px;border-radius:3px;background:var(--c)}
+input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--card);border:2.5px solid var(--c)}
+.grid-slider-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:1px}
+.grid-hint{
+  margin-top:8px;padding:7px 9px;border-radius:7px;background:var(--cl);
+  border-left:3px solid var(--c);font-size:12px;line-height:1.5;color:var(--sub);
+  transition:color .25s, border-color .25s;
+}
+.grid-hint .hint-line+.hint-line{margin-top:3px}
+/* Tone applies to the state phrase only — the box and the recommendation
+   stay neutral. Color deepens as the ratio drifts further from 1:4:
+   warn #FFB74D → sparse #F57C00 (too far apart), dense #FFC107 → dense2 #FF6F00 (too tight). */
+.grid-hint .hint-state{font-weight:700}
+.grid-hint .hint-rec{color:var(--muted)}
+.grid-hint.ok .hint-state{color:var(--grn)}
+.grid-hint.sparse .hint-state{color:var(--warn-strong)}
+.grid-hint.dense .hint-state{color:var(--warn-txt)}
+.grid-hint.dense2 .hint-state{color:var(--warn-strong)}
+/* Token forecast line: green <50% of the free tier, yellow 50-100%, red >100% */
+.grid-hint .hint-tok.tok-ok{color:var(--grn)}
+.grid-hint .hint-tok.tok-warn{color:var(--warn-txt)}
+.grid-hint .hint-tok.tok-crit{color:var(--red);font-weight:700}
+.grid-hint .hint-tok.tok-src{color:var(--muted)}
+[data-theme="dark"] .grid-hint.sparse .hint-state{color:var(--warn-txt)}
+[data-theme="dark"] .grid-hint.dense2 .hint-state{color:var(--warn-txt)}
+/* pulse when the wand finds values already optimal */
+@keyframes grid-hint-pulse{0%,100%{box-shadow:0 0 0 0 var(--glow)}35%{box-shadow:0 0 0 5px var(--glow)}}
+.grid-hint.wand-ok{animation:grid-hint-pulse .7s ease}
+/* «Волшебная палочка» next to the «Покрытие города» title */
+.grid-title-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.grid-wand{
+  background:transparent;border:none;cursor:pointer;font-size:14px;line-height:1;
+  padding:2px 4px;border-radius:6px;transition:transform .15s, background .15s, box-shadow .15s;
+  filter:grayscale(.35);opacity:.85;
+}
+.grid-wand:hover{transform:scale(1.15);filter:none;opacity:1;background:var(--cl);box-shadow:0 0 0 3px var(--glow)}
+.grid-wand:active{transform:scale(1.1)}
+
+
+.apikey-row{display:flex;gap:6px;align-items:flex-start}
+.apikey-row input{flex:1}
+#btn-save-key{
+  width:100%;padding:10px 12px;border:1.5px solid var(--c);border-radius:8px;
+  background:var(--brand);color:var(--on-accent);font-size:12.5px;font-weight:700;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
+  transition:background .12s;font-family:inherit;
+}
+#btn-save-key:hover{background:var(--brand-dark)}
+#btn-save-key:disabled{opacity:.45;cursor:default}
+#apikey-status{font-size:12px;margin-top:2px;padding:7px 10px;border-radius:6px;display:none;line-height:1.4;font-weight:600}
+#apikey-status.ok{background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr)}
+#apikey-status.err{background:var(--err-bg);color:var(--err-txt);border:1px solid var(--err-bdr)}
+
+/* ── Toast notifications (stacked, top-right) ── */
+#toast-container{
+  position:fixed;top:16px;right:16px;z-index:10000;
+  display:flex;flex-direction:column;align-items:flex-end;gap:8px;
+  pointer-events:none;
+}
+.toast{
+  position:relative;top:auto;left:auto;transform:translateX(24px);opacity:0;
+  z-index:10000;max-width:340px;padding:11px 18px;border-radius:10px;
+  font-size:13px;font-weight:700;color:var(--on-accent);
+  display:flex;align-items:center;gap:9px;
+  box-shadow:0 8px 24px rgba(0,0,0,.22);
+  transition:transform .3s cubic-bezier(.34,1.4,.64,1),opacity .3s;
+  pointer-events:auto;
+}
+.toast.show{transform:translateX(0);opacity:1}
+.toast.success{background:var(--grn-btn)}
+.toast.error{background:var(--red-btn)}
+.toast .t-ico{
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  display:grid;place-items:center;font-size:12px;font-weight:800;
+  background:rgba(255,255,255,.22);
+}
+[data-theme="dark"] .toast.error{background:var(--err-bdr)}
+

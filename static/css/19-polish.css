@@ -1,0 +1,276 @@
+/* 19-polish.css · Визуальная шлифовка: типографика, кнопки, поля
+   Часть 20 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ══════════════════════════════════════════════════════════
+   ВИЗУАЛЬНАЯ ШЛИФОВКА
+   Задача — сделать интерфейс «приглушённее»: меньше резких смен
+   цвета, мягче тени, единый ритм. Все значения через токены.
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Типографика: чуть плотнее заголовки, ровнее подписи ── */
+h1,h2,h3,.acc-title,.card-hdr,.panel-title{
+  letter-spacing:-.018em;
+}
+.card-hdr{
+  font-weight:800;
+  padding:15px 18px 14px;
+}
+.intro-copy{
+  color:var(--muted);
+  font-size:12.5px;
+  line-height:1.6;
+}
+.hint{
+  font-size:12px;
+  line-height:1.55;
+  color:var(--muted);
+}
+
+/* ── Кнопки: единый отклик на нажатие ── */
+.btn-sm,
+.tbl-filter-btn,
+.subt-link,
+.term-clear,
+.sender-config-toggle,
+.preset-act-btn,
+.preset-new-btn,
+.file-btn,
+.hist-dl,
+.log-filter,
+.tpl-cat,
+.rt-btn,
+.bulk-preset,
+.bulk-copy-btn,
+.bulk-persist-btn,
+.score-preset{
+  transition:border-color .14s,color .14s,background .14s,transform .1s,box-shadow .14s;
+}
+.btn-sm:active:not(:disabled),
+.tbl-filter-btn:active:not(:disabled),
+.subt-link:active:not(:disabled),
+.term-clear:active:not(:disabled),
+.log-filter:active:not(:disabled),
+.rt-btn:active:not(:disabled),
+.bulk-preset:active:not(:disabled),
+.score-preset:active:not(:disabled){
+  transform:translateY(1px);
+}
+
+/* ── Поля ввода: кольцо фокуса тоньше и точнее ── */
+input[type=text]:focus,
+input[type=number]:focus,
+input[type=password]:focus,
+textarea:focus,
+select:focus{
+  border-color:var(--c);
+  box-shadow:0 0 0 3px var(--c-soft);
+}
+/* В тёмной теме то же кольцо плотнее — на тёмном поле 8% не видно */
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus{
+  box-shadow:0 0 0 3px var(--focus-ring);
+}
+
+/* ── Таблица: аккуратнее строки и hover ── */
+#results-table th{
+  padding:10px 12px;
+  font-size:12px;
+  letter-spacing:.06em;
+  color:var(--muted);
+}
+#results-table td{
+  padding:9px 12px;
+  border-bottom:1px solid var(--bdr-soft);
+}
+/* Hover — не сплошной заливкой, а «подсветкой строки»: полоска
+   слева от строки, как в нативных таблицах macOS */
+#results-table tbody tr{
+  position:relative;
+  transition:background .12s;
+}
+#results-table tbody tr:hover td:first-child{
+  box-shadow:inset 3px 0 0 var(--c);
+}
+/* Зебра мягче — сейчас она спорит с карточкой */
+#results-table tr:nth-child(even) td{background:var(--row-alt)}
+#results-table tr:nth-child(even):hover td{background:var(--row-hover)}
+
+/* ── Бейджи: чуть компактнее, ровнее ── */
+.social-badge,
+.score-badge,
+.hist-chip,
+.files-badge{
+  letter-spacing:.02em;
+  padding:2px 7px;
+}
+.score-badge{
+  min-width:28px;
+  padding:3px 7px;
+}
+
+/* ── Карточки: тени появляются при взаимодействии, а не всегда ── */
+.acc,
+.card,
+.stat-card,
+.file-card,
+.template-card,
+.hist-card{
+  box-shadow:none;
+  transition:border-color .15s,box-shadow .2s;
+}
+.card{box-shadow:var(--sh)}
+.acc.open{box-shadow:var(--sh)}
+.stat-card:hover,
+.file-card:hover,
+.template-card:hover,
+.hist-card:hover{box-shadow:var(--sh)}
+.acc.open:hover{box-shadow:var(--sh-lg)}
+
+/* ── Шапка аккордеона: индикатор открытого состояния — линия слева ── */
+.acc-hdr{position:relative}
+.acc-hdr::before{
+  content:'';
+  position:absolute;left:0;top:8px;bottom:8px;width:2px;
+  background:var(--c);border-radius:0 2px 2px 0;
+  opacity:0;transition:opacity .18s;
+}
+.acc.open>.acc-hdr::before{opacity:1}
+
+/* ── Чекбоксы и радио: более аккуратные размеры ── */
+.chk input[type=checkbox]{
+  width:15px;height:15px;
+  border-radius:4px;
+}
+input[type=radio]{accent-color:var(--c)}
+
+/* ── Табы: активная вкладка заметнее ── */
+.tab-btn{
+  padding:9px 15px;
+  font-size:12.5px;
+  letter-spacing:-.005em;
+}
+.tab-btn.active{
+  background:var(--acc-soft);
+  color:var(--c);
+  font-weight:800;
+  box-shadow:inset 0 -2px 0 var(--c);
+  border-radius:8px 8px 0 0;
+}
+
+/* ── Toast: чище появление, тоньше тень ── */
+.toast{
+  padding:11px 16px;
+  font-size:12.5px;
+  font-weight:700;
+  box-shadow:0 6px 20px rgba(0,0,0,.18),0 2px 6px rgba(0,0,0,.08);
+}
+[data-theme="dark"] .toast{
+  box-shadow:0 6px 20px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.3);
+}
+
+/* ── Empty state: больше воздуха ── */
+.no-data{
+  padding:64px 24px;
+  font-size:12.5px;
+  line-height:1.6;
+  color:var(--muted);
+}
+/* Внутри таблицы пустое состояние — компактнее */
+#results-table .no-data{padding:44px 20px}
+
+/* ── Модалки: мягче фон, аккуратнее заголовок ── */
+.ui-modal{
+  padding:22px 24px 18px;
+  border-radius:var(--r-lg);
+}
+.ui-modal h3{
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:-.015em;
+  margin-bottom:12px;
+}
+.ui-modal p{font-size:12.5px;line-height:1.6;color:var(--sub)}
+@supports(backdrop-filter:blur(6px)){
+  .ui-modal-overlay,
+  .tpl-modal-overlay,
+  .skip-modal-overlay,
+  .logs-modal-overlay{backdrop-filter:blur(2px)}
+}
+
+/* ── Поля с числами: ровные разряды везде ── */
+input[type=number],
+.tbl-phone,
+#tbl-count,
+.dyn-vlab,
+.snum,
+.bar-val,
+.cp-val{
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── Хедер: мягкий переход в фон вместо жёсткой линии ──
+   Одной 1px-тени не хватало: тёмная полоса шапки обрывалась в светлый фон
+   резким краем. Широкая рассеянная тень делает переход плавным в обеих
+   темах. */
+header{
+  border-bottom:1px solid rgba(255,255,255,.06);
+  box-shadow:0 8px 20px rgba(16,24,40,.10),0 2px 6px rgba(16,24,40,.06);
+}
+[data-theme="dark"] header{
+  border-bottom-color:rgba(255,255,255,.04);
+  box-shadow:0 10px 26px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.45);
+}
+
+/* ── Кнопки шапки: мягче hover ── */
+.hdr-right > button,
+.hdr-right .hdr-tools > button,
+.hdr-right .notify-wrap > button{
+  transition:background .14s ease,color .14s ease;
+}
+.hdr-right > button:active,
+.hdr-right .hdr-tools > button:active,
+.hdr-right .notify-wrap > button:active{
+  transform:translateY(1px);
+}
+
+/* ── Скроллбары: одинаковые везде ── */
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-thumb{
+  background:var(--bdr);
+  border:3px solid transparent;
+  background-clip:content-box;
+  border-radius:8px;
+}
+*::-webkit-scrollbar-thumb:hover{
+  background:var(--bdr-h);
+  background-clip:content-box;
+}
+
+/* ── Списки файлов и шаблонов: ровнее ритм ── */
+.history-list,
+.tpl-list,
+.tpl-var-cards{gap:10px}
+.file-card,
+.template-card,
+.tpl-var-card{padding:13px 15px}
+
+/* ── Фокус на табах-подсветках: чуть заметнее ── */
+.tab-btn:focus-visible,
+.subt-tab:focus-visible,
+.tpl-subtab:focus-visible,
+.tpl-cat:focus-visible,
+.log-filter:focus-visible{
+  outline:2px solid var(--c);
+  outline-offset:-3px;
+  border-radius:6px;
+}
+
+/* ── Уменьшенное движение: уважать (уже есть, но усиливаем) ── */
+@media (prefers-reduced-motion:reduce){
+  .acc-body,
+  .tiles-reveal,
+  .hist-body{
+    transition-duration:0s;
+  }
+}

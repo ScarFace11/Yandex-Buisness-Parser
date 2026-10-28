@@ -8,7 +8,7 @@
 // syncDockHeight() keeps the CSS token --dock-h equal to the REAL height of the
 // dock — measured, not hard-coded, because it depends on font, zoom and the
 // layout breakpoint. On the phone layout the dock is static (see the #run-dock
-// media query in style.css) and the bottom edge is free, so the offset must be
+// media query in the styles) and the bottom edge is free, so the offset must be
 // 0 there; otherwise the footer would float above nothing.
 //
 // Run with: node --test tests/ui/filterspanel.test.mjs

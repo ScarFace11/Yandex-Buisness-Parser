@@ -1,0 +1,226 @@
+/* 01-header.css · Шапка, уведомления, прогресс, живая полоса
+   Часть 2 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   HEADER
+   ════════════════════════════════ */
+/* Шапка — плоский графит и одна тонкая линия снизу: ни градиента, ни
+   цветного свечения. Цвет ушёл из фона в акцент (единственное действие). */
+header{
+  background:var(--hdr);color:var(--on-accent);
+  height:var(--hdr-h);padding:0 20px;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+header h1{font-size:14px;font-weight:700;letter-spacing:-.015em}
+.hdr-right{display:flex;align-items:center;gap:7px;flex-shrink:0}
+/* Status badge: every state is a token pair (bg + text), so the same rule
+   works in both themes — the variants no longer need per-theme overrides. */
+#status-badge{
+  font-size:12px;font-weight:700;padding:4px 10px;border-radius:var(--pill);
+  background:rgba(255,255,255,.10);color:var(--on-accent);letter-spacing:.02em;
+  /* Пиктограмма + подпись: зазор между ними — flex-gap, а не пробел в тексте,
+     потому что HTML-пробел в строчном элементе сжимается до нуля. */
+  display:inline-flex;align-items:center;gap:5px;
+}
+/* Значок бейджа мельче остальных в шапке: 15px-глиф рядом с 11px-подписью
+   читался как отдельный элемент, а не как часть пилюли. Штрих утолщён,
+   чтобы на 11px линия осталась ≈1px после масштабирования из viewBox 24. */
+#status-badge .ico{width:11px;height:11px;stroke-width:2.2}
+#status-badge.running{background:var(--pause-to);color:var(--pause-txt)}
+/* Пауза в светлой теме раньше не подсвечивалась вовсе: правило жило только
+   под [data-theme="dark"] — светлая тема показывала нейтральный серый бейдж,
+   хотя кнопка «Продолжить» уже была оранжевой. Тот же тон, что у кнопки. */
+#status-badge.paused{background:var(--pause-to);color:var(--pause-txt)}
+/* «Готово» — нейтральная пилюля в тоне шапки, а не яркое зелёное пятно:
+   поиск закончен, и самое время приглушить. Зелёный остаётся за тостами
+   и бейджами оценки в таблице. */
+#status-badge.done{background:rgba(255,255,255,.10);color:var(--on-accent);border:1px solid rgba(255,255,255,.22)}
+#status-badge.stopped{background:var(--bdr);color:var(--txt);border:1px solid var(--bdr-h)}
+#status-badge.error{background:var(--err-bg);color:var(--err-strong);border:1px solid var(--err-bdr)}
+/* One base style for every header button; variants below.
+   Селектор — по ПРЯМЫМ детям (и кнопка уведомлений внутри .notify-wrap):
+   попап уведомлений живёт внутри .hdr-right, и раньше это правило с большей
+   специфичностью перебивало его содержимое — тумблеры теряли фон, «Сохранить»
+   становился белым на белом, «▶» — белой стрелкой на белой карточке. */
+/* Кнопки шапки — «призрачные»: рамка не рисует лишний шум, состояние
+   показывает подложка. Так шапка читается как панель, а не как набор кнопок. */
+.hdr-right > button,
+.hdr-right .hdr-tools > button,
+.hdr-right .notify-wrap > button{
+  padding:6px 11px;border:none;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.06);color:var(--on-accent);
+  font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  display:inline-flex;align-items:center;gap:6px;transition:background .15s,color .15s;
+}
+/* Служебные кнопки (логи, диагностика, проблема, версии) — отдельная группа
+   справа: тонкая вертикаль отделяет их от пользовательских кнопок слева. */
+.hdr-tools{display:flex;align-items:center;gap:7px;padding-left:7px;
+  border-left:1px solid rgba(127,127,127,.45)}
+.hdr-right > button:hover,
+.hdr-right .hdr-tools > button:hover,
+.hdr-right .notify-wrap > button:hover{background:rgba(255,255,255,.14)}
+/* ⏸ Пауза — оранжевая в ОБЕИХ темах (красный остался за ⏹ «Остановить»):
+   два действия не путаются, а тёмный текст держит контраст выше 4.5:1.
+   Градиент берётся из --pause-from/--pause-to, поэтому отдельного правила
+   для тёмной темы не нужно. */
+#btn-run.run-active{
+  background:linear-gradient(135deg,var(--pause-from) 0%,var(--pause-to) 100%);
+  color:var(--pause-txt);
+  box-shadow:0 6px 18px var(--glow-warn),0 2px 5px var(--glow-warn);
+  cursor:pointer;
+}
+#btn-run.run-active:hover{filter:brightness(1.06)}
+/* «Пропустить город» — единственная кнопка в шапке с цветом по назначению.
+   Раньше фон был литеральным rgba(100,140,200,…) — вне палитры. */
+#btn-skip{
+  display:none;background:var(--blu-btn);color:var(--on-accent);font-weight:700;
+}
+#btn-skip:hover{background:var(--blu-btn);filter:brightness(1.10);opacity:1}
+[data-theme="dark"] #btn-skip{background:var(--blu-btn);opacity:.92}
+[data-theme="dark"] #btn-skip:hover{opacity:1;filter:brightness(1.05)}
+
+/* ── City progress bar (multi-city run strip under the header) ──
+   Was inline-styled white in the HTML — dark theme could not repaint it.
+   This is the ONE city list: the log panel no longer repeats it as mini
+   bars. 50+ cities used to grow the strip to half the screen, so the list
+   scrolls inside a capped box while the summary line stays put. */
+#city-progress{
+  padding:8px 24px;background:var(--panel);border-bottom:1px solid var(--bdr);font-size:12px;
+}
+[data-theme="dark"] #city-progress{background:var(--term);border-bottom-color:var(--bdr)}
+#city-progress-list{max-height:78px;overflow-y:auto;padding-right:4px}
+#city-progress-list::-webkit-scrollbar{width:8px}
+#city-progress-list::-webkit-scrollbar-track{background:transparent}
+#city-progress-list::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
+#city-progress-list::-webkit-scrollbar-thumb:hover{background:var(--bdr-h)}
+
+/* ── Сноска про ограничение числа «страниц» на точку ── */
+.pages-cap-note{
+  margin-top:4px;font-size:12px;line-height:1.45;color:var(--warn-strong);
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.35);
+  border-radius:6px;padding:5px 8px;
+}
+[data-theme="dark"] .pages-cap-note{color:var(--yel);background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3)}
+/* Skip city confirmation modal */
+.skip-modal-overlay{position:fixed;inset:0;background:var(--scrim);z-index:9999;display:flex;align-items:center;justify-content:center}
+.skip-modal{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:24px 28px;max-width:400px;width:90%;box-shadow:var(--sh-lg)}
+.skip-modal h3{margin:0 0 12px;font-size:16px;color:var(--txt)}
+.skip-modal p{margin:0 0 20px;font-size:13px;color:var(--muted);line-height:1.5}
+.skip-modal-btns{display:flex;gap:10px;justify-content:flex-end}
+.skip-modal-btns button{padding:8px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none}
+.skip-modal-btns .skip-confirm{background:var(--blu-btn);color:var(--on-accent)}
+.skip-modal-btns .skip-confirm:hover{background:var(--blu-btn);filter:brightness(1.08)}
+.skip-modal-btns .skip-cancel{background:var(--track);color:var(--sub)}
+.skip-modal-btns .skip-cancel:hover{background:var(--row-hover);color:var(--txt)}
+/* Logs modal */
+.logs-modal-overlay{position:fixed;inset:0;background:var(--scrim);z-index:9999;display:flex;align-items:center;justify-content:center}
+.logs-modal{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);padding:24px 28px;max-width:700px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:var(--sh-lg)}
+.logs-modal h3{margin:0 0 16px;font-size:16px;color:var(--txt)}
+.logs-list{list-style:none;padding:0;margin:0}
+.logs-list li{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--bdr);font-size:13px}
+.logs-list li:last-child{border-bottom:none}
+.logs-list .log-name{color:var(--txt);font-family:monospace}
+.logs-list .log-meta{color:var(--muted);font-size:12px;margin:0 12px}
+.logs-list .log-actions a{padding:4px 10px;border-radius:4px;font-size:12px;text-decoration:none;margin-left:6px}
+.logs-list .log-view{background:var(--c-soft);color:var(--txt)}
+.logs-list .log-dl{background:var(--ok-bg);color:var(--ok-txt)}
+.logs-list .log-actions a:hover{opacity:.85}
+.logs-empty{color:var(--muted);font-size:13px;padding:20px;text-align:center}
+/* Точка-индикатор у подписи «Уведомления»: зелёная — включены, серая — нет.
+   Состояние читается без слов: подпись в шапке одна для всех режимов. */
+.notify-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--grn);margin-left:2px;flex:0 0 auto}
+.notify-dot.is-off{background:rgba(255,255,255,.35)}
+#btn-notify.granted{background:rgba(40,130,90,.45);border-color:rgba(40,190,110,.35)}
+#btn-notify.denied{background:rgba(196,64,64,.28);cursor:default}
+
+/* ── Настройки уведомлений: попап под кнопкой в шапке ──────────
+   Ширина 320px по макету; z-index выше контента (шапка сама z-index:200,
+   внутри своего контекста попап рисуется над страницей). */
+.notify-wrap{position:relative}
+.notify-pop{
+  position:absolute;top:calc(100% + 8px);right:0;width:320px;
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);
+  box-shadow:var(--sh-lg);padding:16px;z-index:500;
+  text-align:left;color:var(--txt);
+}
+.notify-pop[hidden]{display:none}
+.notify-pop-title{font-size:13.5px;font-weight:800;margin-bottom:10px}
+.notify-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
+.notify-row-lbl{font-size:12.5px;font-weight:600;color:var(--sub)}
+.notify-sep{border:none;border-top:1px solid var(--bdr);margin:9px 0}
+.notify-hint{font-size:12px;line-height:1.45;color:var(--muted);margin:6px 0 0}
+.notify-hint[hidden]{display:none}
+.notify-save{
+  width:100%;margin-top:11px;padding:8px 12px;border:none;border-radius:7px;
+  background:var(--brand);color:var(--on-accent);font-size:12.5px;font-weight:700;
+  font-family:inherit;cursor:pointer;transition:filter .15s,opacity .15s;
+}
+.notify-save:hover:not(:disabled){filter:brightness(1.07)}
+.notify-save:disabled{background:var(--bdr);color:var(--muted);cursor:not-allowed}
+
+/* Тумблер в стиле iOS: кнопка с role="switch" (клавиатура + рамка фокуса
+   достаются бесплатно), 44×24 с ползунком 20px. */
+.tgl{
+  position:relative;width:44px;height:24px;flex:0 0 auto;padding:0;margin:0;
+  border:none;border-radius:12px;background:var(--tgl-off);
+  cursor:pointer;transition:background .2s;-webkit-appearance:none;appearance:none;
+}
+.tgl::after{
+  content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;
+  border-radius:50%;background:var(--knob);
+  box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s;
+}
+.tgl.on{background:var(--tgl-on)}
+.tgl.on::after{left:22px}
+.tgl:disabled{opacity:.45;cursor:not-allowed}
+.tgl:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+
+/* Выбор звука: список пресетов + «▶ прослушать» рядом. Список тянется,
+   кнопка не сжимается; на узком экране попап развернётся на всю ширину. */
+.notify-snd{display:flex;align-items:center;gap:6px;flex:0 1 auto;min-width:0}
+.notify-snd select{
+  max-width:158px;padding:5px 6px;border:1px solid var(--bdr);border-radius:6px;
+  background:var(--card);color:var(--txt);font-size:12px;font-family:inherit;
+  cursor:pointer;transition:border-color .15s;
+}
+.notify-snd select:hover{border-color:var(--focus-ring)}
+.notify-snd select:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.notify-play{
+  width:28px;height:27px;flex:0 0 auto;padding:0;border:1px solid var(--bdr);
+  border-radius:6px;background:var(--card);color:var(--txt);font-size:12px;
+  font-family:inherit;line-height:1;cursor:pointer;transition:background .15s,border-color .15s;
+}
+.notify-play:hover{background:var(--c-soft);border-color:var(--focus-ring)}
+.notify-play:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.notify-row-vol{gap:10px}
+.notify-row-vol input[type="range"]{
+  flex:1 1 auto;min-width:0;height:20px;margin:0;accent-color:var(--c);cursor:pointer;
+}
+.notify-row-vol input[type="range"]:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.notify-vol-val{
+  min-width:36px;text-align:right;font-size:12px;font-weight:700;color:var(--sub);
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── Progress ── */
+#prog-wrap{height:4px;background:var(--track);overflow:hidden;display:none}
+#prog-bar{height:100%;background:var(--c);width:0%;transition:width .35s ease}
+#prog-label{
+  font-size:12px;font-weight:600;color:var(--sub);padding:5px 24px;
+  background:var(--cl);border-bottom:1px solid var(--bdr);display:none;
+}
+/* ── Live stats strip ── */
+#live-stats{display:none}
+.live-pill{display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.65);border:1px solid var(--bdr)}
+/* ── Live badge on Results tab ── */
+.live-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--grn-btn);color:var(--on-accent);
+  font-size:12px;font-weight:800;min-width:18px;height:18px;
+  border-radius:9px;padding:0 5px;margin-left:5px;vertical-align:middle;
+  animation:badge-pop .18s ease;
+}
+@keyframes badge-pop{0%{transform:scale(.7)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+

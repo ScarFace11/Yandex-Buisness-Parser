@@ -24,7 +24,7 @@ SaaS: всё работает на машине пользователя, дан
 | Фильтры | [yandex_maps_parser/processing.py](yandex_maps_parser/processing.py) | чёрный список, соцсети, филиалы, «только новые», оценка лида, VK |
 | Выгрузки | [yandex_maps_parser/exporters.py](yandex_maps_parser/exporters.py) | Excel, JSON, CSV, HTML-карта |
 | Состояние | [yandex_maps_parser/state.py](yandex_maps_parser/state.py), [checkpoint.py](yandex_maps_parser/checkpoint.py), [cache.py](yandex_maps_parser/cache.py) | общие настройки прогона, чекпоинт и «уже видели», кэш страниц |
-| Интерфейс | [templates/index.html](templates/index.html), [static/js](static/js), [static/css/style.css](static/css/style.css) | один HTML и модули на чистом JS, без сборщика; темы, таблица, графики, карта |
+| Интерфейс | [templates/index.html](templates/index.html), [static/js](static/js), [static/css](static/css) | один HTML и модули на чистом JS, без сборщика; стили — упорядоченные части (карта в static/css/README.md) |
 
 ## Как идёт один прогон
 

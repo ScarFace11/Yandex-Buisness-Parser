@@ -1,0 +1,331 @@
+/* 04-results-table.css · Таблица результатов, скачивание, фильтры, колонки
+   Часть 5 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   TABLE TAB
+   ════════════════════════════════ */
+.tbl-toolbar{
+  padding:10px 15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  border-bottom:1px solid var(--bdr);background:var(--panel);
+}
+/* Только поле поиска по таблице: раньше селектор без типа задевал чекбоксы
+   в списке «Столбцы» и растягивал их до 160px — подписи столбцов не
+   помещались и оставались невидимыми. */
+.tbl-toolbar input[type="text"]{flex:1;min-width:160px;max-width:250px}
+.tbl-count{font-size:12px;color:var(--muted);font-weight:600;margin-left:auto}
+/* Таблица результатов. Плотность подобрана так, чтобы строка читалась
+   одной строкой текста (высота ~36px): адрес и название переносятся, а не
+   уезжают вбок, а числа выровнены по разрядам. */
+.tbl-wrap{
+  /* Занимает всё оставшееся место панели — таблица идёт до низа экрана,
+     а не обрывается на 400px. При нехватке высоты сжимается (min-height —
+     пол), и строки скроллятся внутри, под липкой шапкой; если места совсем
+     нет — целиком прокручивается панель #rs-current. */
+  flex:1 1 auto;min-height:200px;
+  overflow:auto;scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;
+}
+.tbl-wrap::-webkit-scrollbar{width:10px;height:10px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:5px}
+.tbl-wrap::-webkit-scrollbar-thumb:hover{background:var(--bdr-h)}
+#results-table{width:100%;border-collapse:collapse;font-size:13px}
+#results-table th{
+  position:sticky;top:0;z-index:2;background:var(--card);color:var(--muted);
+  padding:9px 12px;text-align:left;cursor:pointer;
+  user-select:none;white-space:nowrap;
+  font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  /* Тень отделяет липкую шапку от строк, которые под неё уезжают: при
+     border-collapse рамка едет вместе с содержимым. */
+  box-shadow:inset 0 -1px 0 var(--bdr);
+}
+#results-table th,#results-table td{font-variant-numeric:tabular-nums}
+/* Шапка — подписи на цвете карточки, а не чёрная плита и не серая плашка:
+   так она не спорит с зеброй и одинаково выглядит в обеих темах. Цвет
+   обязан быть непрозрачным (--card), иначе уезжающие строки просвечивают
+   сквозь липкую шапку. z-index держит её над бейджами и чипами, а
+   тень-линия снизу (вместо рамки, которая при border-collapse уезжает
+   вместе с содержимым) отделяет строки. */
+/* «#» и «Оценка» — числовые колонки: центр и одинаковая ширина разрядов.
+   Выборка по data-col, а не по позиции: столбцы можно переставлять
+   («Столбцы» → перетаскивание), а оформление должно оставаться при колонке. */
+#results-table th[data-col="num"],#results-table td[data-col="num"],
+#results-table th[data-col="score"],#results-table td[data-col="score"]{text-align:center}
+#results-table th:hover{background:var(--row-hover);color:var(--txt)}
+#results-table th.asc::after{content:" ↑"}
+#results-table th.desc::after{content:" ↓"}
+/* «#» — порядковый номер строки, а не данные: не сортируется и не реагирует
+   на курсор (см. NOSORT_COLS в app.js). */
+#results-table th.nosort{cursor:default}
+#results-table th.nosort:hover{background:var(--card);color:var(--muted)}
+#results-table th.nosort::after{content:""}
+/* Плотность строки — около 36px: текстовая часть выровнена по верху (адрес
+   переносится), а служебные колонки — по центру, иначе бейдж оценки «висит»
+   в верхней кромке высокой строки. Телефон не переносится: разрыв по
+   «+7 (495)» ломает ритм колонки. */
+#results-table td{padding:8px 12px;line-height:1.45;border-bottom:1px solid var(--bdr-soft);vertical-align:top}
+#results-table td[data-col="rev"],#results-table td[data-col="num"],
+#results-table td[data-col="score"],#results-table td[data-col="socials"]{vertical-align:middle}
+#results-table td[data-col="phone"]{white-space:nowrap}
+/* Телефоны: у организаций бывает десяток номеров, и comma-joined строка
+   растягивала таблицу за горизонт — остальные колонки уезжали за экран.
+   Один номер на строку, колонка ограничена, излишек — под прокрутку
+   внутри ячейки (в Excel/CSV попадают все номера без изменений). */
+#results-table td[data-col="phone"]{max-width:230px}
+.tbl-phone{
+  max-height:3.2em;overflow-y:auto;overflow-x:hidden;font-variant-numeric:tabular-nums;
+  scrollbar-width:thin;
+}
+/* Один длинный номер обрезался без эллипсиса — теперь он усекается «…»,
+   а полное значение остаётся в title. */
+.tbl-phone span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Соцсети наоборот: бейджи собираются в колонку, и места им всегда
+   не хватало — колонке задаём минимум, а не максимум. */
+#results-table th[data-col="socials"],#results-table td[data-col="socials"]{min-width:120px;width:120px}
+/* Зебра тоном тише, чем наведение: подсветка курсора должна читаться поверх
+   полос. Порядок и вес правил это обеспечивают — `even:hover` выше по
+   специфичности, чем `even`, и потому выигрывает. */
+#results-table tr:nth-child(even) td{background:var(--row-alt)}
+#results-table tr:nth-child(even):hover td{background:var(--row-hover)}
+#results-table tr:hover td{background:var(--row-hover)}
+/* Ссылка и служебный текст строки — классами, а не инлайном: палитра
+   должна жить в одном месте. */
+.tbl-link{color:var(--c);font-weight:600;text-decoration:none}
+.tbl-link:hover{text-decoration:underline}
+/* В строке текст обязан читаться и на зебре, и под курсором: это не самая
+   тихая подпись на белой карточке (там хватало --muted), а текст на
+   тонированной поверхности — 4.2:1 там ниже нормы. */
+.tbl-cat{color:var(--sub)}
+.social-badge{
+  display:inline-block;padding:2px 7px;border-radius:4px;
+  font-size:12px;font-weight:800;color:var(--on-accent);
+  margin:1px 2px 1px 0;text-decoration:none;letter-spacing:.01em;
+}
+/* Lead score badge in the results table (green = hot lead) */
+/* Бейдж — кнопка: по клику открывается разбор оценки (см. .score-pop).
+   Поэтому здесь reset кнопочных стилей, а не только плашка. */
+.score-badge{
+  display:inline-block;min-width:26px;padding:2px 7px;border-radius:4px;
+  font-size:12px;font-weight:800;text-align:center;line-height:1.35;
+  background:var(--track);color:var(--sub);
+  border:none;font-family:inherit;cursor:pointer;
+}
+.score-badge:hover{filter:brightness(.96)}
+.score-badge:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+
+/* Мини-окно «почему столько баллов» — открывается кликом по оценке. */
+.score-pop{
+  position:fixed;z-index:80;min-width:240px;max-width:330px;
+  padding:10px 12px;border:1px solid var(--bdr);border-radius:9px;
+  background:var(--card);color:var(--txt);box-shadow:0 8px 24px rgba(0,0,0,.18);
+  font-size:12px;line-height:1.45;
+}
+.score-pop:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.score-pop-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px}
+.score-pop-name{font-weight:700;font-size:12.5px;flex:1 1 auto;overflow-wrap:anywhere}
+.score-pop-x{
+  flex:0 0 auto;width:20px;height:20px;padding:0;border:none;border-radius:5px;
+  background:transparent;color:var(--muted);font-size:15px;line-height:1;cursor:pointer;
+}
+.score-pop-x:hover{background:var(--cl);color:var(--txt)}
+.score-pop-x:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+.score-pop-sum{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+/* В разборе оценка — просто цифра, а не ещё одна кнопка: курсор обычный. */
+.score-pop-sum .score-badge{cursor:default;filter:none}
+.score-pop-max{color:var(--sub);font-size:12px}
+.score-pop-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px}
+.score-pop-list li{color:var(--sub);font-size:12px}
+.score-pop-list li.hit{color:var(--txt)}
+.score-na{color:var(--sub)}
+.score-badge.hot{background:var(--ok-bg);color:var(--ok-strong)}
+/* «новая» у названия: организации не было в файлах прошлых поисков.
+   Тот же зелёный, что у других подтверждённых состояний (бейдж движка,
+   завершённая история) — в обеих темах цвет берётся из токенов. */
+.new-tag{
+  display:inline-block;margin-left:6px;padding:0 6px;border-radius:999px;
+  font-size:12px;font-weight:800;line-height:16px;vertical-align:1px;
+  background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr);
+  white-space:nowrap;
+}
+[data-theme="dark"] .score-badge{background:var(--warn-on);color:var(--sub)}
+[data-theme="dark"] .score-badge.hot{background:var(--ok-bg);color:var(--ok-txt)}
+[data-theme="dark"] .score-badge.warm{background:var(--warn-bg);color:var(--warn-txt)}
+.no-data{text-align:center;color:var(--muted);padding:60px 20px;font-size:13px}
+.pager{
+  display:flex;align-items:center;gap:8px;padding:11px 16px;
+  border-top:1px solid var(--bdr);justify-content:center;background:var(--panel);
+}
+.pager button{
+  padding:5px 14px;border:1px solid var(--bdr);border-radius:6px;
+  background:var(--card);cursor:pointer;font-size:12px;font-weight:600;
+  color:var(--sub);transition:border-color .12s,color .12s;font-family:inherit;
+}
+.pager button:hover:not(:disabled){border-color:var(--c);color:var(--c)}
+.pager button:disabled{opacity:.35;cursor:not-allowed}
+.pager span{font-size:12px;color:var(--muted);font-weight:600}
+
+/* ── Downloads ── */
+#dl-section{display:none;padding:9px 15px;background:var(--cl);border-top:1px solid var(--bdr)}
+.dl-row{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.dl-label{font-size:12px;font-weight:700;color:var(--c);margin-right:2px}
+.dl-btn{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 12px;
+  border-radius:6px;border:1.5px solid var(--c);background:var(--card);
+  color:var(--c);font-weight:700;text-decoration:none;font-size:12px;
+  transition:background .12s;font-family:inherit;
+}
+.dl-btn:hover{background:var(--cl)}
+/* «Открыть папку» — второй путь к тем же файлам: скачивание не единственный
+   способ их найти, а папку по умолчанию новичок не знает. */
+.dl-open{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 11px;
+  border-radius:6px;border:1px solid var(--bdr);background:var(--card);
+  color:var(--sub);font-weight:700;font-size:12px;font-family:inherit;
+  cursor:pointer;transition:border-color .12s,color .12s;
+}
+.dl-open:hover{border-color:var(--c);color:var(--c)}
+.dl-open:disabled{opacity:.6;cursor:default}
+
+/* ── Reviewed ── */
+.rev-cb{width:15px;height:15px;accent-color:var(--c);cursor:pointer;flex-shrink:0}
+/* Просмотренная строка гаснет цветом, а не opacity: прозрачность гасит и
+   собственный фон ячейки — строка выбивала дыру в зебре и в наведении. */
+#results-table tr.is-reviewed td{color:var(--sub)}
+#results-table tr.is-reviewed .tbl-link{color:var(--sub)}
+/* Отметка «просмотрено» гасит ВСЕ поля строки, а не только соцсети и
+   оценку: ссылка, бейджи, рейтинг и телефон теряют насыщенность вместе. */
+#results-table tr.is-reviewed td .tbl-link,
+#results-table tr.is-reviewed td .score-badge,
+#results-table tr.is-reviewed td .social-badge,
+#results-table tr.is-reviewed td .rate-val,
+#results-table tr.is-reviewed td .rate-rev,
+#results-table tr.is-reviewed td .tbl-phone{opacity:.5}
+/* Отдельно открытая соцсеть гаснет сама по себе: клик по бейджу отмечает
+   именно эту сеть, а не всю организацию. */
+#results-table .social-badge.social-opened{opacity:.45;filter:grayscale(.35)}
+
+/* ── Social filter row ── */
+.tbl-social-row{
+  display:flex;align-items:center;gap:5px;padding:7px 15px;
+  flex-wrap:wrap;border-bottom:1px solid var(--bdr);background:var(--panel);
+}
+/* Строка спрятана: данных нет (empty) или колонка соцсетей скрыта
+   (col-hidden — фильтр без объекта только путает). */
+.tbl-social-row.empty,.tbl-social-row.col-hidden,.tbl-social-row.socials-off{display:none}
+.social-filter-lbl{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap;margin-right:2px}
+/* Цвет плитки фильтра — токен бренда соцсети (--vk/--ig/--tg/--wa): белая
+   надпись 11px/800 на исходных брендовых #2CA5E0 (Telegram) и #25D366
+   (WhatsApp) давала 2.78:1 и 1.98:1 при пороге WCAG AA 4.5:1 — TG и WA
+   читались хуже всего в полосе фильтров. В токенах лежат те же брендовые
+   цвета с опущенной ровно настолько яркостью, чтобы надпись проходила
+   порог; их же проверяет набор контрастных пар (--on-accent против каждого).
+   Значения сверены сквозным аудитом отрисованной страницы
+   (tests/a11y_audit.js → tests/test_a11y_browser.py), а не расчётом на
+   бумаге: там же, где живёт `--tile`, рисуется и кольцо активного чипа. */
+.sf-tag[data-key="vk"]{--tile:var(--vk)}
+.sf-tag[data-key="instagram"]{--tile:var(--ig)}
+.sf-tag[data-key="telegram"]{--tile:var(--tg)}
+.sf-tag[data-key="whatsapp"]{--tile:var(--wa)}
+.sf-tag{
+  display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;
+  font-size:12px;font-weight:800;color:var(--on-accent);cursor:pointer;border:none;
+  /* Плитка без своей сети (data-key нет) остаётся акцентной, а не прозрачной. */
+  background:var(--tile,var(--c));
+  opacity:.25;transition:opacity .12s,transform .1s;user-select:none;
+}
+.sf-tag:hover{opacity:.52}
+/* Активный тег раньше обводился currentColor (= цвет текста = белый):
+   внешнее кольцо совпадало с внутренним и исчезало. Обводка берёт цвет
+   самой плитки — рисуется как «двойное кольцо» вокруг брендового чипа. */
+.sf-tag.active{
+  opacity:1;
+  box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--tile,var(--c));
+  transform:scale(1.06);
+}
+.sf-clear{
+  font-size:12px;padding:2px 9px;border:1px solid var(--bdr);border-radius:20px;
+  background:none;cursor:pointer;color:var(--muted);margin-left:4px;
+  font-weight:600;display:none;transition:border-color .12s,color .12s;
+}
+.sf-clear.visible{display:inline-block}
+.sf-clear:hover{border-color:var(--red);color:var(--red)}
+
+/* ── Column toggle ── */
+.col-toggle-wrap{position:relative}
+#btn-cols{
+  /* Кнопка заметнее соседних фильтров: это настройка всей таблицы, а не
+     фильтр одной выборки — мелкий шрифт терялся в тулбаре. */
+  padding:7px 14px;border:1px solid var(--bdr-h);border-radius:7px;
+  background:var(--card);color:var(--txt);font-size:13px;font-weight:700;
+  cursor:pointer;white-space:nowrap;
+  display:flex;align-items:center;gap:6px;
+  transition:border-color .12s,color .12s;font-family:inherit;
+  box-shadow:var(--sh);
+}
+#btn-cols:hover,#btn-cols.active{border-color:var(--c);color:var(--c);background:var(--cl)}
+/* Список — ровные колонки: чекбокс | подпись, без «лесенки» из-за длины
+   подписей (раньше чекбоксы разъезжались по строкам). */
+#col-items{display:grid;grid-template-columns:1fr}
+#col-dropdown{
+  position:absolute;top:calc(100% + 5px);right:0;
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);
+  box-shadow:var(--sh-lg);padding:6px 4px;
+  /* Выше таблицы, панелей и модалок: список не должен прятаться под ними. */
+  z-index:900;
+  min-width:232px;display:none;
+}
+#col-dropdown.open{display:block}
+/* Мало места снизу — список поднимается НАД кнопкой (см. fitColDropdown). */
+#col-dropdown.drop-up{top:auto;bottom:calc(100% + 5px)}
+/* Три колонки: ручка перетаскивания │ чекбокс+подпись │ стрелки сдвига.
+   Раньше их было две (чекбокс │ подпись), и стрелки уезжали на вторую
+   строку — список выглядел двухъярусным. */
+.col-item{
+  display:grid;grid-template-columns:14px 1fr;align-items:center;column-gap:9px;
+  padding:7px 12px;
+  cursor:pointer;border-radius:var(--r-sm);font-size:13px;color:var(--txt);
+  transition:background .1s;user-select:none;
+}
+.col-item:hover{background:var(--row-hover)}
+.col-item input{width:14px;height:14px;accent-color:var(--c);cursor:pointer;flex-shrink:0}
+.col-sep{height:1px;background:var(--bdr);margin:4px 10px}
+.col-all-btn{
+  width:100%;padding:5px 12px;border:none;background:none;
+  color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;
+  text-align:left;border-radius:5px;font-family:inherit;transition:background .1s;
+}
+.col-all-btn:hover{background:var(--cl);color:var(--c)}
+/* Скрытый столбец: класс на самих ячейках (th и td). Позиционных правил
+   больше нет — они прятали бы не тот столбец после перестановки. */
+#results-table .col-hidden{display:none}
+/* Перетаскивание столбцов в списке «Столбцы»: ручка-грип и стрелки
+   (стрелки — доступная замена мыши с перетаскиванием). */
+.col-item .col-grip{cursor:grab;color:var(--muted);font-size:13px;line-height:1;text-align:center}
+.col-item:hover .col-grip{color:var(--c)}
+.col-item.dragging{opacity:.55}
+#col-items.dragging .col-item{cursor:grabbing}
+.col-lbl{
+  display:flex;align-items:center;gap:9px;min-width:0;cursor:pointer;
+}
+/* Подпись обрезается многоточием у самого текста, а не у flex-контейнера:
+   `overflow:hidden` на flex-контейнере схлопывал анонимный текстовый
+   флекс-элемент в ноль — список столбцов показывал пустые строки. */
+.col-lbl-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.col-hint{padding:2px 12px 6px;color:var(--muted);font-size:12px;line-height:1.35}
+/* Рейтинг: звезда + число отзывов; пустая ячейка — прочерк из JS. */
+.rate-val{font-weight:700;white-space:nowrap}
+.rate-rev{color:var(--muted);margin-left:5px;font-size:12px;font-variant-numeric:tabular-nums}
+.rate-rev::after{content:' отз.'}
+
+/* Кнопка импорта — label, оборачивающий скрытый file input: стилизация
+   нативного поля невозможна, а выглядеть должна как соседняя кнопка. */
+.data-import-btn{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.data-import-btn input[hidden]{display:none}
+
+/* ── Export filtered ── */
+#export-sel-wrap{display:none;align-items:center;gap:6px;margin-left:auto}
+.export-sel-btn{
+  font-size:12px;padding:5px 11px;border:1.5px solid var(--c);border-radius:6px;
+  background:var(--card);color:var(--c);font-weight:700;cursor:pointer;
+  transition:background .12s;white-space:nowrap;font-family:inherit;
+}
+.export-sel-btn:hover{background:var(--cl)}
+

@@ -1,0 +1,198 @@
+/* 10-dark-responsive.css · Тёмная тема и адаптив
+   Часть 11 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   DARK THEME
+   ════════════════════════════════ */
+/* Мягкая палитра (2026-09): тёмно-синий графит + сланцевый акцент.
+   Все значения — в токенах ниже; правила темы ссылаются только на var(--…). */[data-theme="dark"]{
+  /* ── Мягкая тёмная тема ──────────────────────────────────────────────
+     Фон — графит, а не почти чёрный; текст — мягкий светло-серый, а не
+     чисто белый; акцент — сланцевый, тот же тон графита. Шрифт, кегли и скругления
+     тема не меняет, но объявляет их и здесь: набор токенов один, и это
+     проверяет tests/test_theme_contrast.py. */
+  --font-ui:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:ui-monospace,"Cascadia Mono",Consolas,"JetBrains Mono",monospace;
+  --fs-11:11px;--fs-12:12px;--fs-13:13px;--fs-14:14px;--fs-16:16px;--fs-20:20px;--fs-26:26px;
+  --r-sm:8px;--r-md:12px;--r-lg:16px;--pill:999px;
+  --bg:#101216;          /* фон страницы */
+  --card:#171A20;        /* карточки и панели */
+  --panel:#1C1F26;       /* блоки внутри карточек, кнопки */
+  --field:#1C1F26;       /* поля ввода */
+  --term:#121418;        /* терминал и лог */
+  --row-alt:#13151A;     /* чётные строки таблицы */
+  --row-hover:#232830;   /* строка под курсором */
+  --track:#242832;       /* дорожки полосок */
+  --tgl-off:#3A4150;     /* в тёмной теме «выкл» — тёмно-серый, а не белый */
+  --tgl-on:#43A877;      /* тот же приглушённый зелёный, чуть светлее для тёмного фона */
+  --knob:#F2F6F8;        /* ползунок: не чистый белый, чтобы не слепил */
+  --bdr:#262A33;         /* границы */
+  --bdr-h:#39404C;       /* границы под курсором */
+  --bdr-hover:var(--bdr-h);
+  --bdr-soft:#1F232B;    /* тонкие разделители внутри таблицы */
+  --txt:#E6E9EF;         /* основной текст */
+  --sub:#AAB3C0;         /* подписи (≥6:1 на карточке) */
+  --muted:#939BAA;       /* самый тихий текст (≥4.5:1 и на подложке --acc-soft) */
+  --on-accent:#ffffff;   /* текст на плотном акценте — белый в обеих темах */
+  --hdr:#14171D;         /* шапка: тот же графит, отделена только границей */
+  --c:#9BAEC4;--cl:#1B2028;--cd:#8296AC;
+  --brand:#3A4759;--brand-dark:#2E394A;   /* плотный фон под белый текст */
+  --cta-from:#3A4759;--cta-to:#2E394A;
+  --cta:#3A4759;         /* сплошной акцент, как в светлой теме */
+  --cta-shadow:0 6px 18px rgba(0,0,0,.45);
+  /* Тот же красочный градиент кнопки поиска — светлее на тёмном фоне. */
+  --run-grad:linear-gradient(135deg,#0D807E 0%,#1B76C2 55%,#2A63E8 100%);
+  --run-shadow:0 6px 18px rgba(42,99,232,.45);
+  --red:#D9736F;--red-btn:#A8453F;--red-btn-2:#8E3630;
+  --yel:#D3A24C;--grn:#5FB88C;--blu:#7FA8CE;
+  /* Плотные аналоги для кнопок с белой надписью (см. :root). Светлые
+     --grn/--blu/--red в тёмной теме — это цвет текста, а не фона. */
+  --grn-btn:#2E7D5B;--blu-btn:#31689B;
+  --acc-soft:rgba(155,174,196,.12);
+  /* Чип: нейтральная серая плашка, но в тон графита (как остальные
+     поверхности), а не чистый Gray-700 из макета. */
+  --chip-bg:#333A47;
+  --chip-txt:var(--txt);
+  --ok-bg:rgba(95,184,140,.16);--ok-bdr:rgba(95,184,140,.45);
+  --ok-txt:#8FD3B0;--ok-strong:#7FD1A6;--ok-on:#12261C;
+  --warn-bg:rgba(211,162,76,.16);--warn-bdr:rgba(211,162,76,.45);
+  --warn-txt:#E4C489;--warn-strong:#EFC98F;--warn-on:#2A2011;
+  --err-bg:rgba(217,115,111,.16);--err-bdr:rgba(217,115,111,.45);
+  --err-txt:#E9A6A2;--err-strong:#EBA6A2;--err-on:#2A1616;
+  --pause-from:#E8A03A;--pause-to:#C9821B;--pause-txt:#2A1B00;
+  --tip-bg:#14171D;--tip-txt:#E8EFF3;--tip-field:#1B2733;--tip-ok:#8FD6A6;--tip-bdr:#2C3D4A;
+  --scrim:rgba(4,6,9,.62);
+  --vk:#4c75a3;--ig:#a8306c;--tg:#1d6da3;--wa:#2e7d4f;
+  --c-soft:rgba(155,174,196,.10);
+  /* В тёмной теме кольцо плотнее: те же 8% на тёмном поле неразличимы. */
+  --focus-ring:rgba(155,174,196,.48);
+  --glow:rgba(155,174,196,.22);
+  --glow-warn:rgba(211,162,76,.24);
+  --glow-red:rgba(217,115,111,.24);
+  --sh:0 1px 2px rgba(0,0,0,.36),0 1px 3px rgba(0,0,0,.30);
+  --sh-lg:0 4px 12px rgba(0,0,0,.42),0 18px 44px rgba(0,0,0,.38);
+  --r:var(--r-md);
+  --g:var(--c);--gl:var(--cl);--g2:var(--cd);
+  /* Высота шапки задаётся в :root; повторена для паритета токенов светлой/тёмной тем. */
+  --hdr-h:56px;
+}
+/*/TOK*/
+/* ── Переключение темы без «вспышки» ──────────────────────────────────────
+   Плавный переход включается только на время смены темы (класс theme-anim
+   ставит app.js на 260 мс): постоянные transition на всей странице заметно
+   тормозят перерисовку большой таблицы. При reduced-motion переходы уже
+   выключены блоком выше. */
+html.theme-anim,
+html.theme-anim body,
+html.theme-anim header,
+html.theme-anim .card,
+html.theme-anim .acc-inner,
+html.theme-anim .stat-card,
+html.theme-anim table,
+html.theme-anim td,
+html.theme-anim th,
+html.theme-anim input,
+html.theme-anim select,
+html.theme-anim textarea,
+html.theme-anim button,
+html.theme-anim #log-output{
+  transition:background-color .22s ease,color .22s ease,border-color .22s ease,
+             box-shadow .22s ease;
+}
+[data-theme="dark"] .api-status-block{border-color:var(--bdr);background:var(--card)}
+[data-theme="dark"] .group-title{color:var(--sub);border-left-color:var(--c)}
+[data-theme="dark"] .clear-all-btn{border-color:var(--bdr-h);color:var(--sub);background:transparent}
+[data-theme="dark"] .clear-all-btn:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
+[data-theme="dark"] .btn-save-preset{border-color:var(--bdr-h);color:var(--sub)}
+[data-theme="dark"] .btn-save-preset:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
+[data-theme="dark"] body{background:var(--bg)}
+/* Шапка таблицы и зебра больше не нуждаются в отдельных правилах для
+   тёмной темы: базовые правила читают роли (--panel, --muted, --row-alt,
+   --row-hover), а они в обеих темах описаны одним набором. */
+[data-theme="dark"] header{box-shadow:0 1px 0 rgba(0,0,0,.5),0 4px 16px rgba(0,0,0,.45)}
+/* Тёмная шапка: раньше она была окрашена в тот же акцент, что и бейдж
+   «Готово», и состояния сливались с ней. Отдельный токен --hdr держит
+   контраст текста и бейджей выше 4.5:1. */
+[data-theme="dark"] header{background:var(--hdr)}
+[data-theme="dark"] .hdr-right > button,
+[data-theme="dark"] .hdr-right .hdr-tools > button,
+[data-theme="dark"] .hdr-right .notify-wrap > button{border-color:rgba(255,255,255,.34);color:var(--txt)}
+[data-theme="dark"] .hdr-right > button:hover,
+[data-theme="dark"] .hdr-right .hdr-tools > button:hover,
+[data-theme="dark"] .hdr-right .notify-wrap > button:hover{background:rgba(255,255,255,.1);opacity:1}
+[data-theme="dark"] #status-badge.done{background:rgba(255,255,255,.16);color:var(--on-accent);border-color:rgba(255,255,255,.30)}
+[data-theme="dark"] input[type=text],[data-theme="dark"] input[type=number],
+[data-theme="dark"] input[type=password],[data-theme="dark"] textarea,
+[data-theme="dark"] select{background:var(--field);border:1px solid var(--bdr);color:var(--txt)}
+[data-theme="dark"] input:focus,[data-theme="dark"] textarea:focus,[data-theme="dark"] select:focus{
+  background:var(--field);border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring);outline:none}
+[data-theme="dark"] input::placeholder,[data-theme="dark"] textarea::placeholder{color:var(--muted)}
+[data-theme="dark"] input[type=password]{letter-spacing:.08em}
+[data-theme="dark"] .stepper input{background:var(--field);border:none;color:var(--txt)}
+[data-theme="dark"] .stepper input:focus{background:var(--field)}
+[data-theme="dark"] .tbl-toolbar,[data-theme="dark"] .tbl-social-row,[data-theme="dark"] .pager{background:var(--panel)}
+[data-theme="dark"] .pager button{background:var(--panel);color:var(--txt);border-color:var(--bdr)}
+[data-theme="dark"] .btn-sm,[data-theme="dark"] #btn-cols{background:var(--panel)}
+[data-theme="dark"] #prog-label{background:var(--cl);border-color:var(--bdr)}
+[data-theme="dark"] #live-stats{background:var(--cl);border-color:var(--bdr)}
+[data-theme="dark"] .live-pill{background:rgba(255,255,255,.06);border-color:var(--bdr)}
+[data-theme="dark"] .term-top{background:var(--panel);border-color:var(--bdr)}
+
+[data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3,
+[data-theme="dark"] .acc-title,[data-theme="dark"] .api-title{color:var(--txt);font-weight:600}
+[data-theme="dark"] .acc-num{color:var(--c)}
+[data-theme="dark"] .onboarding h2{color:var(--txt)}
+[data-theme="dark"] .flow-step{background:var(--card);border:1px solid var(--bdr)}
+[data-theme="dark"] .flow-step:hover{border-color:var(--bdr-h)}
+[data-theme="dark"] .flow-step b{color:var(--c);font-weight:700}
+[data-theme="dark"] .flow-step span,[data-theme="dark"] .hint{color:var(--sub)}
+[data-theme="dark"] .onboarding{background:var(--card);border-color:var(--bdr)}
+[data-theme="dark"] .tab-bar{background:var(--card);border-color:var(--bdr)}
+[data-theme="dark"] .tab-panels{border-color:var(--bdr)}
+[data-theme="dark"] .sender-intro{background:var(--cl)}
+[data-theme="dark"] .sender-part,[data-theme="dark"] .sender-config{background:var(--panel)}
+[data-theme="dark"] details.advanced-settings>summary{background:var(--panel)}
+[data-theme="dark"] details.advanced-settings>.dbody{background:var(--panel)}
+[data-theme="dark"] .dl-btn,[data-theme="dark"] .export-sel-btn{background:var(--panel)}
+[data-theme="dark"] #dl-section{background:var(--cl);border-color:var(--bdr)}
+/* Плотный акцент под белый текст — `--brand`, а не `--c`: в тёмной теме
+   `--c` светлый (сланец), и белая надпись на нём давала 2.3:1. */
+[data-theme="dark"] #btn-save-key{background:var(--brand)}
+[data-theme="dark"] #apikey-status.ok{background:var(--ok-bg);border-color:var(--ok-bdr);color:var(--ok-txt)}
+[data-theme="dark"] #apikey-status.err{background:var(--err-bg);border-color:var(--err-bdr);color:var(--err-txt)}
+[data-theme="dark"] .stat-card{background:var(--card);border-color:var(--bdr)}
+[data-theme="dark"] .col-all-btn:hover,[data-theme="dark"] .col-item:hover{background:var(--cl)}
+[data-theme="dark"] #col-dropdown{background:var(--card);border-color:var(--bdr)}
+
+/* ════════════════════════════════
+   RESPONSIVE
+   ════════════════════════════════ */
+@media(max-width:860px){
+  :root{--hdr-h:52px}
+  header{padding:0 16px}
+  /* шапка ниже — баннер опускается вместе с ней (top берётся из --hdr-h) */
+  #update-banner{padding:9px 12px;font-size:12px}
+  .layout{padding:12px;gap:12px}
+  .flow-steps{grid-template-columns:1fr}
+  .onboarding{padding:28px 18px;min-height:400px}
+  .onboarding h2{font-size:21px}
+  .hdr-right{gap:5px}
+  /* Шапка не влезала на телефоне и растягивала страницу вбок (горизонтальная
+     прокрутка появлялась на всём приложении). До 620px у второстепенных кнопок
+     остаются только значки — их дублируют aria-label и title. */
+  header h1{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Кнопка нужна и на узком экране (в попапе — настройки звука и окон),
+     но место в шапке экономим: остаётся только иконка. */
+  #notify-txt{display:none}
+  #btn-notify{padding:6px 9px}
+  .notify-pop{position:fixed;left:8px;right:8px;top:calc(var(--hdr-h) + 8px);width:auto;max-height:70vh;overflow-y:auto}
+  /* На телефоне список пресетов и ползунок получают всю ширину строки. */
+  .notify-snd{flex:1 1 auto}
+  .notify-snd select{max-width:none;flex:1 1 auto;min-width:0}
+  .notify-row-vol input[type="range"]{flex:1 1 auto}
+  .tab-btn{padding:8px 11px;font-size:12px}
+  aside{position:static}
+  details.advanced-settings>.dbody{grid-template-columns:1fr}
+  .sender-row3{grid-template-columns:1fr 1fr}
+}
+

@@ -1,0 +1,284 @@
+/* 11-redesign-sidebar.css · Редизайн: аккордеоны и фильтрация
+   Часть 12 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ══════════════════════════════════════════════════════════
+   UI REDESIGN · brand #007E8C
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Header ── */
+.hdr-sep{opacity:.45;font-weight:400;margin:0 2px}
+.hdr-src{font-weight:600;font-size:12.5px;opacity:.85}
+
+/* ══════════════════════════════════════════════════════════
+   1. ACCORDION SECTIONS (sidebar)
+   ══════════════════════════════════════════════════════════ */
+.acc{
+  border:1px solid var(--bdr);border-radius:var(--r-md);
+  background:var(--card);overflow:hidden;
+  transition:border-color .15s,box-shadow .15s;
+}
+.acc:hover{border-color:var(--bdr-h)}
+.acc.open{border-color:var(--c);box-shadow:var(--sh)}
+.acc-hdr{
+  width:100%;display:flex;align-items:center;gap:10px;
+  padding:11px 13px;border:none;background:transparent;
+  cursor:pointer;font-family:inherit;text-align:left;user-select:none;
+}
+.acc-hdr:focus-visible{outline:2px solid var(--c);outline-offset:-2px}
+.acc-num{
+  font-size:12px;font-weight:800;color:var(--c);
+  letter-spacing:.06em;
+  width:26px;height:26px;border-radius:7px;flex-shrink:0;
+  display:grid;place-items:center;
+  background:var(--cl);
+}
+.acc-title{flex:1;font-size:13px;font-weight:800;color:var(--txt);letter-spacing:-.01em}
+.acc-sub{font-size:12px;font-weight:600;color:var(--muted);margin-left:5px;letter-spacing:0}
+.acc-chev{
+  width:9px;height:9px;flex-shrink:0;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);transition:transform .22s;
+}
+.acc.open .acc-chev{transform:rotate(225deg);border-color:var(--c)}
+.acc-body{
+  display:grid;grid-template-rows:0fr;
+  transition:grid-template-rows .26s cubic-bezier(.4,0,.2,1);
+}
+.acc.open .acc-body{grid-template-rows:1fr}
+.acc-body>.acc-inner{overflow:hidden;min-height:0}
+.acc-inner{
+  /* 12px сверху (шаг сетки): содержимое не прилипает к линии разделителя
+     под шапкой (было 2px — первая строка читалась как часть заголовка).
+     Ритм колонки — 16px, как в .form-body, чтобы зазоры не отличались
+     от секции к секции. */
+  padding:12px 13px 16px;display:flex;flex-direction:column;gap:16px;
+  border-top:1px solid transparent;
+}
+.acc.open .acc-inner{border-top-color:var(--bdr)}
+/* Закрытый аккордеон раньше показывал 29px собственного отступа, и первая
+   строка содержимого выглядывала обрезанной: у «Форматы результата» —
+   половина галочек Excel/JSON. Отступ сворачивается вместе с высотой. */
+.acc-inner{
+  transition:padding-top .26s cubic-bezier(.4,0,.2,1),
+             padding-bottom .26s cubic-bezier(.4,0,.2,1);
+}
+.acc:not(.open) .acc-inner{padding-top:0;padding-bottom:0}
+
+/* ══════════════════════════════════════════════════════════
+   «ФИЛЬТРАЦИЯ РЕЗУЛЬТАТА»: логические группы, «⚙️ Дополнительно»
+   и sticky-футер с действием
+   ══════════════════════════════════════════════════════════ */
+/* Одиннадцать блоков подряд читались как один длинный список: было непонятно,
+   что к чему относится, а кнопка «Применить фильтры заново» уезжала за нижнюю
+   кромку. Теперь это группы с подзаголовками, редкие настройки — в свёрнутом
+   «⚙️ Дополнительно», действие — в футере. */
+
+/* Ритм задают группы, а не flex-gap аккордеона: у разделителя между группами
+   должен быть ровный отступ сверху и снизу. */
+#acc-filters .acc-inner{gap:0;padding-bottom:0}
+
+/* ВАЖНО для sticky-футера: `overflow:hidden` делает элемент скролл-портом, и
+   «прилипание» считается к нему, а не к сайдбору — то есть не работает вовсе.
+   `overflow:clip` подрезает так же, но скролл-порта не создаёт. */
+#acc-filters{overflow:clip}
+#acc-filters .acc-body>.acc-inner{overflow:clip}
+
+.flt-group{padding-top:16px}
+.flt-group+.flt-group{border-top:1px solid var(--bdr);margin-top:16px}
+.flt-group-title{
+  font-size:12px;font-weight:800;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.05em;line-height:1.25;
+  padding:0 0 8px 9px;border-left:3px solid var(--c);
+}
+.flt-group-body{display:flex;flex-direction:column;gap:12px}
+
+/* «🎯 Тип компании»: два чекбокса, период для «новых» и счётчик под ними.
+   Строка периода гаснет, пока её чекбокс выключен — иначе селект читался бы
+   как самостоятельная настройка, которая ничего не делает. */
+.ct-new-row{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  margin:8px 0 0 26px;opacity:.4;pointer-events:none;transition:opacity .13s;
+}
+.ct-new-row.on{opacity:1;pointer-events:auto}
+.ct-new-row .lbl{margin:0}
+.ct-new-row select{width:auto;padding:5px 8px;font-size:12px;margin-top:0}
+
+/* Счётчик «Будет найдено»: отвечает до нажатия «Применить фильтры заново»,
+   а вторая строка объясняет охват данных (источник без дат и т.п.). */
+.ct-count{
+  padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;
+  background:var(--row-alt);font-size:12px;line-height:1.5;color:var(--muted);
+}
+.ct-count.on{border-color:var(--c);color:var(--sub)}
+.ct-count b{color:var(--txt);font-weight:700}
+.ct-count .ct-note{display:block;margin-top:2px}
+
+@media(max-width:860px){
+  .ct-new-row{margin-left:0}
+  .ct-new-row select{flex:1 1 100%}
+}
+
+/* «⚙️ Дополнительно»: редкие настройки, свёрнуто по умолчанию. */
+.flt-extra{
+  /* 16px — тот же шаг, что у .flt-group+.flt-group ниже по секции. */
+  margin-top:16px;border:1px solid var(--bdr);border-radius:9px;
+  background:var(--row-alt);overflow:hidden;
+}
+.flt-extra>summary{
+  display:flex;align-items:center;gap:6px;
+  padding:9px 11px;cursor:pointer;user-select:none;list-style:none;
+  font-size:12px;font-weight:700;color:var(--sub);
+  transition:background .13s,color .13s;
+}
+.flt-extra>summary::-webkit-details-marker{display:none}
+.flt-extra>summary::after{
+  content:"▾";margin-left:auto;font-size:12px;color:var(--muted);
+  transition:transform .18s;
+}
+.flt-extra[open]>summary::after{transform:rotate(180deg)}
+.flt-extra>summary:hover{background:var(--cl);color:var(--c)}
+.flt-extra[open]>summary{border-bottom:1px solid var(--bdr)}
+.flt-extra-body{padding:11px;display:flex;flex-direction:column;gap:12px}
+
+/* Футер аккордеона: кнопка действия всегда на виду. Паркуется НАД sticky-доком
+   сайдбора — иначе две прилипающие панели накладывались бы друг на друга.
+   Высоту дока меряет app.js (syncDockHeight); значение ниже — запасное. */
+:root{--dock-h:62px}
+@media(max-width:860px){:root{--dock-h:0px}}   /* на телефоне док статичный */
+.flt-footer{
+  position:sticky;bottom:calc(var(--dock-h,0px) + 6px);z-index:5;
+  margin:16px -13px 0;padding:8px 13px 11px;
+  background:var(--card);border-top:1px solid var(--bdr);
+  box-shadow:0 -4px 12px rgba(0,0,0,.05);
+}
+.flt-footer #btn-refilter{width:100%;padding:11px 12px;font-size:13px;font-weight:700}
+
+/* ── Чёрный список слов («🚫 Исключить по словам») ── */
+.bl-block{display:flex;flex-direction:column;gap:8px}
+/* Список чипов: тянется по строке, но не растёт бесконечно — при сотне слов
+   аккордеон должен остаться аккордеоном, а не простыней. */
+.bl-chips{
+  display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;
+  max-height:150px;overflow-y:auto;overflow-x:hidden;
+  /* margin убран в пользу gap: у .bl-block он и так складывался с mt чипов
+     (5+8 = 13px от подписи, хотя шаг блока — 8). */
+  margin:0;padding:0 2px 0 0;scrollbar-width:thin;
+}
+.bl-chip{
+  display:inline-flex;align-items:center;gap:5px;max-width:100%;
+  padding:5px 8px 5px 10px;border-radius:6px;
+  background:var(--chip-bg);color:var(--chip-txt);
+  font-size:12px;font-weight:600;line-height:1.2;
+  transition:opacity .15s,transform .15s;
+}
+/* Появление анимируется только у свежедобавленных слов: при перерисовке
+   списка (innerHTML пересобирается целиком) остальные чипы не должны прыгать. */
+.bl-chip.bl-new{animation:bl-chip-in .15s ease-out}
+/* Слово может быть длинным («автосервисный центр») — чип не ломает строку. */
+.bl-chip>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bl-chip .bl-chip-x{
+  flex:0 0 auto;cursor:pointer;font-size:12px;font-weight:800;line-height:1;
+  color:var(--muted);transition:color .12s;
+}
+.bl-chip .bl-chip-x:hover{color:var(--err-strong)}
+.bl-chip .bl-chip-x .ico{width:11px;height:11px;margin-right:0;vertical-align:-1px}
+.bl-chip.bl-out{opacity:0;transform:translateX(-6px)}
+@keyframes bl-chip-in{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+.bl-input-wrap{display:flex;gap:6px;align-items:stretch;margin-top:8px}
+.bl-input-wrap input{
+  flex:1;min-width:0;padding:9px 11px;font-size:13px;
+  border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--txt);font-family:inherit;
+  transition:border-color .14s,box-shadow .14s;
+}
+.bl-input-wrap input::placeholder{color:var(--muted)}
+.bl-input-wrap input:focus{
+  outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring);
+}
+.bl-input-wrap #btn-blacklist-add{
+  flex:0 0 auto;width:38px;padding:0;font-size:17px;font-weight:800;line-height:1;
+}
+.bl-input-wrap #btn-blacklist-add:hover:not(:disabled){border-color:var(--c);color:var(--c)}
+.bl-err{font-size:12px;font-weight:600;color:var(--err-strong);margin-top:6px}
+.bl-err[hidden]{display:none}
+/* Дропдаун «Загрузить шаблон»: кнопка + панель со списками. Кастомный,
+   потому что у нативного select не бывает кнопок ✎/🗑 в опциях. */
+.bl-dd{position:relative;margin-top:10px}
+.bl-dd-btn{
+  width:100%;display:flex;align-items:center;gap:8px;padding:9px 11px;
+  font-size:13px;font-weight:600;border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--txt);font-family:inherit;cursor:pointer;
+  transition:border-color .14s,box-shadow .14s;
+}
+.bl-dd-btn::after{content:'▾';margin-left:auto;color:var(--muted);font-size:12px}
+.bl-dd-btn:hover{border-color:var(--c)}
+.bl-dd-btn:focus-visible{outline:none;border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring)}
+.bl-dd-btn[aria-expanded="true"]{border-color:var(--c)}
+.bl-dd-btn[aria-expanded="true"]::after{content:'▴'}
+.bl-dd-panel{
+  position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;
+  background:var(--card);border:1px solid var(--bdr);border-radius:10px;
+  box-shadow:var(--sh);padding:6px;max-height:260px;overflow-y:auto;scrollbar-width:thin;
+}
+.bl-dd-panel[hidden]{display:none}
+.bl-dd-group{
+  font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);padding:6px 8px 3px;
+}
+.bl-dd-group-gap{margin-top:4px;border-top:1px dashed var(--bdr);padding-top:8px}
+.bl-dd-item{
+  display:block;width:100%;text-align:left;padding:7px 9px;font-size:12.5px;
+  border:none;border-radius:7px;background:transparent;color:var(--txt);
+  font-family:inherit;cursor:pointer;transition:background .12s,color .12s;
+}
+.bl-dd-item:hover{background:var(--c-soft);color:var(--c)}
+.bl-dd-n{color:var(--muted);font-size:12px}
+.bl-dd-row{display:flex;align-items:center;gap:4px}
+.bl-dd-row .bl-dd-apply{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bl-dd-actions{display:flex;gap:3px;flex:0 0 auto;opacity:0;transition:opacity .15s}
+.bl-dd-row:hover .bl-dd-actions,.bl-dd-row:focus-within .bl-dd-actions{opacity:1}
+.bl-dd-empty{padding:6px 8px;font-size:12px;color:var(--muted);line-height:1.5}
+.bl-dd-note{padding:6px 8px 2px;font-size:12px;color:var(--muted);border-top:1px dashed var(--bdr);margin-top:4px}
+.bl-tpl-act{
+  display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;
+  border:1px solid var(--bdr);border-radius:6px;background:transparent;color:var(--sub);
+  font:inherit;font-size:12px;cursor:pointer;transition:all .12s;
+}
+.bl-tpl-act:hover{border-color:var(--c);color:var(--c);background:var(--c-soft)}
+.bl-tpl-del:hover{border-color:var(--err-strong);color:var(--err-strong);background:var(--err-bg)}
+.bl-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.bl-actions .btn-sm{width:100%;padding:9px 6px;font-size:12px}
+
+/* ══════════════════════════════════════════════════════════
+   2. TECH BOX (grey panel for technical parameters)
+   ══════════════════════════════════════════════════════════ */
+.tech-box{
+  background:var(--panel);border:1px solid var(--bdr);border-radius:9px;
+  /* Шаг 8 — половина сетки 16: было 9, и внутри зазоры читались то 9,
+     то 13 (9 + margin подсказки 4). */
+  padding:12px;display:flex;flex-direction:column;gap:8px;
+}
+[data-theme="dark"] .tech-box{background:var(--term);border-color:var(--bdr)}
+.tech-box-title{font-size:12px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em}
+.tech-box-note{font-size:12px;color:var(--muted);line-height:1.5;margin:0}
+
+/* ── Stepper (− / input / +) ── */
+.stepper{display:flex;align-items:stretch;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;background:var(--card)}
+.stepper input{
+  border:none;border-radius:0;width:100%;min-width:0;text-align:center;
+  font-weight:700;padding:8px 4px;font-size:13px;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.stepper input:focus{outline:none;box-shadow:none}
+.stepper:focus-within{border-color:var(--c);box-shadow:0 0 0 3px var(--focus-ring)}
+.stp-btn{
+  width:30px;flex-shrink:0;border:none;background:var(--panel);color:var(--sub);
+  font-size:15px;font-weight:800;cursor:pointer;line-height:1;
+  transition:background .12s,color .12s;font-family:inherit;
+}
+.stp-btn:hover{background:var(--cl);color:var(--c)}
+.stp-btn:active{background:var(--cl);color:var(--cd)}
+[data-theme="dark"] .stp-btn{background:var(--panel);color:var(--sub)}
+.lbl-note{font-weight:500;color:var(--muted);text-transform:none;font-size:12px}
+

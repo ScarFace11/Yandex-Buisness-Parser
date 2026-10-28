@@ -1,0 +1,163 @@
+/* 08-stats-updates.css · Статистика по городам, баннер обновления
+   Часть 9 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ════════════════════════════════
+   STATS PER-CITY BREAKDOWN
+   ════════════════════════════════ */
+.stat-city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+.stat-city-card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);padding:15px 17px}
+/* Разбивки рядом: слева карточки/полосы, справа — кольцо соцсетей. На
+   узком экране кольцо переезжает вниз, под список. */
+.stat-split{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+.stat-split>.stat-split-main{flex:1 1 340px;min-width:0}
+.stat-split>.stat-split-side{flex:0 1 300px}
+/* Кольцо «По соцсетям»: доли соцсетей читаются формой, точные значения —
+   в подписи легенды рядом (внутри центрируется итог и подпись). */
+.donut-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.donut{position:relative;width:168px;height:168px}
+.donut svg{display:block;transform:rotate(-90deg)}
+.donut circle{fill:none;stroke-width:16}
+/* Дуги вырастают из нуля при появлении (анимация только на вставку:
+   .donut отрисовывается заново при каждом рендере статистики, а повторный
+   ховер-ререндер не happens — анимация не дёргается на каждый тик). */
+.donut .donut-arc{animation:donut-in .7s cubic-bezier(.2,.7,.3,1) both}
+@keyframes donut-in{from{stroke-dasharray:0 var(--dash-rest,999)}}
+@media (prefers-reduced-motion:reduce){.donut .donut-arc{animation:none}}
+.donut .donut-track{stroke:var(--track)}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.donut-center b{font-size:22px;line-height:1.1;color:var(--txt);font-variant-numeric:tabular-nums}
+.donut-center span{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.donut-legend{display:flex;flex-direction:column;gap:5px;width:100%}
+.donut-legend-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--sub)}
+.donut-legend-row b{margin-left:auto;color:var(--txt);font-variant-numeric:tabular-nums}
+.donut-swatch{display:inline-block;width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.stat-city-card h4{font-size:13px;font-weight:700;color:var(--c);margin:0 0 9px}
+/* Заголовок с ⓘ-подсказкой: иконка уезжает вправо. */
+.stat-city-card h4{display:flex;align-items:center;gap:5px}
+.stat-city-card .stat-mini-row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);padding:4px 0}
+.stat-city-card .stat-mini-row span:last-child{font-weight:800;font-size:14.5px;color:var(--txt)}
+
+/* ════════════════════════════════
+   UPDATE BANNER
+   ════════════════════════════════ */
+#update-banner{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  margin:0 0 10px;padding:10px 14px;
+  background:var(--grn-btn);
+  color:var(--on-accent);font-size:13px;font-weight:600;
+  /* Баннер живёт В ПОТОКЕ правой колонки, сразу под вкладками: раньше он
+     был position:fixed, а body получал padding-top на его высоту. Шапка
+     уезжала вниз, баннер оставался вверху и перекрывал её вместе с меню.
+     Теперь никакого наложения: навигация всегда выше, контент — ниже. */
+  border-radius:10px;
+  box-shadow:0 3px 10px rgba(9,30,36,.12);
+}
+/* Когда баннер вставлен между вкладками и панелями, нижняя рамка вкладок
+   больше не стыкуется с панелью — возвращаем панели самостоятельный вид. */
+.right-col > #update-banner + .tab-panels{
+  margin-top:2px;border-top:1px solid var(--bdr);border-radius:var(--r);
+}
+.ub-text{flex:1}
+.ub-text b{color:var(--on-accent);font-weight:800}
+.ub-btn{
+  padding:6px 14px;border-radius:6px;
+  background:rgba(255,255,255,.2);color:var(--on-accent);
+  font-size:12px;font-weight:700;text-decoration:none;
+  border:1px solid rgba(255,255,255,.3);
+  transition:background .12s;white-space:nowrap;
+}
+.ub-btn:hover{background:rgba(255,255,255,.35)}
+/* Главное действие в баннере («Обновить сейчас» в .exe, «Скачать» в
+   исходниках/macOS): плотная белая кнопка с ТЁМНО-ЗЕЛЁНЫМ текстом.
+   Раньше цвет текста брался из --ok-on (= белый), и в светлой теме надпись
+   была белой на белом — кнопку приходилось искать на ощупь. */
+.ub-btn.ub-primary{
+  background:var(--on-accent);color:var(--ok-strong);border-color:var(--on-accent);
+  box-shadow:0 1px 6px rgba(0,0,0,.18);
+}
+.ub-btn.ub-primary:hover{background:var(--ok-bg);color:var(--ok-strong)}
+.ub-close{
+  background:none;border:none;color:rgba(255,255,255,.6);
+  font-size:16px;font-weight:800;cursor:pointer;padding:4px 8px;
+  transition:color .12s;
+}
+.ub-close:hover{color:var(--on-accent)}
+/* Причина сбоя обновления — строкой внутри баннера, а не только тостом:
+   тост исчезает, а пользователь остаётся с неработающей кнопкой. */
+.ub-error{
+  flex-basis:100%;margin-top:2px;padding:7px 10px;border-radius:7px;
+  background:rgba(0,0,0,.16);color:var(--on-accent);
+  font-size:12px;font-weight:600;line-height:1.45;word-break:break-word;
+}
+.ub-error[hidden]{display:none}
+/* Видимая с первого взгляда индикация обновления в шапке.
+   Шапка приклеена к верху окна, поэтому кнопку видно при любой прокрутке —
+   именно она (а не только тонкая точка) сообщает о новой версии, даже если
+   зелёный баннер закрыли. */
+#btn-updates.has-update{
+  background:var(--warn-bdr);border-color:var(--warn-bdr);color:var(--txt);
+  font-weight:800;
+  animation:btn-update-pulse 2.4s ease infinite;
+}
+#btn-updates.has-update:hover{filter:brightness(1.05);opacity:1}
+@keyframes btn-update-pulse{
+  0%{box-shadow:0 0 0 0 rgba(232,150,13,.55)}
+  70%{box-shadow:0 0 0 8px rgba(232,150,13,0)}
+  100%{box-shadow:0 0 0 0 rgba(232,150,13,0)}
+}
+
+/* «Update available» dot on the header button */
+#btn-updates{position:relative}
+#update-dot{
+  position:absolute;top:-3px;right:-3px;
+  width:10px;height:10px;border-radius:50%;
+  background:var(--warn-bdr);border:2px solid var(--c);
+  opacity:0;transform:scale(.4);pointer-events:none;
+  transition:opacity .2s,transform .2s;
+}
+#update-dot.on{opacity:1;transform:scale(1);animation:dot-pulse 1.8s ease infinite}
+@keyframes dot-pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,150,13,.55)}55%{box-shadow:0 0 0 6px rgba(232,150,13,0)}}
+
+/* ── Changelog viewer modal («История изменений») ── */
+.changelog-modal{max-width:620px}
+.changelog-modal h3{display:flex;align-items:center;gap:7px}
+.cl-sub{margin:-4px 0 12px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.cl-sub b{color:var(--txt)}
+.cl-offline{margin:-4px 0 10px;padding:6px 9px;border-radius:6px;font-size:12px;
+  color:var(--warn-strong);background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.30)}
+.cl-list{max-height:56vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}
+/* Запись списка — кнопка: краткое описание, полный текст открывается по ней. */
+.cl-entry{
+  border:1px solid var(--bdr);border-radius:9px;padding:11px 13px;
+  background:var(--row-alt);display:flex;flex-direction:column;gap:5px;
+  width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.cl-entry:hover{border-color:var(--c);background:var(--cl)}
+.cl-entry:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.cl-entry.cl-latest{border-color:var(--c);background:var(--cl)}
+.cl-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.cl-ver{font-size:13px;font-weight:800;color:var(--c);display:flex;align-items:center;gap:7px}
+.cl-name{font-size:12.5px;font-weight:700;color:var(--txt);line-height:1.4}
+.cl-sum{font-size:12.5px;color:var(--sub);line-height:1.55}
+.cl-more{font-size:12px;font-weight:700;color:var(--c)}
+.cl-date{font-size:12px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.cl-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:13px}
+.cl-foot{justify-content:space-between}
+/* Одна кнопка (список версий) — у правого края, как в остальных окнах. */
+.cl-foot .m-cancel:only-child{margin-left:auto}
+.cl-tag{
+  font-size:12px;font-weight:800;padding:1px 8px;border-radius:20px;
+  background:var(--brand);color:var(--on-accent);letter-spacing:.02em;
+}
+.cl-tag.cl-yours{background:var(--grn)}
+.cl-text{font-size:12.5px;color:var(--sub);line-height:1.55}
+/* Полный текст версии (открывается нажатием на запись списка). */
+.cl-detail{display:flex;flex-direction:column;gap:12px}
+.cl-dtitle{margin:0;font-size:14px;font-weight:800;color:var(--txt);line-height:1.4}
+.cl-item{border-left:2px solid var(--c);padding-left:10px;display:flex;flex-direction:column;gap:3px}
+.cl-item-t{font-size:12.5px;font-weight:700;color:var(--txt)}
+.cl-item-x{margin:0;font-size:12.5px;color:var(--sub);line-height:1.6}
+[data-theme="dark"] .cl-entry{background:var(--panel)}
+[data-theme="dark"] .cl-entry:hover,[data-theme="dark"] .cl-entry.cl-latest{background:var(--tip-bg)}
+

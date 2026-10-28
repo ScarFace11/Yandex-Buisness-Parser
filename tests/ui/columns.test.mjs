@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { readAppSrc } from './_src.mjs';
+import { readCss } from './_css.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const src = readAppSrc(root);
@@ -397,7 +398,7 @@ test('the template gives every column a stable data-col and keyed sort', () => {
   assert.match(tpl, /onclick="resetColOrder\(\)"/);
   assert.ok(!/onclick="sortTable\(\d\)"/.test(tpl), 'позиционный sortTable(N) в шапке ломается при перестановке');
   assert.ok(!/col-hide-\d/.test(src), 'позиционное скрытие колонок больше не используется');
-  const css = readFileSync(join(root, 'static', 'css', 'style.css'), 'utf8');
+  const css = readCss(root);
   assert.match(css, /#results-table \.col-hidden\{display:none\}/);
   assert.ok(!/#results-table\.col-hide-/.test(css));
 });

@@ -1,0 +1,301 @@
+/* 14-dock-pipeline.css · Прогресс городов, док запуска, пайплайн, сайдбар
+   Часть 15 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+
+/* ══════════════════════════════════════════════════════════
+   Multi-city progress panel (top bar): statuses, %, found count
+   ══════════════════════════════════════════════════════════ */
+#cp-summary{font-size:12px;color:var(--sub);font-weight:600;margin-bottom:6px}
+#cp-summary b{color:var(--txt)}
+.cp-item{display:flex;align-items:center;gap:6px;min-width:190px}
+.cp-ico{font-size:12px;width:15px;text-align:center;flex-shrink:0}
+.cp-name{font-weight:600;color:var(--txt);font-size:12px;min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-theme="dark"] .cp-name{color:var(--sub)}
+.cp-bar{flex:1;height:6px;background:var(--track);border-radius:3px;min-width:60px;max-width:120px}
+[data-theme="dark"] .cp-bar{background:var(--bdr)}
+.cp-fill{height:100%;border-radius:3px;transition:width .3s}
+.cp-val{font-size:12px;color:var(--sub);min-width:78px;text-align:right;white-space:nowrap}
+.cp-found{color:var(--muted)}
+.cp-queued .cp-fill{background-image:repeating-linear-gradient(45deg,var(--bdr) 0 4px,transparent 4px 8px)}
+
+/* Developer «tech» lines behind the log-details toggle */
+.ll.tech{color:var(--muted);font-style:italic;font-size:12px}
+.ll.tech::before{content:'⌙ ';opacity:.7}
+[data-theme="dark"] .ll.tech{color:var(--sub)}
+#btn-tech-details{margin-left:auto}
+#btn-tech-details.active{background:var(--brand-dark);color:var(--tip-ok);border-color:var(--c)}
+
+/* ── Sticky dock: «Найти компании» is always visible at the bottom of the
+      sidebar, even when city chips push the rest off-screen ── */
+/* ── Sidebar footer: 💾 Сохранить пресет + 🚀 Найти компании ── */
+/* Док — колонка: сверху подсказка «чего не хватает», под ней прежний ряд
+   кнопок. Ряд остаётся одной строкой, чтобы кнопка запуска не уменьшалась. */
+#run-dock.sidebar-footer{
+  display:flex;flex-direction:column;gap:8px;align-items:stretch;
+}
+.run-dock-row{display:flex;gap:8px;align-items:stretch}
+/* Подсказка у кнопки: спокойная строка, а не вторая жёлтая тревога.
+   Кликабельна — ведёт к тому полю, которого не хватает. */
+.run-hint{
+  display:block;width:100%;margin:0;padding:2px 2px;
+  background:none;border:none;border-radius:6px;
+  color:var(--sub);font-family:inherit;
+  font-size:12px;font-weight:600;line-height:1.4;text-align:left;
+  cursor:pointer;
+  transition:color .12s;
+}
+.run-hint:hover{color:var(--txt)}
+.run-hint:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.run-hint[hidden]{display:none}
+.btn-save-preset{
+  flex:0 0 auto;padding:12px 14px;
+  background:transparent;border:1px solid var(--bdr);border-radius:9px;
+  font-size:16px;line-height:1;cursor:pointer;font-family:inherit;
+  transition:border-color .15s,background .15s,transform .15s;
+}
+.btn-save-preset:hover{border-color:var(--c);background:var(--cl);transform:translateY(-1px)}
+.btn-save-preset:active{transform:translateY(0)}
+
+#run-dock{
+  position:sticky;bottom:0;z-index:60;
+  margin-top:auto;                 /* keep the button at the bottom when the sidebar is short */
+  padding:12px 0 2px;
+  /* Подложка непрозрачная: раньше верхние 12px были прозрачными, и текст
+     формы читался прямо сквозь подсказку «чего не хватает» — выглядело
+     так, будто две строки наехали друг на друга. */
+  background:var(--card);
+  /* Чёткий шов вместо градиента: градиент над плашкой при прокрутке до
+     конца гасил последние 18px формы — нижние галочки выглядели
+     обрезанными, хотя были доступны. */
+  border-top:1px solid var(--bdr);
+  box-shadow:0 -6px 14px -10px rgba(0,0,0,.35);
+}
+@media(max-width:860px){#run-dock{position:static}}
+
+/* Run-button states.
+   • not ready (no cities / no queries): default:disabled grey + not-allowed
+   • ready: brand teal
+   • running: red «⏸ Остановить поиск» (button is disabled while the run is
+     live — the class repaints it so it reads as an active control) */
+#btn-run.run-ready{
+  background:var(--run-grad);
+  cursor:pointer;
+}
+
+/* ── Two-segment run control (30/70) ──────────────────────
+   While a search is live, the dock shows ✕ (stop, 30%) and
+   ⏸ Пауза (70%) instead of the single main button. */
+#btn-stop-seg{
+  flex:0 0 30%;min-width:52px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--red-btn) 0%,var(--red-btn-2) 100%);
+  color:var(--on-accent);border:none;border-radius:9px;
+  font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;
+  transition:filter .13s,transform .13s;
+  box-shadow:0 4px 14px rgba(196,64,64,.28);
+}
+#btn-stop-seg:hover{filter:brightness(1.1)}
+#btn-stop-seg:active{transform:translateY(1px)}
+[data-theme="dark"] #btn-stop-seg{background:var(--red);box-shadow:0 4px 14px var(--glow-red)}
+[data-theme="dark"] #btn-stop-seg:hover{background:var(--red);filter:none}
+#btn-pause-seg{
+  flex:1 1 auto;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(135deg,var(--pause-from) 0%,var(--pause-to) 100%);
+  color:var(--on-accent);border:none;border-radius:9px;
+  font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;
+  transition:filter .13s,transform .13s;
+  box-shadow:0 4px 14px rgba(240,158,11,.3);
+  padding:12px 10px;
+}
+#btn-pause-seg:hover{filter:brightness(1.08)}
+#btn-pause-seg:active{transform:translateY(1px)}
+#btn-pause-seg:disabled{cursor:wait;opacity:.75;filter:none}
+#btn-pause-seg.pausing{cursor:wait;opacity:.75}
+
+/* Paused state: the dock shows ONE orange «Продолжить поиск» button */
+#btn-run.run-paused{
+  background:linear-gradient(135deg,var(--pause-from) 0%,var(--pause-to) 100%);
+  color:var(--pause-txt);cursor:pointer;
+  box-shadow:0 4px 14px var(--glow-warn);
+}
+#btn-run.run-paused:hover{filter:brightness(1.06)}
+
+/* Dark theme: deep teal fill + white text (was too light to read) */
+[data-theme="dark"] #btn-run:disabled{background:var(--bdr);color:var(--sub);cursor:not-allowed}
+/* ══════════════════════════════════════════════════════════
+   TWO-STAGE PIPELINE: results view toggle + accordion 05
+   ══════════════════════════════════════════════════════════ */
+.results-toggle{
+  display:inline-flex;border:1px solid var(--bdr);border-radius:8px;
+  overflow:hidden;background:var(--card);flex-shrink:0;
+}
+.rt-btn{
+  border:none;background:transparent;padding:7px 13px;font-size:12px;
+  font-weight:700;color:var(--sub);cursor:pointer;font-family:inherit;
+  border-right:1px solid var(--bdr);transition:background .12s,color .12s;
+  white-space:nowrap;
+}
+.rt-btn:last-child{border-right:none}
+.rt-btn:hover{background:var(--cl);color:var(--c)}
+.rt-btn.active{background:var(--brand);color:var(--on-accent)}
+[data-theme="dark"] .rt-btn:hover{background:var(--hdr)}
+#btn-refilter:hover:not(:disabled){border-color:var(--c);color:var(--c)}
+#btn-refilter:disabled{opacity:.55;cursor:wait}
+
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR RESTRUCTURE: api-keys block, groups, app-shell scroll
+   ══════════════════════════════════════════════════════════ */
+
+/* App shell: fixed viewport — each panel scrolls independently.
+   (Desktop only; the mobile breakpoint restores normal document flow.) */
+@media(min-width:861px){
+  body{height:100vh;overflow:hidden}
+}
+
+/* ── Group titles (📥 Сбор данных / 📤 Вывод и фильтрация) ── */
+.group-title{
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  color:var(--muted);
+  letter-spacing:0.09em;
+  /* Ритм секции на общей сетке: +8 сверху поверх gap 16 (итого 24 — секция
+     начинается с паузы), а −8 внизу компенсирует gap: заголовок прижат
+     к своей секции (итого 8), а не расстоянием обычного блока. */
+  padding:8px 0 0;
+  margin:0 0 -8px;
+}
+[data-theme="dark"] .group-title{color:var(--muted)}
+
+/* ── API-keys block (static section above the accordions) ── */
+.api-status-block{
+  border:1px solid var(--bdr);border-radius:var(--r-md);
+  background:var(--card);
+  overflow:hidden;
+}
+.api-status-header{
+  width:100%;display:flex;align-items:center;gap:8px;
+  padding:11px 13px;border:none;background:transparent;cursor:pointer;
+  font-family:inherit;text-align:left;user-select:none;
+}
+.api-status-header:hover{background:var(--c-soft)}
+.api-icon{font-size:14px;line-height:1}
+.api-title{flex:0 1 auto;font-size:13px;font-weight:800;color:var(--txt);letter-spacing:-.01em}
+.api-badge{
+  flex:1;text-align:right;font-size:12px;font-weight:800;
+  padding:3px 9px;border-radius:20px;letter-spacing:.01em;white-space:nowrap;
+}
+.score-presets{display:flex;gap:6px;margin:4px 0 6px}
+.score-preset{
+  flex:1;padding:7px 4px;border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--sub);font-size:12px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:border-color .12s,background .12s,color .12s;
+}
+.score-preset:hover{border-color:var(--c);color:var(--c)}
+.score-preset.active{background:var(--brand);border-color:var(--c);color:var(--on-accent)}
+.score-formula{margin-top:8px;border:1px solid var(--bdr);border-radius:8px;background:var(--cl)}
+.score-formula summary{
+  cursor:pointer;padding:8px 10px;font-size:12.5px;font-weight:700;color:var(--sub);
+  user-select:none;list-style:none;
+}
+.score-formula summary::-webkit-details-marker{display:none}
+.score-formula summary:hover{color:var(--c)}
+.score-formula-body{padding:2px 10px 10px}
+.sf-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;font-size:12.5px;color:var(--txt);
+  border-bottom:1px dashed var(--bdr);
+}
+.sf-row b{color:var(--c);font-size:13px}
+.sf-total{padding-top:8px;font-size:12px;color:var(--muted)}
+.api-badge.ok{background:var(--ok-bg);color:var(--ok-txt);border:1px solid var(--ok-bdr)}
+.api-badge.warn{background:var(--warn-bg);color:var(--warn-strong);border:1px solid var(--warn-bdr)}
+.key-dot{
+  display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:var(--bdr);vertical-align:middle;margin-left:2px;transition:background .15s;
+}
+.key-dot.on{background:var(--wa)}
+.key-where{
+  font-size:12px;color:var(--c);text-decoration:none;margin-top:3px;align-self:flex-start;
+}
+.key-where:hover{text-decoration:underline}
+.api-badge.err{background:var(--err-bg);color:var(--err-txt);border:1px solid var(--err-bdr)}
+/* Ключ не указан — это норма, а не поломка: спокойная плашка вместо
+   жёлтого предупреждения, которое читалось как «настройка не закончена». */
+.api-badge.off{background:var(--cl);color:var(--sub);border:1px solid var(--bdr)}
+.api-chev{
+  flex:0 0 auto;width:8px;height:8px;
+  border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);transition:transform .2s;
+}
+.api-status-header.open .api-chev{transform:rotate(225deg);border-color:var(--c)}
+/* [hidden] на элементе с display:flex не пересекается с этим правилом —
+   !important не нужен: атрибут сильнее класса, если только класс не задаёт
+   display явно. Здесь как раз и задаёт, поэтому селектор [hidden] должен
+   быть ниже по файлу или специфичнее — используем атрибут в связке. */
+.api-status-body{padding:4px 13px 13px;display:flex;flex-direction:column}
+.api-status-body[hidden]{display:none}
+.api-status-body .lbl{margin-bottom:5px}
+.btn-save-api{
+  margin-top:10px;padding:9px 12px;border:1px solid var(--bdr);border-radius:8px;
+  background:var(--card);color:var(--sub);font-size:12.5px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:border-color .15s,color .15s,background .15s;
+}
+.btn-save-api:hover{border-color:var(--c);color:var(--c);background:var(--cl)}
+[data-theme="dark"] .api-badge.ok{background:var(--ok-bg);color:var(--ok-txt);border-color:var(--ok-bdr)}
+[data-theme="dark"] .api-badge.warn{background:var(--warn-bg);color:var(--warn-txt);border-color:var(--warn-bdr)}
+[data-theme="dark"] .api-badge.err{background:var(--err-bg);color:var(--err-txt);border-color:var(--err-bdr)}
+
+/* ══════════════════════════════════════════════════════════
+   DARK THEME: visibility polish (scrollbars, tabs, tables)
+   ══════════════════════════════════════════════════════════ */
+[data-theme="dark"] ::-webkit-scrollbar{width:8px;height:8px}
+[data-theme="dark"] ::-webkit-scrollbar-track{background:var(--bg)}
+[data-theme="dark"] ::-webkit-scrollbar-thumb{background:var(--bdr-h);border-radius:4px}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+[data-theme="dark"] aside,[data-theme="dark"] .right-col{scrollbar-color:var(--bdr-h) var(--bg)}
+
+[data-theme="dark"] .btn-sm,[data-theme="dark"] #btn-cols{background:var(--field);border-color:var(--bdr);color:var(--sub)}
+[data-theme="dark"] .btn-sm:hover,[data-theme="dark"] #btn-cols:hover{border-color:var(--c);color:var(--c)}
+/* Semantic buttons must win over the generic dark .btn-sm above (same
+   specificity, later rule): with translucent --err-bdr (*.45) both the
+   border and the label faded into the panel — the button «сливалась
+   с фоном». Solid tokens keep it as red as it is in the light theme. */
+[data-theme="dark"] .btn-sm.danger,[data-theme="dark"] .files-bulk-btn{
+  background:var(--err-bg);border-color:var(--red);color:var(--err-txt)}
+[data-theme="dark"] .btn-sm.danger:hover,[data-theme="dark"] .files-bulk-btn:hover{
+  background:var(--err-on);border-color:var(--red);color:var(--red)}
+[data-theme="dark"] .btn-sm.warn,[data-theme="dark"] .files-bulk-arch{
+  background:var(--warn-bg);border-color:var(--warn-bdr);color:var(--warn-txt)}
+[data-theme="dark"] .btn-sm.warn:hover,[data-theme="dark"] .files-bulk-arch:hover{
+  background:var(--warn-on);border-color:var(--warn-strong);color:var(--warn-strong)}
+[data-theme="dark"] .hdr-right > button,
+[data-theme="dark"] .hdr-right .hdr-tools > button,
+[data-theme="dark"] .hdr-right .notify-wrap > button{border-color:rgba(255,255,255,.3)}
+/* Dark theme header is teal, so a 15%-alpha badge washed out (contrast ~1.5:1).
+   Solid fills with dark text keep every state readable on the teal bar. */
+[data-theme="dark"] #status-badge{background:rgba(255,255,255,.22);color:var(--on-accent);border:1px solid rgba(255,255,255,.38)}
+[data-theme="dark"] #status-badge.done{background:rgba(255,255,255,.16);color:var(--on-accent);border-color:rgba(255,255,255,.30)}
+[data-theme="dark"] #status-badge.running{background:var(--yel);color:var(--warn-on);border-color:var(--warn-bdr)}
+[data-theme="dark"] #status-badge.paused{background:var(--yel);color:var(--warn-on);border-color:var(--warn-bdr)}
+[data-theme="dark"] #status-badge.error{background:var(--red-btn);color:var(--on-accent);border-color:var(--err-bdr)}
+[data-theme="dark"] #city-dropdown{background:var(--card);border-color:var(--c);box-shadow:0 10px 32px rgba(0,0,0,.5)}
+[data-theme="dark"] .city-option:hover{background:var(--field)}
+[data-theme="dark"] .soc-tile{border-color:var(--bdr-h);background:var(--card);color:var(--sub)}
+[data-theme="dark"] .tech-box{background:var(--tip-bg);border-color:var(--bdr)}
+[data-theme="dark"] .rt-btn{color:var(--sub)}
+/* Активная кнопка режима таблицы: правило выше перебивало .rt-btn.active
+   (одинаковая специфичность, но оно ниже по файлу), и надпись оставалась
+   серой на плотном --brand — 4.46:1 вместо нужных 4.5. */
+[data-theme="dark"] .rt-btn.active{color:var(--on-accent)}
+
+/* ══════════════════════════════════════════════════════════
+   DARK THEME: contrast pass (inputs, ghost buttons, cards)
+   Оформление — только через токены из блока [data-theme="dark"] выше.
+   ══════════════════════════════════════════════════════════ */
+[data-theme="dark"] .flow-step{background:var(--card);border:1px solid var(--bdr)}
+[data-theme="dark"] .flow-step:hover{border-color:var(--bdr-h)}
+[data-theme="dark"] .hint{color:var(--sub)}
+[data-theme="dark"] .grid-hint .hint-state{color:var(--txt)}
+[data-theme="dark"] .btn-start-search:disabled,[data-theme="dark"] #btn-run:disabled{background:var(--bdr);color:var(--muted)}
+
