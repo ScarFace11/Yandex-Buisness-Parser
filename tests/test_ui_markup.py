@@ -2172,3 +2172,31 @@ class TestCityInputCommit:
         # Первый клик должен застать уже готовую кнопку.
         assert 'commitCityInput();' in APP_JS
         assert 'setTimeout(() => {\n      if (dd.contains(document.activeElement)) return;' in APP_JS
+
+
+class TestOpenResultFolder:
+    """Рядом со скачиванием — «Открыть папку с результатами».
+
+    Файлы лежат на диске, а не только в загрузках браузера; папку по
+    умолчанию новичок не знает и ищет вручную.
+    """
+
+    def test_button_lives_in_the_download_row(self):
+        start = TEMPLATE.index('id="dl-section"')
+        row = TEMPLATE[start:TEMPLATE.index('</div>', start)]
+        assert 'id="dl-open-folder"' in row
+        assert 'openOutputDir(this)' in row
+        assert 'aria-label="Открыть папку с результатами"' in row
+
+    def test_one_handler_serves_both_buttons(self):
+        assert 'function openOutputDir(btn)' in APP_JS
+        body = APP_JS.split('function openOutputDir(btn)')[1][:800]
+        assert "document.getElementById('btn-output-open')" in body
+        assert 'b.innerHTML = label' in body, 'подпись кнопки должна вернуться как была'
+
+    def test_style_is_secondary_to_downloads(self):
+        assert '.dl-open{' in STYLE
+        rule = STYLE[STYLE.index('.dl-open{'):]
+        rule = rule[:rule.index('}')]
+        assert 'border:1px solid var(--bdr)' in rule
+        assert 'color:var(--sub)' in rule

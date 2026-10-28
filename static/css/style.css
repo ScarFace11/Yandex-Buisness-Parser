@@ -922,6 +922,16 @@ details.advanced-settings>.dbody>.chk{grid-column:span 2}
   transition:background .12s;font-family:inherit;
 }
 .dl-btn:hover{background:var(--cl)}
+/* «Открыть папку» — второй путь к тем же файлам: скачивание не единственный
+   способ их найти, а папку по умолчанию новичок не знает. */
+.dl-open{
+  display:inline-flex;align-items:center;gap:5px;padding:6px 11px;
+  border-radius:6px;border:1px solid var(--bdr);background:var(--card);
+  color:var(--sub);font-weight:700;font-size:12px;font-family:inherit;
+  cursor:pointer;transition:border-color .12s,color .12s;
+}
+.dl-open:hover{border-color:var(--c);color:var(--c)}
+.dl-open:disabled{opacity:.6;cursor:default}
 
 /* ── Reviewed ── */
 .rev-cb{width:15px;height:15px;accent-color:var(--c);cursor:pointer;flex-shrink:0}

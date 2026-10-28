@@ -480,15 +480,18 @@ function pickOutputDir() {
 // 📁 «Открыть» — показать папку результатов в файл-менеджере ОС
 // (Finder на macOS, проводник на Windows). Путь сервер берёт из настроек
 // приложения — открытую папку нельзя подменить запросом.
-function openOutputDir() {
-  const btn = document.getElementById('btn-output-open');
-  if (btn) { btn.disabled = true; btn.innerHTML = UI_ICONS.busy + 'Открываю…'; }
+function openOutputDir(btn) {
+  // Кнопка приходит из разметки (в настройках и рядом со скачиванием):
+  // подпись восстанавливаем ровно та, что была, а не жёстко «Открыть».
+  const b = btn && btn.nodeType ? btn : document.getElementById('btn-output-open');
+  const label = b ? b.innerHTML : '';
+  if (b) { b.disabled = true; b.innerHTML = UI_ICONS.busy + 'Открываю…'; }
   postJSON('/output/open', {})
     .then(d => {
       if (!(d && d.ok)) showToast((d && d.error) || 'Не удалось открыть папку', 'error');
     })
     .catch(() => showToast('Сервер не ответил — папку открыть не удалось', 'error'))
-    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = UI_ICONS.folderOpen + 'Открыть'; } });
+    .finally(() => { if (b) { b.disabled = false; b.innerHTML = label; } });
 }
 
 function saveOutputDir() {

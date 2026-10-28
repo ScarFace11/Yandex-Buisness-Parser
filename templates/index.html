@@ -1252,6 +1252,13 @@
             <div class="dl-row">
               <span class="dl-label"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>Скачать:</span>
               <span id="dl-btns"></span>
+              <!-- Файлы остаются на диске: скачивание не единственный путь.
+                   Новичок искал папку по всему компьютеру — теперь один клик. -->
+              <button type="button" class="dl-open" id="dl-open-folder" onclick="openOutputDir(this)"
+                      title="Открыть папку с результатами в проводнике или Finder"
+                      aria-label="Открыть папку с результатами">
+                <svg class="ico" aria-hidden="true"><use href="#i-folder-open"/></svg>Открыть папку
+              </button>
             </div>
           </div>
         </div><!-- /rs-current -->
