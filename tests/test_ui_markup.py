@@ -2298,3 +2298,43 @@ class TestSectionHierarchy:
         assert 'class="hm-more"' in TEMPLATE and 'class="hm-less"' in TEMPLATE
         assert ".hint-more[open] .hm-less{display:inline}" in STYLE
         assert "hint-more" not in APP_JS, "свёртка должна работать без JS"
+
+
+class TestNarrowWindows:
+    """Узкие окна: шапка и вкладки не должны прятать содержимое.
+
+    На 1280 заголовок ломался на две строки в колонке 142px (разделитель
+    висел в конце первой), на 1024 и 900 «Шаблоны сообщений» уезжали
+    за край полосы вкладок — часть навигации становилась невидимой.
+    """
+
+    def test_title_stays_on_one_line(self):
+        block = STYLE[STYLE.index("header h1{"):]
+        block = block[:block.index("}")]
+        assert "min-width:0" in block
+        assert "white-space:nowrap" in block
+        assert "text-overflow:ellipsis" in block
+
+    def test_source_suffix_is_dropped_before_the_title_wraps(self):
+        # Полное имя (202px) плюс подписи кнопок (1098px) требуют ≥1352px.
+        start = STYLE.index("@media(max-width:1351px){")
+        block = STYLE[start:STYLE.index("\n}", start)]
+        assert ".hdr-sep,.hdr-src{display:none}" in block
+
+    def test_header_labels_hide_before_the_title_is_crushed(self):
+        start = STYLE.index("@media(max-width:1270px){")
+        block = STYLE[start:STYLE.index("\n}", start)]
+        assert ".hdr-right > button .hdr-lbl{display:none}" in block
+
+    def test_narrow_window_hides_low_priority_chrome(self):
+        start = STYLE.index("@media(max-width:1010px){")
+        block = STYLE[start:STYLE.index("\n}", start)]
+        assert "#app-version{display:none}" in block
+        assert "#notify-txt{display:none}" in block
+
+    def test_narrow_tab_bar_shows_all_six_tabs(self):
+        start = STYLE.index("@media(min-width:861px) and (max-width:1023px){")
+        block = STYLE[start:STYLE.index("\n}", start)]
+        assert "grid-template-columns:repeat(3,1fr)" in block
+        assert "overflow:visible" in block, "в сетке не нужна прокрутка полосы"
+        assert len(re.findall(r'id="t-[a-z]+"', TEMPLATE)) == 6

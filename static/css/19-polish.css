@@ -202,6 +202,26 @@ input[type=radio]{accent-color:var(--c)}
   box-shadow:inset 0 -2px 0 var(--c);
   border-radius:8px 8px 0 0;
 }
+/* Окно 861–1120px: шесть подписей не влезали в строку — «Шаблоны
+   сообщений» уезжали за край и были недоступны без прокрутки полосы.
+   Сначала поджимаем отступы (на 1024 строка влезает), ниже — сетка 3×2,
+   чтобы все вкладки были видны сразу, а не прятались за краем. */
+@media(min-width:861px) and (max-width:1120px){
+  .tab-btn{padding:9px 10px}
+}
+@media(min-width:861px) and (max-width:1023px){
+  .tab-bar{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:2px;
+    overflow:visible;
+  }
+  .tab-btn{
+    padding:8px 6px;font-size:12px;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  /* В сетке подчёркивание активной вкладки повисало в середине полосы:
+     активная — цельная плашка, как кнопка, а не «открытая вниз». */
+  .tab-btn.active{border-radius:8px;box-shadow:none}
+}
 
 /* ── Toast: чище появление, тоньше тень ── */
 .toast{
