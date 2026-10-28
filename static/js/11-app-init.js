@@ -969,7 +969,7 @@ function loadHistory() {
       const history = data.history || [];
       const stats = data.stats || {};
       if (!history.length) {
-        el.innerHTML = '<div class="no-data">История пуста</div>';
+        el.innerHTML = '<div class="no-data">История пуста — запущенные поиски появятся здесь</div>';
         return;
       }
       el.innerHTML = `

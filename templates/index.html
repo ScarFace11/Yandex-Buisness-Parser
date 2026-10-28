@@ -546,7 +546,7 @@
                   <input type="checkbox" id="f-continue" onchange="onContinueToggle()">
                   Продолжать после последнего города
                 </label>
-                <div class="hint">Когда выбранные города закончатся, поиск автоматически перейдёт к следующим городам из каталога (по населению) — можно отойти, парсер не остановится</div>
+                <div class="hint">Когда выбранные города закончатся, поиск сам перейдёт к следующим городам из каталога (по населению) — можно отойти, он не остановится</div>
                 <div id="continue-limit-row" style="display:none;margin-top:8px">
                   <label class="lbl" for="f-continue-limit">Сколько городов добавить</label>
                   <div class="stepper" data-min="1" data-max="50" data-step="1">
@@ -1237,7 +1237,7 @@
                 </tr>
               </thead>
               <tbody id="tbl-body">
-                <tr><td colspan="9" class="no-data">Запустите парсер для получения результатов</td></tr>
+                <tr><td colspan="9" class="no-data">Здесь появятся компании после поиска — заполните запрос и город слева</td></tr>
               </tbody>
             </table>
           </div>
@@ -1290,7 +1290,7 @@
                   <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>Применить фильтры заново</button>
                 <span class="history-caret" aria-hidden="true">▾</span>
               </div>
-              <div class="history-hint">Всё, что собрал парсер, кроме отброшенного на сборе (чёрный список, «без сайта», соцсети). Отсюда работает «Фильтрация результата».</div>
+              <div class="history-hint">Всё, что собрал поиск, кроме отброшенного на сборе (чёрный список, «без сайта», соцсети). Отсюда работает «Фильтрация результата».</div>
               <div class="history-list" id="history-raw"><div class="no-data">Загрузка…</div></div>
             </div>
 
@@ -1334,7 +1334,7 @@
       <div class="tab-panel" id="p-stats" role="tabpanel" aria-labelledby="t-stats">
         <div id="stats-daily"></div>
         <div class="stats-body" id="stats-body">
-          <div class="no-data">Запустите поиск, чтобы увидеть понятный обзор результатов.</div>
+          <div class="no-data">Запустите поиск — здесь появится разбор: рейтинги, горячие лиды и полнота карточек.</div>
         </div>
       </div>
 

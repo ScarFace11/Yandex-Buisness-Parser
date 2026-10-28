@@ -2119,3 +2119,35 @@ class TestCollapsedAccordion:
         inner = STYLE[STYLE.index('.acc-inner{\n  transition:padding-top'):]
         inner = inner[:inner.index('}')]
         assert 'cubic-bezier(.4,0,.2,1)' in inner
+
+
+class TestEmptyStates:
+    """Пустой экран говорит, что произошло и что нажать.
+
+    «Запустите парсер для получения результатов» — жаргон без подсказки,
+    «История пуста» — факт без объяснения, а «Измените настройки» не
+    говорило, какие именно и где.
+    """
+
+    def test_results_placeholder_names_the_next_step(self):
+        assert 'Здесь появятся компании после поиска' in TEMPLATE
+        assert 'Запустите парсер' not in TEMPLATE
+
+    def test_filters_point_to_the_section_not_just_settings(self):
+        assert 'снимите часть условий в «Фильтрации результата»' in APP_JS
+        assert 'Измените настройки.' not in APP_JS
+        # Общий плейсхолдер таблицы тоже подсказывает, что менять.
+        assert 'Ничего не найдено — измените запрос, города или фильтры' in APP_JS
+
+    def test_history_explains_what_will_appear(self):
+        assert 'История пуста — запущенные поиски появятся здесь' in APP_JS
+
+    def test_map_and_stats_promise_data_instead_of_stating_absence(self):
+        assert 'Карта пуста: точек пока нет — они появятся после поиска.' in APP_JS
+        assert ('здесь появится разбор: рейтинги, горячие лиды '
+                'и полнота карточек') in TEMPLATE
+
+    def test_parser_jargon_left_the_user_facing_copy(self):
+        for text in (TEMPLATE, APP_JS):
+            assert 'собрал парсер' not in text
+            assert 'парсер не остановится' not in text
