@@ -269,7 +269,18 @@
 [data-theme="dark"] #status-badge.error{background:var(--red-btn);color:var(--on-accent);border-color:var(--err-bdr)}
 [data-theme="dark"] #city-dropdown{background:var(--card);border-color:var(--c);box-shadow:0 10px 32px rgba(0,0,0,.5)}
 [data-theme="dark"] .city-option:hover{background:var(--field)}
-[data-theme="dark"] .soc-tile{border-color:var(--bdr-h);background:var(--card);color:var(--sub)}
+/* :not(.on) обязателен: это правило идёт ПОСЛЕ .soc-tile.on и при равной
+   специфичности гасило выбранную плитку — в тёмной теме клик по соцсети
+   не давал ни заливки, ни обводки. */
+[data-theme="dark"] .soc-tile:not(.on){border-color:var(--bdr-h);background:var(--card);color:var(--sub)}
+/* Выбранная плитка: тот же социальный цвет, что и рамка, но разбавленный
+   фоном карточки — плотная заливка --tile делала бы плитку ярче текста. */
+[data-theme="dark"] .soc-tile.on{
+  border-color:var(--tile,var(--c));
+  background:color-mix(in srgb, var(--tile,var(--c)) 24%, var(--card));
+  color:var(--txt);
+}
+[data-theme="dark"] .soc-tile:not(.on):hover{border-color:var(--tile,var(--bdr-h))}
 [data-theme="dark"] .tech-box{background:var(--tip-bg);border-color:var(--bdr)}
 /* ══════════════════════════════════════════════════════════
    DARK THEME: contrast pass (inputs, ghost buttons, cards)

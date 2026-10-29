@@ -307,7 +307,8 @@ const fns = [
   'setResultsSubTab', 'exportFiltered', 'persistReviewedMarks',
   // Lead score: filterTable mirrors the server-side threshold + ordering,
   // renderPage renders the «Оценка» cell, scoreHTML explains it per record.
-  'minScoreThreshold', 'scoreHTML', 'scoreBreakdown', 'scoreWhyText', 'scoreNum',
+  'minScoreThreshold', 'onMinScoreInput', 'setMinScore',
+  'scoreHTML', 'scoreBreakdown', 'scoreWhyText', 'scoreNum',
   'scoreOwnWebsite', 'scoreRating', 'scoreHasSocials', 'scoreNewBusiness', 'scoreVkChecked',
   // Видимая метка «новая» у названия организации
   'newTagHTML',
@@ -357,6 +358,7 @@ function resetState(rows = ROWS) {
   els['bulk-only-filtered'].checked = false;
   els['bulk-social'].value = 'vk';
   els['f-sort-score'].checked = false;      // таблица — в порядке файла
+  els['f-min-score'].value = 0;             // порог оценки не протекает из предыдущего теста
   els['bulk-order-note'].textContent = '';
   globalThis.sortCol = -1;
   globalThis.sortAsc = true;
@@ -912,6 +914,36 @@ test('filterTable applies the city tab filter', () => {
   globalThis.filterTable();
   assert.equal(globalThis.filteredRows.length, 2);
   assert.equal(els['tbl-count'].textContent, '2 записей');
+});
+
+test('выбор соцсетей в настройках не сужает уже показанную таблицу', () => {
+  // Регресс: клик по плитке «Обязательные соцсети» перефильтровывал таблицу,
+  // и найденные компании без этой сети исчезали прямо во время просмотра.
+  resetState();
+  globalThis.socialMode = 'with_socials';
+  globalThis.requiredSocials = new Set(['vk', 'telegram']);
+  globalThis.filterTable();
+  assert.equal(globalThis.filteredRows.length, 4,
+    'сети — параметр следующего сбора, а не фильтр готовых результатов');
+  globalThis.socialMode = 'without_socials';
+  globalThis.filterTable();
+  assert.equal(globalThis.filteredRows.length, 4, 'режим «без соцсетей» тоже не сужает таблицу');
+  globalThis.socialMode = 'all';
+  globalThis.requiredSocials = new Set();
+});
+
+test('кнопка-пресет порога оценки перефильтровывает таблицу', () => {
+  // Регресс: пресет менял только подпись и число в поле, а строки оставались
+  // прежними — ручной ввод работал, кнопка нет.
+  resetState(ROWS.map((r, i) => ({ ...r, lead_score: i === 0 ? 80 : 10 })));
+  globalThis.filterTable();
+  assert.equal(globalThis.filteredRows.length, 4);
+  globalThis.setMinScore(50);
+  assert.equal(Number(els['f-min-score'].value), 50);
+  assert.equal(globalThis.filteredRows.length, 1, 'остался только лид с оценкой 80');
+  assert.equal(globalThis.filteredRows[0].name, 'А');
+  globalThis.setMinScore(0);
+  assert.equal(globalThis.filteredRows.length, 4, '«Все» возвращает все строки');
 });
 
 test('клик по заголовку «✓» переключает показ: всё → непросмотренные → просмотренные', () => {

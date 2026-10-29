@@ -1099,7 +1099,6 @@ function collapseChainsClient(rows) {
 // бы к общему списку.
 function _applyRowFilters(source) {
   const q = document.getElementById('tbl-search').value.trim().toLocaleLowerCase('ru-RU');
-  const SOCIAL_KEYS = Object.keys(SOCIALS);
   return source.filter(r => {
     // City tab ('' = все города)
     if (activeCity && cityOf(r) !== activeCity) return false;
@@ -1117,14 +1116,9 @@ function _applyRowFilters(source) {
       String(value ?? '').toLocaleLowerCase('ru-RU').includes(q)
     );
     if (q && !searchable) return false;
-    // Social mode filter (form-level toggle)
-    if (socialMode === 'with_socials') {
-      if (!SOCIAL_KEYS.some(k => r[k])) return false;
-    } else if (socialMode === 'without_socials') {
-      if (SOCIAL_KEYS.some(k => r[k])) return false;
-    }
-    // Required socials (AND filter): must have ALL checked socials
-    if (requiredSocials.size > 0 && ![...requiredSocials].every(key => r[key])) return false;
+    // Режим и обязательные соцсети из формы сюда НЕ входят: это параметры
+    // следующего сбора, а не показ уже найденного. Компании без выбранной
+    // сети не должны исчезать из таблицы от клика по плитке в настройках.
     // Social filter buttons in table — OR logic: row must have at least one
     if (activeSocialFilters.size > 0 && ![...activeSocialFilters].some(key => r[key])) return false;
     // Lead-score threshold (mirror of the server-side stage-2 filter)

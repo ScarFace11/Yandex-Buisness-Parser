@@ -489,7 +489,6 @@ function disablePersonalFields() {
   PARSE_PERSONAL.forEach(f => parseFields.delete(f.k));
   saveParseFields();
   renderParseFields();
-  if (allResults.length) filterTable();
   if (typeof updateBasicSummary === 'function') updateBasicSummary();
   if (typeof showToast === 'function') {
     showToast('В отчёт попадут только сведения о компании — персональные поля сняты', 'ok');
@@ -503,7 +502,8 @@ function toggleParseField(k, on) {
   if (k === 'socials' && !on) parseFields.delete('vk_activity');
   saveParseFields();
   renderParseFields();
-  if (allResults.length) filterTable();
+  // Состав полей влияет на следующую выгрузку, а не на строки таблицы:
+  // перефильтрация здесь только сбрасывала сортировку и страницу.
 }
 
 // ═══════════════════════════════════════════
@@ -743,12 +743,9 @@ function setMinScore(v) {
   const el = document.getElementById('f-min-score');
   if (el) el.value = +v || 0;
   onMinScoreInput();
-  applyFiltersAndRender();
-}
-
-function applyFiltersAndRender() {
-  curPage = 1;
-  renderPage();
+  // Порог — фильтр таблицы, как и ручной ввод в поле: без filterTable()
+  // кнопка меняла только подпись, а строки оставались прежними.
+  filterTable();
 }
 
 // Ask the backend which keys are present in .env and paint the badge.

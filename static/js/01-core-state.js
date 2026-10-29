@@ -436,8 +436,8 @@ function setSocialMode(mode) {
     });
     updateSocialFilterHint();
   }
-  // Re-filter table if results exist
-  if (allResults.length) filterTable();
+  // Таблица уже найденных результатов не меняется: режим соцсетей —
+  // параметр СЛЕДУЮЩЕГО поиска, а не фильтр того, что человек уже видит.
 }
 
 // Hint under the social radios: names EXACTLY which organizations survive.
@@ -546,7 +546,7 @@ function initSocialNetCheckboxes() {
     `<label class="soc-tile soc-tile-sm" style="--tile:${SOCIALS[key] || '#9aa'}" onclick="event.preventDefault();toggleRequiredSocial('${key}', this)" title="${escapeHtml(SNAMES[key] || label)}">
        <span class="soc-ico">${label}</span>
        <span class="soc-name">${SNAMES[key] || label}</span>
-       <span class="soc-mark">✓</span>
+       <span class="soc-mark" aria-hidden="true"></span>
        <input type="checkbox" value="${key}" style="display:none" data-soc-key="${key}">
      </label>`
   ).join('');
@@ -560,7 +560,9 @@ function toggleRequiredSocial(key, tileEl) {
   else requiredSocials.delete(key);
   if (tileEl) tileEl.classList.toggle('on', checked);
   updateSocialFilterHint();
-  if (allResults.length) filterTable();
+  // Никакой перефильтрации: сети нужны при следующем сборе, а не для
+  // сужения уже показанной таблицы. Прежний вызов ещё и сбрасывал
+  // сортировку по клику на заголовок — совершенно не к месту.
 }
 
 // ═══════════════════════════════════════════

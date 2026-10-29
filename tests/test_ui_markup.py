@@ -2381,3 +2381,42 @@ class TestNarrowWindows:
         assert "grid-template-columns:repeat(3,1fr)" in block
         assert "overflow:visible" in block, "в сетке не нужна прокрутка полосы"
         assert len(re.findall(r'id="t-[a-z]+"', TEMPLATE)) == 6
+
+
+class TestSocialTiles:
+    """Плитки «Обязательные соцсети»: одна галочка и видимый выбор."""
+
+    @staticmethod
+    def _fn(name: str) -> str:
+        start = APP_JS.index("function " + name + "(")
+        end = APP_JS.find("\nfunction ", start + 1)
+        return APP_JS[start:end if end != -1 else None]
+
+    def test_checkmark_is_drawn_once(self):
+        # Текст «✓» внутри .soc-mark плюс ::after давали ДВЕ галочки
+        # на выбранной плитке — в обеих темах.
+        tile_html = self._fn("initSocialNetCheckboxes")
+        assert '<span class="soc-mark"' in tile_html
+        assert "✓" not in tile_html, "галочку рисует только CSS"
+        assert '.soc-tile.on .soc-mark::after{content:"✓"' in STYLE
+
+    def test_selected_tile_stays_selected_in_dark_theme(self):
+        # Тёмное правило идёт после .soc-tile.on и при равной специфичности
+        # гасило заливку и обводку выбранной плитки.
+        assert '[data-theme="dark"] .soc-tile:not(.on)' in STYLE
+        start = STYLE.index('[data-theme="dark"] .soc-tile.on{')
+        block = STYLE[start:STYLE.index("}", start)]
+        assert "border-color:var(--tile" in block
+        assert "color-mix(in srgb, var(--tile" in block
+        assert STYLE.index('[data-theme="dark"] .soc-tile:not(.on)') < start
+
+    def test_form_social_settings_do_not_refilter_the_table(self):
+        # Выбор сетей — параметр следующего сбора, а не фильтр уже
+        # показанных результатов: плитка не должна сужать таблицу.
+        for fn in ("setSocialMode", "toggleRequiredSocial"):
+            assert "filterTable()" not in self._fn(fn), fn
+        table = (ROOT / "static" / "js" / "04-results-table.js").read_text(encoding="utf-8")
+        start = table.index("function _applyRowFilters(")
+        body = table[start:table.index("\n}", start)]
+        assert "socialMode" not in body, "режим соцсетей не фильтрует готовую таблицу"
+        assert "requiredSocials" not in body, "обязательные сети не фильтруют готовую таблицу"
