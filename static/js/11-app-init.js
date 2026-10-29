@@ -868,6 +868,9 @@ function initTermsGate() {
     if (saved) { delete saved.city; saved.cities = null; }
     applySettings(saved);
   } catch {}
+  // Снимок инструкции до первой строки лога: кнопка «Как это работает»
+  // показывает её заново во время и после поиска.
+  cacheOnboardingHtml();
   // Set initial social mode active state + social net checkboxes
   initSocialNetCheckboxes();
   setSocialMode(socialMode);

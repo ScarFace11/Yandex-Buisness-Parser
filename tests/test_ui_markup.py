@@ -1972,6 +1972,54 @@ class TestOnboardingStepsAreActions:
         assert ".flow-steps{" in STYLE and "flex-direction:column" in STYLE
 
 
+class TestOnboardingCanBeReopened:
+    """«Как это работает» открывается заново после старта поиска.
+
+    Первый экран удаляется при первой строке лога, поэтому нужен способ
+    вернуться к инструкции во время прогона, а не только до него.
+    """
+
+    @staticmethod
+    def _fn(name: str, limit: int = 2000) -> str:
+        start = APP_JS.index("function " + name + "(")
+        return APP_JS[start:start + limit]
+
+    def test_log_toolbar_has_the_button(self):
+        assert 'id="btn-log-howto"' in TEMPLATE
+        assert 'onclick="toggleOnboardingHelp()"' in TEMPLATE
+        assert 'aria-controls="onboarding-screen onboarding-help"' in TEMPLATE
+        assert 'aria-expanded="true"' in TEMPLATE
+        assert "#i-book" in TEMPLATE
+
+    def test_instruction_is_cached_before_the_first_log_line(self):
+        assert "cacheOnboardingHtml();" in APP_JS
+        cache = self._fn("cacheOnboardingHtml", 400)
+        assert "innerHTML" in cache, "без снимка разметки кнопка покажет пустоту"
+        # Первая строка лога убирает первый экран — кнопка обязана узнать об этом.
+        log = self._fn("appendLog", 1400)
+        assert "syncOnboardingButton()" in log
+
+    def test_reopened_card_sits_above_the_log_and_has_a_close(self):
+        body = self._fn("toggleOnboardingHelp")
+        assert "host.parentElement.insertBefore(wrap, host)" in body, \
+            "подсказка должна вставать над журналом, а не внутрь прокрутки"
+        assert "onb-close" in body and "closeOnboardingHelp" in body
+        assert "aria-expanded" in APP_JS
+        # Шаги и ключевые слова закрывают подсказку перед переходом к полю.
+        assert "closeOnboardingHelp();" in self._fn("onboardingKeyword", 400)
+        assert "closeOnboardingHelp();" in self._fn("onboardingStep", 500)
+
+    def test_reopened_card_has_its_own_scroll(self):
+        assert "#onboarding-help{" in STYLE
+        start = STYLE.index("#onboarding-help{")
+        block = STYLE[start:STYLE.index("}", start)]
+        assert "max-height:min(46vh,460px)" in block
+        assert "overflow:auto" in block
+        assert "width:auto" in block, "width:100% + поля дают горизонтальную прокрутку"
+        assert "#onboarding-help .onb-close{" in STYLE
+        assert "#onboarding-help .onb-close .ico{margin:0}" in STYLE
+
+
 class TestTemplateHotReloadInDevMode:
     """Из исходников шаблоны читаются заново — иначе правка UI видна только
     после перезапуска сервера (Jinja кеширует шаблоны при debug=False)."""

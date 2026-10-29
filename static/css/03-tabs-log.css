@@ -24,6 +24,32 @@
 #p-log .onboarding-mark{width:56px;height:56px;font-size:20px;margin-bottom:16px}
 #p-log .onboarding-lead{margin-bottom:24px}
 
+/* Та же инструкция после старта поиска: карточка над журналом со своей
+   прокруткой. Строки лога продолжают идти ниже, подсказка их не перекрывает
+   и не занимает место навсегда — закрывается крестиком или той же кнопкой.
+   width:auto обязателен: базовое .onboarding{width:100%} вместе с полями
+   вылезало за родителя на 24px и давало горизонтальную прокрутку. */
+#onboarding-help{
+  position:relative;width:auto;margin:12px 12px 0;padding:26px 28px;
+  max-height:min(46vh,460px);overflow:auto;box-shadow:none;
+  scrollbar-width:thin;scrollbar-color:var(--bdr) transparent;
+}
+#onboarding-help .onboarding-mark{width:44px;height:44px;margin-bottom:12px}
+#onboarding-help h2{font-size:24px}
+#onboarding-help .onboarding-lead{margin-bottom:18px}
+#onboarding-help .onb-close{
+  position:absolute;top:10px;right:10px;width:28px;height:28px;
+  display:grid;place-items:center;border:1px solid var(--bdr);
+  border-radius:8px;background:var(--card);color:var(--sub);cursor:pointer;
+}
+#onboarding-help .onb-close:hover{border-color:var(--c);color:var(--c);background:var(--cl)}
+#onboarding-help .onb-close .ico{margin:0}
+[data-theme="dark"] #onboarding-help .onb-close{background:var(--panel);border-color:var(--bdr-h)}
+[data-theme="dark"] #onboarding-help .onb-close:hover{background:var(--c-soft);border-color:var(--c);color:var(--c)}
+@media(max-width:860px){
+  #onboarding-help{margin:8px 8px 0;padding:20px 18px;max-height:50vh}
+}
+
 .playwright-notice{
   background:var(--warn-bg);border:1px solid var(--warn-txt);border-radius:var(--r);
   padding:10px 16px;margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:8px;

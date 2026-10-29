@@ -299,6 +299,66 @@ function _logNorm(msg) {
     .toLowerCase();
 }
 function _isDup(msg) { return _logNorm(msg) === _logNorm(_lastLogMsg); }
+
+// ── «Как это работает»: вернуться к инструкции после старта поиска ──
+// Первый экран удаляется при первой строке лога, а сами шаги нужны и во
+// время прогона. Держим снимок разметки до удаления и показываем его над
+// журналом: строки продолжают идти, подсказка ничего не перекрывает.
+let _onboardingHtml = '';
+
+function cacheOnboardingHtml() {
+  const el = document.getElementById('onboarding-screen');
+  if (el && !_onboardingHtml) _onboardingHtml = el.innerHTML;
+}
+
+function onboardingIsOpen() {
+  return !!(document.getElementById('onboarding-screen') || document.getElementById('onboarding-help'));
+}
+
+function syncOnboardingButton() {
+  const btn = document.getElementById('btn-log-howto');
+  if (!btn) return;
+  btn.setAttribute('aria-expanded', onboardingIsOpen() ? 'true' : 'false');
+}
+
+function closeOnboardingHelp() {
+  const help = document.getElementById('onboarding-help');
+  if (help) help.remove();
+  syncOnboardingButton();
+}
+
+function toggleOnboardingHelp() {
+  const initial = document.getElementById('onboarding-screen');
+  if (initial) {
+    // Пустой экран: карточка уже перед глазами — ведём к ней, а не
+    // дублируем ту же инструкцию второй раз.
+    initial.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    return;
+  }
+  if (document.getElementById('onboarding-help')) {
+    closeOnboardingHelp();
+    return;
+  }
+  const host = document.getElementById('log-output');
+  if (!host || !host.parentElement || !_onboardingHtml) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'onboarding-help';
+  wrap.className = 'onboarding';
+  wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-label', 'Как это работает');
+  wrap.innerHTML = _onboardingHtml;
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'onb-close';
+  close.setAttribute('aria-label', 'Свернуть инструкцию');
+  close.title = 'Свернуть инструкцию';
+  close.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-x"/></svg>';
+  close.onclick = closeOnboardingHelp;
+  wrap.appendChild(close);
+  host.parentElement.insertBefore(wrap, host);
+  syncOnboardingButton();
+}
+
 function appendLog(level, msg) {
   const clean = msg.replace(/\x1b\[[0-9;]*m/g, '');
   const S = _ls();
@@ -313,7 +373,7 @@ function appendLog(level, msg) {
   if (ph) ph.remove();
   // Remove the «Как это работает» onboarding card once real log lines arrive.
   const ob = document.getElementById('onboarding-screen');
-  if (ob) ob.remove();
+  if (ob) { ob.remove(); syncOnboardingButton(); }
   // Drop the skeleton loaders — real data has arrived
   const skel = document.getElementById('log-skeleton');
   if (skel) skel.remove();
@@ -606,6 +666,7 @@ function renderLogStats(payload) {
 
 function clearLog() {
   const S = _ls();
+  closeOnboardingHelp();
   logEl.innerHTML = '';
   _lastLogMsg = '';
   // Counters, folds and the stamp memory describe lines that no longer exist.

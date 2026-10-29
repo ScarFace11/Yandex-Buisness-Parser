@@ -1034,6 +1034,10 @@
             <button type="button" class="log-filter"        data-lfilter="errors"    onclick="setLogFilter('errors')"    title="Только ошибки и предупреждения">Ошибки<span class="log-filter-count" id="log-err-count" hidden>0</span></button>
             <button type="button" class="log-filter"        data-lfilter="tech"      onclick="setLogFilter('tech')"      title="API-запросы, координаты, время — технические детали">Технические</button>
           </div>
+          <button class="term-clear" id="btn-log-howto" onclick="toggleOnboardingHelp()"
+                  aria-controls="onboarding-screen onboarding-help" aria-expanded="true"
+                  title="Открыть инструкцию: три шага поиска">
+            <svg class="ico" aria-hidden="true"><use href="#i-book"/></svg>Как это работает</button>
           <button class="term-clear" id="btn-tech-details" onclick="toggleTechDetails()"
                   title="Показать сырые ошибки API и служебную информацию">
             <svg class="ico" aria-hidden="true"><use href="#i-code"/></svg>Детали</button>

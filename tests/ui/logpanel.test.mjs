@@ -112,6 +112,9 @@ globalThis.MAX_LOG_LINES = 1200;
 
 // ── Slice the functions under test ────────────────────────────
 const fns = ['_trimLog', '_isDup', 'appendLog', 'toggleTechDetails', 'clearLog',
+  // clearLog/appendLog синхронизируют кнопку «Как это работает»
+  'cacheOnboardingHtml', 'onboardingIsOpen', 'syncOnboardingButton',
+  'closeOnboardingHelp', 'toggleOnboardingHelp',
   'initCityProgress', 'updateCityProgress', 'renderCityProgress',
   'handleProgress', 'handleCityDone',
   'logStamp', '_elapsedStamp', '_logNorm', '_scrollLogIfFollowing', 'updateTermProgress', '_etaText',

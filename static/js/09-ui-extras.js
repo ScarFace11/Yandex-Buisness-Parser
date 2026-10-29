@@ -1624,6 +1624,8 @@ function _onboardingFocus(id) {
 }
 
 function onboardingStep(n) {
+  // Открытая подсказка не должна закрывать поле, к которому шаг ведёт.
+  closeOnboardingHelp();
   if (n === 1) {
     // «Напишите запрос и город»: открываем раздел и ставим курсор в то поле,
     // которое ещё пустое — сначала запрос, потом город.
@@ -1665,6 +1667,8 @@ function onboardingStep(n) {
 // Явное действие для подсвеченного слова: ведёт именно туда, куда оно
 // обещает, а не в поле «которое ещё пустое», как общий шаг 01.
 function onboardingKeyword(key) {
+  // Слово ведёт к полю или разделу — открытая инструкция больше не нужна.
+  closeOnboardingHelp();
   if (key === 'queries') {
     _onboardingOpenBasic();
     _onboardingFocus('f-queries');
