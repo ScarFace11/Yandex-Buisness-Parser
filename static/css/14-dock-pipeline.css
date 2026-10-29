@@ -275,8 +275,6 @@
    DARK THEME: contrast pass (inputs, ghost buttons, cards)
    Оформление — только через токены из блока [data-theme="dark"] выше.
    ══════════════════════════════════════════════════════════ */
-[data-theme="dark"] .flow-step{background:var(--card);border:1px solid var(--bdr)}
-[data-theme="dark"] .flow-step:hover{border-color:var(--bdr-h)}
 [data-theme="dark"] .hint{color:var(--sub)}
 [data-theme="dark"] .grid-hint .hint-state{color:var(--txt)}
 [data-theme="dark"] .btn-start-search:disabled,[data-theme="dark"] #btn-run:disabled{background:var(--bdr);color:var(--muted)}

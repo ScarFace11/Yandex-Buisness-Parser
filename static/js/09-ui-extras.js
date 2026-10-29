@@ -1603,11 +1603,17 @@ async function selfUpdate() {
 // ═══════════════════════════════════════════
 //  Шаги «Как это работает» — не картинка, а действие
 //
-//  Три шага на пустом экране объясняли, что делать, но были обычными блоками:
-//  тень при наведении обещала клик, которого не было. Теперь каждый шаг
-//  делает то, о чём говорит: ведёт к полю, запускает поиск, открывает
-//  результаты — и объясняет, чего не хватает, если запустить пока нельзя.
+//  Вся карточка шага больше не кнопка: нажимаются только выделенные слова
+//  внутри текста. Каждое ведёт к своему полю или разделу, поэтому подсказка
+//  не притворяется одной большой кнопкой и не уводит не туда.
 // ═══════════════════════════════════════════
+function _onboardingOpenBasic() {
+  const sec = document.getElementById('acc-basic');
+  if (!sec || sec.classList.contains('open')) return;
+  const hdr = sec.querySelector('.acc-hdr');
+  if (hdr) toggleAccordion(hdr);
+}
+
 function _onboardingFocus(id) {
   const el = document.getElementById(id);
   if (!el) return false;
@@ -1624,11 +1630,7 @@ function onboardingStep(n) {
   if (n === 1) {
     // «Напишите запрос и город»: открываем раздел и ставим курсор в то поле,
     // которое ещё пустое — сначала запрос, потом город.
-    const sec = document.getElementById('acc-basic');
-    if (sec && !sec.classList.contains('open')) {
-      const hdr = sec.querySelector('.acc-hdr');
-      if (hdr) toggleAccordion(hdr);
-    }
+    _onboardingOpenBasic();
     const queries = (document.getElementById('f-queries')?.value || '').trim();
     _onboardingFocus(queries ? 'f-city-input' : 'f-queries');
     return;
@@ -1660,6 +1662,27 @@ function onboardingStep(n) {
     if (!hasRows) {
       showToast('Пока пусто — запустите поиск, и результаты появятся здесь', 'info');
     }
+  }
+}
+
+// Явное действие для подсвеченного слова: ведёт именно туда, куда оно
+// обещает, а не в поле «которое ещё пустое», как общий шаг 01.
+function onboardingKeyword(key) {
+  if (key === 'queries') {
+    _onboardingOpenBasic();
+    _onboardingFocus('f-queries');
+    return;
+  }
+  if (key === 'city') {
+    _onboardingOpenBasic();
+    _onboardingFocus('f-city-input');
+    return;
+  }
+  if (key === 'run') { onboardingStep(2); return; }
+  if (key === 'results') { onboardingStep(3); return; }
+  if (key === 'messages') {
+    showTab('templates');
+    showToast('Выберите шаблон и нажмите «Копировать» — текст попадёт в буфер', 'info');
   }
 }
 

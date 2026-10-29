@@ -1072,19 +1072,43 @@
                   <path d="M31 20l3.2 6.4L41 27.6l-6.8 1.2L31 35l-3.2-6.2-6.8-1.2 6.8-1.2z" class="es-star"/>
                 </svg>
               </div>
+              <p class="onboarding-kicker">Три шага</p>
               <h2>Как это работает</h2>
-              <p class="onboarding-lead">Введите запрос в левой панели, чтобы начать сбор данных. Здесь будет отображаться живой лог вашего поиска и статус обработки городов.</p>
-              <!-- Шаги — кнопки, а не картинки: подсказка сразу и делает то,
-                   о чём говорит (ведёт к полю, запускает поиск, открывает
-                   результаты). -->
+              <p class="onboarding-lead">Слева укажите, кого искать и где. Одна кнопка запускает сбор, а здесь видно, что происходит.</p>
+              <!-- Карточка шага — не кнопка: нажимаются только выделенные
+                   слова внутри неё. Так подсказка не выглядит одной большой
+                   кнопкой и сразу показывает, куда именно ведёт действие. -->
               <div class="flow-steps">
-                <button type="button" class="flow-step" onclick="onboardingStep(1)">
-                  <b>Шаг 01</b><strong>Напишите запрос и город</strong><span>Например: «стоматологии» и «Ярославль».</span></button>
-                <button type="button" class="flow-step" onclick="onboardingStep(2)">
-                  <b>Шаг 02</b><strong>Нажмите «Найти компании»</strong><span>Мы соберём компании с Яндекс.Карт.</span></button>
-                <button type="button" class="flow-step" onclick="onboardingStep(3)">
-                  <b>Шаг 03</b><strong>Просмотрите результаты и отправьте сообщения</strong><span>Выберите подходящих клиентов и скопируйте текст сообщения.</span></button>
+                <article class="flow-step">
+                  <span class="flow-num" aria-hidden="true">01</span>
+                  <div class="flow-body">
+                    <h3>Напишите <button type="button" class="flow-key" onclick="onboardingKeyword('queries')"
+                         aria-label="Перейти к полю «Кого будем искать»" title="Перейти к полю «Кого будем искать»">запрос</button>
+                      и выберите <button type="button" class="flow-key" onclick="onboardingKeyword('city')"
+                         aria-label="Перейти к полю «Где ищем»" title="Перейти к полю «Где ищем»">город</button></h3>
+                    <p>Например: «стоматологии» в Ярославле — один город или сразу несколько.</p>
+                  </div>
+                </article>
+                <article class="flow-step">
+                  <span class="flow-num" aria-hidden="true">02</span>
+                  <div class="flow-body">
+                    <h3>Нажмите <button type="button" class="flow-key" onclick="onboardingKeyword('run')"
+                         aria-label="Запустить поиск компаний" title="Запустить поиск компаний">«Найти компании»</button></h3>
+                    <p>Программа соберёт карточки с Яндекс.Карт и оставит только тех, кто подходит под фильтры.</p>
+                  </div>
+                </article>
+                <article class="flow-step">
+                  <span class="flow-num" aria-hidden="true">03</span>
+                  <div class="flow-body">
+                    <h3>Откройте <button type="button" class="flow-key" onclick="onboardingKeyword('results')"
+                         aria-label="Открыть результаты поиска" title="Открыть результаты поиска">результаты</button>
+                      и скопируйте <button type="button" class="flow-key" onclick="onboardingKeyword('messages')"
+                         aria-label="Открыть шаблоны сообщений" title="Открыть шаблоны сообщений">сообщение</button></h3>
+                    <p>Отметьте просмотренных, выберите шаблон и нажмите «Копировать» — текст письма попадёт в буфер.</p>
+                  </div>
+                </article>
               </div>
+              <p class="onboarding-tip">Подсказка: выделенные слова можно нажимать — они сразу ведут к нужному полю или разделу.</p>
             </div>
           </div>
         </div>

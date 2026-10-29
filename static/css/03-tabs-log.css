@@ -21,9 +21,8 @@
    терминальным шрифтом — то есть выглядели как чужая страница. */
 #onboarding-screen,.onboarding,.flow-step{font-family:var(--font-ui)}
 #p-log #onboarding-screen{margin:0;padding:34px 26px}
-#p-log .onboarding-mark{width:52px;height:52px;font-size:20px;margin-bottom:16px}
+#p-log .onboarding-mark{width:56px;height:56px;font-size:20px;margin-bottom:16px}
 #p-log .onboarding-lead{margin-bottom:24px}
-#p-log .flow-step b{font-size:12px}
 
 .playwright-notice{
   background:var(--warn-bg);border:1px solid var(--warn-txt);border-radius:var(--r);
@@ -36,10 +35,10 @@
 
 .onboarding{
   background:var(--card);border:1px solid var(--bdr);
-  border-radius:var(--r);box-shadow:var(--sh);
-  padding:52px 40px;align-items:center;justify-content:center;width:100%;
+  border-radius:var(--r-lg);box-shadow:var(--sh);
+  padding:48px 40px;align-items:center;justify-content:center;width:100%;
 }
-.onboarding-inner{max-width:660px;width:100%;text-align:center;margin:0 auto}
+.onboarding-inner{max-width:900px;width:100%;text-align:center;margin:0 auto}
 .onboarding-mark{
   width:56px;height:56px;margin:0 auto 20px;
   border-radius:var(--r-lg);
@@ -47,33 +46,65 @@
   color:var(--c);display:grid;place-items:center;
   font-size:24px;font-weight:800;
 }
-.onboarding h2{
-  font-size:22px;font-weight:700;color:var(--txt);
-  margin-bottom:8px;letter-spacing:-.02em;line-height:1.25;
+.onboarding-kicker{
+  display:inline-block;margin-bottom:10px;padding:3px 10px;border-radius:var(--pill);
+  background:var(--acc-soft);color:var(--c);
+  font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
 }
-.onboarding-lead{color:var(--sub);font-size:13.5px;margin-bottom:32px;line-height:1.6}
+.onboarding h2{
+  font-size:30px;font-weight:800;color:var(--txt);
+  margin-bottom:10px;letter-spacing:-.025em;line-height:1.2;
+}
+.onboarding-lead{
+  max-width:560px;margin:0 auto 28px;
+  color:var(--sub);font-size:15px;line-height:1.6;
+}
+/* Вертикальные шаги вместо трёх узких колонок: на 1024 и 900px колонки
+   сжимались до 170px, и ключевые слова терялись в тексте. Широкие карточки
+   читаются сверху вниз, как инструкция, и одинаково работают на любой ширине. */
 .flow-steps{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:left;
+  display:flex;flex-direction:column;gap:10px;
+  max-width:780px;margin:0 auto;text-align:left;
 }
 .flow-step{
-  width:100%;padding:16px;border-radius:var(--r-md);
-  border:1px solid var(--bdr);background:var(--card);
-  display:flex;flex-direction:column;gap:6px;
-  /* Шаг — не картинка, а кнопка: подсказка «с чего начать» сразу и делает
-     это (ведёт к полю, запускает поиск, открывает результаты). Раньше это
-     были div'ы с тенью при наведении, но клик по ним не делал ничего. */
-  font-family:inherit;text-align:left;cursor:pointer;
-  transition:border-color .14s,box-shadow .14s,transform .1s;
+  display:grid;grid-template-columns:48px minmax(0,1fr);gap:16px;align-items:start;
+  width:100%;padding:18px 20px;border-radius:var(--r-md);
+  border:1px solid var(--bdr);background:var(--panel);
+  transition:border-color .14s;
 }
-.flow-step:hover{border-color:var(--bdr-h);box-shadow:var(--sh);transform:translateY(-1px)}
-.flow-step:active{transform:translateY(0)}
-.flow-step:focus-visible{outline:2px solid var(--c);outline-offset:2px}
-.flow-step b{
-  font-size:12px;font-weight:800;color:var(--c);
-  letter-spacing:.07em;text-transform:uppercase;
+.flow-step:hover{border-color:var(--bdr-h)}
+.flow-num{
+  width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
+  background:var(--card);border:1px solid var(--bdr);
+  color:var(--c);font-size:16px;font-weight:800;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;
 }
-.flow-step strong{font-size:13.5px;font-weight:700;color:var(--txt);line-height:1.3}
-.flow-step span{font-size:12px;color:var(--sub);line-height:1.5}
+.flow-body{min-width:0}
+.flow-step h3{
+  margin:0 0 4px;font-size:16.5px;font-weight:700;color:var(--txt);
+  line-height:1.45;letter-spacing:-.01em;
+}
+.flow-step p{margin:0;font-size:13.5px;color:var(--sub);line-height:1.55}
+/* Ключевое слово — маленькая кнопка внутри фразы, а не вся карточка:
+   клик ведёт к конкретному полю или разделу. Рамка и подчёркивание
+   показывают, что это действие, а не просто выделенный текст. */
+.flow-key{
+  display:inline-block;padding:2px 7px;margin:0 1px;
+  border:1px solid var(--bdr);border-radius:6px;
+  background:var(--card);color:var(--c);
+  font:inherit;font-weight:800;line-height:1.35;white-space:nowrap;
+  cursor:pointer;text-decoration:underline;text-decoration-style:dotted;
+  text-underline-offset:3px;
+  transition:background .12s,border-color .12s,color .12s,box-shadow .12s;
+}
+.flow-key:hover{background:var(--acc-soft);border-color:var(--c);text-decoration-style:solid}
+.flow-key:focus-visible{outline:2px solid var(--c);outline-offset:2px;background:var(--acc-soft)}
+.flow-key:active{transform:translateY(1px)}
+.onboarding-tip{
+  max-width:780px;margin:16px auto 0;padding:10px 14px;
+  border-radius:var(--r-sm);background:var(--acc-soft);
+  color:var(--sub);font-size:12.5px;line-height:1.5;
+}
 
 /* ── Tab bar ── */
 .tab-bar{

@@ -65,7 +65,8 @@ globalThis.allResults = [];
 globalThis.toggleAccordion = () => { globalThis.__accordionToggled = true; };
 globalThis.showTab = name => { globalThis.__tab = name; };
 
-(0, eval)(grab('_onboardingFocus') + '\n' + grab('onboardingStep'));
+(0, eval)(grab('_onboardingFocus') + '\n' + grab('_onboardingOpenBasic')
+  + '\n' + grab('onboardingStep') + '\n' + grab('onboardingKeyword'));
 
 function reset({ queries = 'кафе', cities = [], runActive = false, results = [] } = {}) {
   els['f-queries'].value = queries;
@@ -150,4 +151,34 @@ test('шаг 3 открывает таблицу и говорит, если п�
   globalThis.onboardingStep(3);
   assert.equal(globalThis.__tab, 'table');
   assert.equal(globalThis.__toasts.length, 0, 'есть записи — подсказка не нужна');
+});
+
+// ── Ключевые слова ведут именно туда, куда обещают ────────────
+test('слово «запрос» ведёт к полю запроса даже при заполненном городе', () => {
+  reset({ queries: 'кафе' });
+  globalThis.onboardingKeyword('queries');
+  assert.equal(els['f-queries']._focused, true);
+  assert.equal(els['f-city-input']._focused, false);
+});
+
+test('слово «город» ведёт к полю города', () => {
+  reset({ queries: 'кафе' });
+  globalThis.onboardingKeyword('city');
+  assert.equal(els['f-city-input']._focused, true);
+  assert.equal(els['f-queries']._focused, false);
+});
+
+test('слово «Найти компании» запускает тот же поиск', () => {
+  reset({ queries: 'кафе', cities: ['Уфа'] });
+  globalThis.onboardingKeyword('run');
+  assert.equal(els['btn-run']._clicked, 1);
+});
+
+test('слово «сообщение» открывает шаблоны и подсказывает кнопку', () => {
+  reset();
+  globalThis.onboardingKeyword('messages');
+  assert.equal(globalThis.__tab, 'templates');
+  assert.equal(globalThis.__toasts.length, 1);
+  assert.match(globalThis.__toasts[0][0], /Копировать/);
+  assert.equal(globalThis.__toasts[0][1], 'info');
 });

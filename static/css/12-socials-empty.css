@@ -64,7 +64,6 @@
 .es-lens{fill:var(--card);stroke:var(--c);stroke-width:2.6}
 .es-lens-handle{stroke:var(--c);stroke-width:3;stroke-linecap:round}
 .es-star{fill:var(--warn-txt)}
-.onboarding h2{font-size:24px}
 
 /* ── Log skeleton (shown on run start) ── */
 .log-skeleton{padding:6px 0}

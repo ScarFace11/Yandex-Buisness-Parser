@@ -1909,21 +1909,33 @@ class TestAccessibility:
 
 
 class TestOnboardingStepsAreActions:
-    """Шаги «Как это работает» — кнопки, а не картинки.
+    """Шаги «Как это работает» — статичные карточки с кликабельными словами.
 
-    У блока-подсказки была тень при наведении, обещавшая клик, которого не
-    было: шаги оставались обычными div'ами. Теперь каждый шаг делает то, о чём
-    говорит (ведёт к полю, запускает поиск, открывает результаты).
+    Раньше вся карточка была одной большой кнопкой. Теперь нажимаются только
+    выделенные ключевые слова: каждое ведёт к своему полю или разделу, и
+    пользователь видит, куда именно попадёт.
     """
 
-    def test_steps_are_buttons(self):
-        how = TEMPLATE[TEMPLATE.index('class="flow-steps"'):][:1200]
+    def _how(self):
+        start = TEMPLATE.index('class="flow-steps"')
+        return TEMPLATE[start:TEMPLATE.index('onboarding-tip', start)]
+
+    def test_steps_are_cards_not_buttons(self):
+        how = self._how()
         assert how.count('class="flow-step"') == 3
-        assert how.count('<button type="button" class="flow-step"') == 3, \
-            "шаг должен быть кнопкой — иначе он не кликается с клавиатуры"
-        assert '<div class="flow-step"' not in how, "вернулся div вместо кнопки"
-        for n in (1, 2, 3):
-            assert f'onclick="onboardingStep({n})"' in how, n
+        assert how.count('<article class="flow-step"') == 3, \
+            "шаг — карточка, кликается только ключевое слово внутри"
+        assert '<button type="button" class="flow-step"' not in how, \
+            "вся панель снова стала кнопкой"
+        assert 'onclick="onboardingStep' not in how
+
+    def test_keywords_are_interactive_and_lead_to_exact_places(self):
+        how = self._how()
+        assert how.count('class="flow-key"') == 5
+        for key in ("queries", "city", "run", "results", "messages"):
+            assert f"onboardingKeyword('{key}')" in how, key
+        # У каждой кнопки-слова есть понятное имя для скринридера.
+        assert how.count('aria-label="') >= 5
 
     def test_handler_says_what_is_missing_instead_of_failing_silently(self):
         start = APP_JS.index("function onboardingStep(")
@@ -1933,6 +1945,13 @@ class TestOnboardingStepsAreActions:
         assert "btn-run" in body, "шаг 2 обязан запускать тот же поиск, что и кнопка"
         assert "showTab('table')" in body, "шаг 3 ведёт к результатам"
 
+    def test_keyword_handler_goes_to_the_exact_field(self):
+        start = APP_JS.index("function onboardingKeyword(")
+        body = APP_JS[start:start + 900]
+        assert "'f-queries'" in body and "'f-city-input'" in body
+        assert "showTab('templates')" in body, "слово «сообщение» ведёт к шаблонам"
+        assert "onboardingStep(2)" in body and "onboardingStep(3)" in body
+
     def test_focus_lands_after_the_click(self):
         """Фокус ставится после клика: иначе его съедает нажатая кнопка."""
         start = APP_JS.index("function _onboardingFocus(")
@@ -1940,15 +1959,17 @@ class TestOnboardingStepsAreActions:
         assert "setTimeout(" in body
         assert "el.focus({ preventScroll: true })" in body
 
-    def test_steps_look_clickable(self):
-        # Правило ищется по началу объявления: `.flow-step{` встречается ещё
-        # и в составном селекторе шрифтов выше по файлу.
-        start = STYLE.index(".flow-step{\n  width:100%;padding:16px")
+    def test_cards_are_static_but_keywords_look_clickable(self):
+        start = STYLE.index(".flow-step{\n  display:grid")
         block = STYLE[start:start + 500]
-        assert "cursor:pointer" in block
-        assert "font-family:inherit" in block
-        assert "text-align:left" in block, "текст кнопки не должен центрироваться"
-        assert ".flow-step:focus-visible" in STYLE
+        assert "cursor:pointer" not in block, "карточка не должна обещать клик"
+        assert "background:var(--panel)" in block
+        key = STYLE.index(".flow-key{")
+        key_block = STYLE[key:key + 500]
+        assert "cursor:pointer" in key_block
+        assert "background:var(--card)" in key_block
+        assert ".flow-key:focus-visible" in STYLE
+        assert ".flow-steps{" in STYLE and "flex-direction:column" in STYLE
 
 
 class TestTemplateHotReloadInDevMode:
