@@ -206,13 +206,13 @@ def fetch_html(url: str, session=None, biz_id: str = "") -> str:
         state.warn(f"Карточка не открылась в браузере ({state.READ_FAILURE_LABELS[reason]}) "
                    "— детали этой организации пропущены.")
         # Счётчик потерь: запись всё равно попадёт в выгрузку, и без этой цифры её «пустые контакты» выглядят как «так и есть».
-        state.inc_read_failure(reason)
+        state.inc_read_failure(reason, key=biz_id or url)
         return ""
 
     lower = text[:4000].lower()
     if any(m in lower for m in _ANTIBOT_MARKERS):
         state.warn("Яндекс вернул anti-bot страницу — детали этой карточки пропущены.")
-        state.inc_read_failure("antibot")
+        state.inc_read_failure("antibot", key=biz_id or url)
         return ""
 
     if biz_id:

@@ -143,6 +143,22 @@ class TestResultsView:
         # view=all merges both stages and de-duplicates by card URL
         assert client.get("/results-view?view=all").get_json()["count"] == 4
 
+    def test_processed_formats_of_one_result_are_counted_once(self, client):
+        """Excel и JSON одного результата — не две разные записи.
+
+        Этап 2 пишет оба формата сразу; «Обработанные» читали всё и
+        показывали 156 записей как 312.
+        """
+        from yandex_maps_parser.exporters import save_json
+
+        _make_raw(client, "raw_a.xlsx", SAMPLE)
+        save_excel(SAMPLE, str(client.dirs["proc"] / "excel" / "кафе_уфа_filtered.xlsx"))
+        save_json(SAMPLE, str(client.dirs["proc"] / "json" / "кафе_уфа_filtered.json"),
+                  append=False)
+        d = client.get("/results-view?view=processed").get_json()
+        assert d["count"] == 4
+        assert len({r["yandex_maps_url"] for r in d["records"]}) == 4
+
     def test_processed_view_reads_csv_too(self, client):
         """«Формат результата: CSV» — processed/csv/*_filtered.csv читается так же,
         как excel/json, и попадает и в «Обработанные», и в «Все»."""

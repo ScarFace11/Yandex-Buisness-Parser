@@ -24,14 +24,18 @@ RECORDS = [
 def _xlsx_headers(records, columns, extra=()):
     state.EXCEL_COLUMNS = columns
     try:
-        path = os.path.join(tempfile.mkdtemp(), "t.xlsx")
-        save_excel(records, path, extra_fields=extra)
-        wb = openpyxl.load_workbook(path)
-        try:
-            ws = wb.active
-            return [c.value for c in ws[1]], list(ws.iter_rows(values_only=True))[1]
-        finally:
-            wb.close()
+        # TemporaryDirectory сам убирает папку: mkdtemp() без контекста оставлял
+        # в корне проекта десятки папок tmpXXXXXXXX с одним t.xlsx внутри, когда
+        # системная %TEMP% недоступна.
+        with tempfile.TemporaryDirectory(prefix="yp-xlsx-") as tmp:
+            path = os.path.join(tmp, "t.xlsx")
+            save_excel(records, path, extra_fields=extra)
+            wb = openpyxl.load_workbook(path)
+            try:
+                ws = wb.active
+                return [c.value for c in ws[1]], list(ws.iter_rows(values_only=True))[1]
+            finally:
+                wb.close()
     finally:
         state.EXCEL_COLUMNS = None
 
@@ -144,14 +148,14 @@ def test_coordinates_round_trip_from_xlsx_for_the_map():
     """Сохранённые координаты читаются обратно теми же ключами (lat/lon),
     которых ждёт static/js/06-map-stats.js."""
     from yandex_maps_parser.exporters import _records_from_xlsx
-
-    path = os.path.join(tempfile.mkdtemp(), "geo.xlsx")
     state.EXCEL_COLUMNS = {"name"}
     try:
-        save_excel([dict(RECORDS[0], lat="43.313", lon="45.696")], path)
+        with tempfile.TemporaryDirectory(prefix="yp-xlsx-") as tmp:
+            path = os.path.join(tmp, "geo.xlsx")
+            save_excel([dict(RECORDS[0], lat="43.313", lon="45.696")], path)
+            recs = _records_from_xlsx(path)
     finally:
         state.EXCEL_COLUMNS = None
-    recs = _records_from_xlsx(path)
     assert len(recs) == 1
     assert abs(float(recs[0]["lat"]) - 43.313) < 1e-6
     assert abs(float(recs[0]["lon"]) - 45.696) < 1e-6

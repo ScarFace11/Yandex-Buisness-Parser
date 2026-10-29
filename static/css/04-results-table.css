@@ -329,3 +329,8 @@
 }
 .export-sel-btn:hover{background:var(--cl)}
 
+
+/* Протягивание отметок «просмотрено»: пока зажата галочка, выделять текст
+   в таблице не нужно — иначе протяжка превращается в выделение абзаца. */
+body.rev-dragging, body.rev-dragging *{user-select:none}
+body.rev-dragging #tbl-body tr{cursor:pointer}

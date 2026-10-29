@@ -62,8 +62,10 @@ def _print_read_failure_stats() -> None:
         return
     state.warn(f"    📄 не прочитано карточек: {delta['total']} "
                f"({state.read_failure_text(delta)})")
+    # Расшифровка — по тем же delta-счётчикам, что и total: полный итог давал
+    # «total=85 (карточка не открылась 205)» — две несовместимые цифры рядом.
     state.syslog(f"  read_failures: total={delta['total']} "
-                 f"({state.read_failure_text(state.read_failure_summary())})")
+                 f"({state.read_failure_text(delta)})")
 
 
 def _print_prefilter_stats() -> None:

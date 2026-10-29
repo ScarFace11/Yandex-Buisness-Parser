@@ -54,6 +54,91 @@ function toggleReviewed(url, cb) {
   }).catch(() => {});
   markReviewedDirty();
   updateBulkStats();
+  scheduleReviewBadges();
+}
+
+// ── Прогресс городов: одиночная галочка ───────────────────────
+// Цифра «✓5/42» живёт в полосах городов и во вкладках городов. Раньше её
+// обновлял только refreshReviewedUI (после массовых действий), а чекбокс
+// строки менял отметку молча — счётчик у города отставал от таблицы.
+// Полную перерисовку здесь делать нельзя: сбросилась бы прокрутка.
+let _reviewBadgeTimer = null;
+
+function syncReviewBadges() {
+  if (typeof document === 'undefined') return;
+  const groups = document.querySelectorAll('#results-table tr.city-group[data-city]');
+  for (const tr of groups) {
+    const city = tr.dataset.city || '';
+    const rows = (allResults || []).filter(r => cityOf(r) === city);
+    if (!rows.length) continue;
+    const done = rows.filter(r => isReviewed(r)).length;
+    const el = tr.querySelector('.city-group-done');
+    if (!el) continue;
+    el.textContent = `✓${done}/${rows.length}`;
+    el.title = `Просмотрено ${done} из ${rows.length} · осталось ${rows.length - done}`;
+  }
+  if (typeof renderCityTabs === 'function') renderCityTabs(_lastCities);
+}
+
+// Протягивание мышью прилетает по строке на каждое движение — обновляем
+// счётчики один раз в 30 мс, а не на каждый пиксель.
+function scheduleReviewBadges() {
+  if (typeof setTimeout !== 'function') { syncReviewBadges(); return; }
+  if (_reviewBadgeTimer) return;
+  _reviewBadgeTimer = setTimeout(() => {
+    _reviewBadgeTimer = null;
+    syncReviewBadges();
+  }, 30);
+}
+
+// ── Отметка протягиванием мыши ───────────────────────────────
+// Зажали галочку и ведёте курсор по таблице — каждая встречная строка
+// получает то же состояние (отметить или снять). Обычный клик по одной
+// строке работает как раньше: стартовую строку обрабатывает сам клик.
+let _reviewDrag = null;
+
+function _dragReviewRowCb(tr) {
+  return tr && tr.querySelector ? tr.querySelector('input.rev-cb') : null;
+}
+
+function _applyReviewDrag(cb, force) {
+  if (!_reviewDrag || !cb || cb.disabled) return;
+  // Стартовую строку обрабатывает клик, но только если протяжка не началась.
+  // При первом же переходе на другую строку она тоже входит в диапазон.
+  if (!force && cb === _reviewDrag.start) return;
+  if (cb.checked === _reviewDrag.mark) return;
+  cb.checked = _reviewDrag.mark;
+  toggleReviewed(cb.dataset.reviewUrl, cb);
+}
+
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('pointerdown', e => {
+    const cb = e.target && e.target.closest ? e.target.closest('input.rev-cb') : null;
+    if (!cb || cb.disabled || (e.button !== undefined && e.button !== 0)) return;
+    _reviewDrag = { mark: !cb.checked, start: cb, moved: false };
+    if (document.body) document.body.classList.add('rev-dragging');
+  });
+  document.addEventListener('pointerover', e => {
+    if (!_reviewDrag) return;
+    if (e.buttons === 0) { endReviewDrag(); return; }   // отпустили вне окна
+    const tr = e.target && e.target.closest ? e.target.closest('#tbl-body tr') : null;
+    if (!tr) return;
+    const cb = _dragReviewRowCb(tr);
+    if (cb && cb !== _reviewDrag.start && !_reviewDrag.moved) {
+      _reviewDrag.moved = true;
+      _applyReviewDrag(_reviewDrag.start, true);
+    }
+    _applyReviewDrag(cb);
+  });
+  const endReviewDrag = () => {
+    _reviewDrag = null;
+    if (document.body) document.body.classList.remove('rev-dragging');
+  };
+  document.addEventListener('pointerup', endReviewDrag);
+  document.addEventListener('pointercancel', endReviewDrag);
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('blur', endReviewDrag);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════

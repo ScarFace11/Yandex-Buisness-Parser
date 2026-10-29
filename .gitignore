@@ -79,9 +79,16 @@ icon-preview.png
 icon-final.png
 spheres.json
 # Временные папки прогонов, когда системная %TEMP% недоступна: pytest кладёт
-# туда basetemp, а профиль Chromium для CDP — mkdtemp с префиксом yp-cdp-
+# туда basetemp, а профиль Chromium для CDP — mkdtemp с префиксом yp-cdp-.
+# Голые tmpXXXXXXXX (mkdtemp без префикса) в проекте появляться не должны:
+# тесты временных файлов обязаны брать TemporaryDirectory.
 pytest-of-*/
 yp-cdp-*/
+yp-xlsx-*/
+# Голые tmpXXXXXXXX в корне — только артефакты старых тестов
+/tmp*/
+# Obsidian: личные настройки хранилища (раскладка вкладок, тема) — не часть проекта
+docs/obsidian/.obsidian/
 # Coverage
 .coverage
 .coverage.*

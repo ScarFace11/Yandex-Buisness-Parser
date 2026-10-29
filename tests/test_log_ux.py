@@ -63,7 +63,26 @@ class TestBrowserSearchFailure:
         assert browser_search._reviews("") == ""
 
 
-# ── 3. Stats labels in Russian ────────────────────────────────
+# ── 3. Счётчик непрочитанных карточек ───────────────────────
+
+class TestReadFailures:
+    def test_one_card_failed_in_two_queries_is_counted_once(self):
+        """Два запроса идут одновременно и могут дважды упереться в одну
+        карточку; «не прочитано» обязано считать карточки, а не попытки."""
+        state.reset_read_failures()
+        try:
+            state.inc_read_failure("no_page", key="111")
+            state.inc_read_failure("no_page", key="111")
+            state.inc_read_failure("antibot", key="222")
+            data = state.read_failure_summary()
+            assert data["total"] == 2
+            assert data["no_page"] == 1
+            assert data["antibot"] == 1
+        finally:
+            state.reset_read_failures()
+
+
+# ── 4. Stats labels in Russian ────────────────────────────────
 
 class TestStatsLabels:
     def test_kinds_are_named_in_russian(self, monkeypatch):

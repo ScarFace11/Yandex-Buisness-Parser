@@ -316,6 +316,15 @@ def run() -> None:
     try:
         if pending_queries:
             worker_count = min(state.SEARCH_WORKERS, len(pending_queries))
+            # Два запроса идут одновременно — так и задумано. Но в журнале их
+            # «начало поиска» появляется подряд, а готовые записи приходят в
+            # порядке завершения, и это выглядело как путаница: «начали кафе,
+            # а закончили кофейней». Одна строка объясняет правило до старта.
+            if worker_count > 1:
+                state.info("  🔀 Запросы идут одновременно: "
+                           + ", ".join(pending_queries)
+                           + " — завершаются по мере готовности, "
+                             "порядок строк в журнале не важен")
             with ThreadPoolExecutor(max_workers=worker_count) as pool:
                 futures = {pool.submit(run_query, query): query for query in pending_queries}
                 for future in as_completed(futures):
@@ -477,7 +486,7 @@ def run() -> None:
             _skipped_ctx = f" · предфильтр сбора отбросил {_skipped_total}"
     except Exception:
         pass
-    state.ok(f"  Найдено записей: {len(all_results)}{_found_ctx}{_skipped_ctx}")
+    state.ok(f"  Найдено в этом городе: {len(all_results)}{_found_ctx}{_skipped_ctx}")
     if full_records:
         # Paths already announced as «📁 город: файл» are not repeated here — each output path shows up once per run. _shown_file_paths only exists in the web runner; the plain run() still prints everything.
         shown = globals().get("_shown_file_paths") or set()

@@ -27,6 +27,11 @@ except Exception:
     RESULTS_DIR = "output"
 REVIEWED_FILE = os.path.join(OUTPUT_DIR, "_reviewed.json")
 
+# «Просмотрено» переписывается целиком на каждую отметку, а протягивание
+# мышью шлёт несколько POST подряд. Без замка два потока писали один и тот же
+# .tmp, и os.replace падал с 500 (живой случай при протяжке по таблице).
+_REVIEWED_LOCK = threading.RLock()
+
 bp = Blueprint("api", __name__)
 
 
@@ -79,29 +84,30 @@ def _save_reviewed(data: dict):
     следующий разбор читал его как пустой словарь и перезаписывал. Поэтому
     пишем в .tmp и подменяем одним os.replace, а прошлую версию держим в .bak.
     """
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    tmp = REVIEWED_FILE + ".tmp"
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
-            f.flush()
-            os.fsync(f.fileno())
-        if os.path.exists(REVIEWED_FILE):
+    with _REVIEWED_LOCK:
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        tmp = REVIEWED_FILE + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
+                f.flush()
+                os.fsync(f.fileno())
+            if os.path.exists(REVIEWED_FILE):
+                try:
+                    os.replace(REVIEWED_FILE, REVIEWED_FILE + ".bak")
+                except OSError:
+                    pass
+            os.replace(tmp, REVIEWED_FILE)
+        except Exception:
             try:
-                os.replace(REVIEWED_FILE, REVIEWED_FILE + ".bak")
+                os.remove(tmp)
             except OSError:
                 pass
-        os.replace(tmp, REVIEWED_FILE)
-    except Exception:
+            raise
         try:
-            os.remove(tmp)
-        except OSError:
+            _backup_reviewed()
+        except Exception:
             pass
-        raise
-    try:
-        _backup_reviewed()
-    except Exception:
-        pass
 
 
 def _mark(key: str, ts: float | None = None) -> dict:
@@ -232,12 +238,13 @@ def set_reviewed():
     state_val = bool(data.get("reviewed", False))
     if not url:
         return jsonify({"error": "url required"}), 400
-    reviewed = _load_reviewed()
-    _set_mark(reviewed, url, state_val)
-    try:
-        _save_reviewed(reviewed)
-    except Exception as exc:
-        return _fail(exc)          # клиент ждёт JSON, а не HTML-страницу ошибки
+    with _REVIEWED_LOCK:
+        reviewed = _load_reviewed()
+        _set_mark(reviewed, url, state_val)
+        try:
+            _save_reviewed(reviewed)
+        except Exception as exc:
+            return _fail(exc)      # клиент ждёт JSON, а не HTML-страницу ошибки
     return jsonify({"ok": True})
 
 
@@ -291,16 +298,16 @@ def data_import():
         if not isinstance(incoming, dict):
             return jsonify({"ok": False,
                             "error": "_reviewed.json в архиве повреждён"}), 400
-        reviewed = _load_reviewed()
-        for key, value in incoming.items():
-            k = str(key or "").strip()
-            if not k or reviewed.get(k):
-                continue          # уже есть — не трогаем (и дату не сдвигаем)
-            reviewed[k] = value
-            imported["marks"] += 1
-        _save_reviewed(reviewed)
         try:
-            _save_reviewed(reviewed)
+            with _REVIEWED_LOCK:
+                reviewed = _load_reviewed()
+                for key, value in incoming.items():
+                    k = str(key or "").strip()
+                    if not k or reviewed.get(k):
+                        continue      # уже есть — не трогаем (и дату не сдвигаем)
+                    reviewed[k] = value
+                    imported["marks"] += 1
+                _save_reviewed(reviewed)
         except Exception as exc:
             return _fail(exc)
 
@@ -1022,11 +1029,20 @@ def _view_files(view: str, scope: str = "current") -> list[str]:
     if view in ("processed", "all"):
         proc_d = _processed_dir()
         if os.path.isdir(proc_d):
-            for sub in ("json", "excel", "csv"):
+            # Один результат этап 2 пишет сразу в несколько форматов (json +
+            # excel + csv). Раньше «Обработанные» читали их все, и каждая
+            # организация считалась дважды: 156 записей показывались как 312.
+            # На результат берём один файл — json (полный), иначе excel, иначе
+            # csv. Файлы с разными именами (повторная фильтрация) остаются оба.
+            by_stem: dict[str, str] = {}
+            for sub in ("csv", "excel", "json"):
                 sd = os.path.join(proc_d, sub)
-                if os.path.isdir(sd):
-                    out.extend(os.path.join(sd, f) for f in sorted(os.listdir(sd))
-                               if _is_result_file(f))
+                if not os.path.isdir(sd):
+                    continue
+                for f in sorted(os.listdir(sd)):
+                    if _is_result_file(f):
+                        by_stem[os.path.splitext(f)[0]] = os.path.join(sd, f)
+            out.extend(by_stem[k] for k in sorted(by_stem))
     if scope == "all":
         return out
     since = float(_current_search().get("started_at") or 0)
@@ -1473,6 +1489,13 @@ def _sort_like_table(recs: list, sort_col, sort_asc: bool = True) -> list:
     """Копия записей в том порядке, в каком их показывает таблица."""
     if sort_col == 6:
         return sorted(recs, key=_lead_score_num, reverse=not sort_asc)
+    if sort_col == 9:
+        # «Соцсети»: у кого сетей больше. Сервер повторяет клиентскую
+        # сортировку, иначе «Массовый обход» шёл бы не в том порядке, что
+        # видит пользователь.
+        def _social_count(r: dict) -> int:
+            return sum(1 for s in SOCIAL_KEYS if _safe_http_url(r.get(s)))
+        return sorted(recs, key=_social_count, reverse=not sort_asc)
     key = _VIEW_SORT_KEYS.get(sort_col)
     if not key:
         return list(recs)          # колонка не выбрана — порядок файла
@@ -1798,20 +1821,20 @@ def reviewed_batch():
     if len(raw_keys) > 500:
         return jsonify({"error": "too many keys (max 500)"}), 400
     state_val = bool(data.get("reviewed", True))
-    reviewed = _load_reviewed()
-    changed = 0
-    for k in raw_keys:
-        k = str(k or "").strip()
-        if not k:
-            continue
-        if _set_mark(reviewed, k, state_val):
-            changed += 1
-    if changed:
-        _save_reviewed(reviewed)
-        try:
-            _save_reviewed(reviewed)
-        except Exception as exc:
-            return _fail(exc)
+    with _REVIEWED_LOCK:
+        reviewed = _load_reviewed()
+        changed = 0
+        for k in raw_keys:
+            k = str(k or "").strip()
+            if not k:
+                continue
+            if _set_mark(reviewed, k, state_val):
+                changed += 1
+        if changed:
+            try:
+                _save_reviewed(reviewed)
+            except Exception as exc:
+                return _fail(exc)
     return jsonify({"ok": True, "changed": changed})
 
 

@@ -41,6 +41,31 @@ def _rec(name):
             "yandex_maps_url": "https://ya.ru/" + name, "address": "ул. 1"}
 
 
+# ── Параллельные отметки ─────────────────────────────────────
+
+class TestConcurrentMarks:
+    def test_parallel_marks_save_without_500(self, client):
+        """Протягивание мышью шлёт отметки подряд. """
+        from concurrent.futures import ThreadPoolExecutor
+        from routes import api as api_mod
+
+        app = client.application
+
+        def mark(i):
+            c = app.test_client()
+            return c.post("/reviewed",
+                          json={"url": f"https://ya.ru/{i}", "reviewed": True}).status_code
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            codes = list(pool.map(mark, range(24)))
+
+        assert codes == [200] * 24, "ни один POST не должен падать с 500"
+        saved = api_mod._load_reviewed()
+        assert len(saved) == 24, "ни одна отметка не потерялась"
+        assert not list((client.dirs["root"]).glob("_reviewed.json.tmp"))
+        assert json.loads((client.dirs["root"] / "_reviewed.json").read_text(encoding="utf-8"))
+
+
 # ── Автокопия отметок ─────────────────────────────────────────
 
 class TestBackup:

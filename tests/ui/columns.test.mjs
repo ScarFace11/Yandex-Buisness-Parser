@@ -170,11 +170,12 @@ globalThis.localStorage = {
 }).join('\n') + '\n' + grabLet('colOrder') + '\n' + grabLet('hiddenCols')
   // «Рейтинг» сортируется своим циклом — метка в заголовке хранится здесь.
   + '\n' + grabLet('_ratingSortLabel') + '\n'
-  + grabConst('RATING_SORT_CYCLE'));
+  + grabConst('RATING_SORT_CYCLE') + '\n'
+  + grabConst('SOCIALS'));
 
 const fns = ['normalizeColOrder', 'saveColOrder', 'loadColOrder', 'resetColOrder',
   'applyColOrder', 'applyColClasses', 'moveCol', 'renderColDropdown',
-  'sortTableByKey', 'sortTable', 'resetSortHeaders', '_thByCol',
+  'sortTableByKey', 'sortTable', 'resetSortHeaders', '_thByCol', 'socialsCount',
   // Цикл «Рейтинг»: оценка ↓ → оценка ↑ → отзывы ↓ → отзывы ↑
   'cycleRatingSort', '_sortRatingRows', '_numSortVal', '_clearRatingSortLabel',
   '_stampMissingColIds'];
@@ -269,14 +270,39 @@ test('a hidden column is hidden by class on its own cells, not by position', () 
 test('sorting maps the column key to the legacy numeric index', () => {
   assert.deepEqual(globalThis.COL_SORT_INDEX,
     { rev: null, num: null, name: 2, category: 3, address: 4, phone: null,
-      score: 6, socials: null, rating: 7 });
-  // «Соцсети» и «Просмотрено» не сортируются; телефон убран из сортировки:
-  // в ячейке несколько номеров и порядок им не задаётся.
-  assert.equal(globalThis.COL_SORT_INDEX.socials, null);
+      score: 6, socials: 9, rating: 7 });
+  // «Соцсети» сортируются числом сетей (индекс 9); «Просмотрено» — нет;
+  // телефон убран из сортировки: в ячейке несколько номеров и порядок им
+  // не задаётся.
+  assert.equal(globalThis.COL_SORT_INDEX.socials, 9);
   assert.equal(globalThis.COL_SORT_INDEX.phone, null,
     'телефон больше не сортируется');
   // «Рейтинг» сортируется, но своим индексом — колонка одна, смыслов два.
   assert.equal(globalThis.COL_SORT_INDEX.rating, 7);
+});
+
+test('socials sort counts networks instead of comparing letters', () => {
+  resetOrder();
+  globalThis.sortCol = -1;
+  globalThis.sortAsc = true;
+  globalThis.filteredRows = [
+    { name: '0', vk: '' },
+    { name: '2', vk: 'https://vk.com/a', telegram: 'https://t.me/a' },
+    { name: '1', vk: 'https://vk.com/b' },
+  ];
+  const prev = globalThis.renderPage;
+  globalThis.renderPage = () => {};
+  try {
+    globalThis.sortTable(9);
+    assert.equal(globalThis.sortCol, 9, 'колонка запомнила свой индекс');
+    assert.deepEqual(globalThis.filteredRows.map(r => r.name), ['2', '1', '0'],
+      'первый клик — больше сетей сверху');
+    globalThis.sortTable(9);
+    assert.deepEqual(globalThis.filteredRows.map(r => r.name), ['0', '1', '2'],
+      'повторный клик — по возрастанию');
+  } finally {
+    globalThis.renderPage = prev;
+  }
 });
 
 test('rating sort cycles: оценка ↓ → оценка ↑ → отзывы ↓ → отзывы ↑', () => {
@@ -395,6 +421,8 @@ test('the template gives every column a stable data-col and keyed sort', () => {
   const tpl = readFileSync(join(root, 'templates', 'index.html'), 'utf8');
   for (const key of COL_KEYS) assert.match(tpl, new RegExp(`data-col="${key}"`));
   assert.match(tpl, /onclick="sortTableByKey\('name'\)"/);
+  assert.match(tpl, /onclick="sortTableByKey\('socials'\)"/,
+    'колонка «Соцсети» сортируется по числу сетей');
   assert.match(tpl, /onclick="resetColOrder\(\)"/);
   assert.ok(!/onclick="sortTable\(\d\)"/.test(tpl), 'позиционный sortTable(N) в шапке ломается при перестановке');
   assert.ok(!/col-hide-\d/.test(src), 'позиционное скрытие колонок больше не используется');

@@ -708,6 +708,17 @@ function ratingHTML(row) {
 // просмотренная гаснет (`social-opened`), не помечая всю организацию.
 // Метки-галочки «просмотрено» рядом с бейджами убраны: они дублировали
 // затемнение и читались как лишние символы в ячейке.
+// Сколько сетей у компании — для сортировки колонки «Соцсети».
+// Порядок и набор сетей те же, что у бейджей в ячейке.
+function socialsCount(row) {
+  if (!row) return 0;
+  let n = 0;
+  for (const p of Object.keys(SOCIALS || {})) {
+    if (String(row[p] || '').trim()) n += 1;
+  }
+  return n;
+}
+
 function socialsHTML(row, rowKey, rowIsRev) {
   let h = '';
   const key = escapeHtml(reviewKey(row));
@@ -1187,8 +1198,10 @@ const NOSORT_COLS = new Set([0, 1]);
 // Телефон в контракте остался (сервер умеет), но в шапке не кликается:
 // в ячейке несколько номеров, и порядок им не задаётся.
 // 7/8 — «Рейтинг»: колонка одна, а смысла два (оценка и число отзывов).
-const COL_SORT_INDEX = { rev: null, num: null, name: 2, category: 3, address: 4, phone: null, score: 6, socials: null, rating: 7 };
-const SORT_INDEX_COL = { 2: 'name', 3: 'category', 4: 'address', 5: 'phone', 6: 'score', 7: 'rating' };
+// 9 — «Соцсети»: сортировка по числу сетей у компании, а не по алфавиту.
+// Сервер повторяет её в _sort_like_table для «Массового обхода».
+const COL_SORT_INDEX = { rev: null, num: null, name: 2, category: 3, address: 4, phone: null, score: 6, socials: 9, rating: 7 };
+const SORT_INDEX_COL = { 2: 'name', 3: 'category', 4: 'address', 5: 'phone', 6: 'score', 7: 'rating', 9: 'socials' };
 
 // Заголовок берём по data-col, а не по позиции в строке: столбцы можно
 // переставлять («Столбцы» → перетаскивание), а сортировка должна оставаться
@@ -1200,7 +1213,7 @@ function _thByCol(key) {
 function sortTableByKey(key) {
   if (key === 'rating') { cycleRatingSort(); return; }
   const idx = COL_SORT_INDEX[key];
-  if (!idx) return;                 // «Просмотрено», «#», «Соцсети», «Телефон» не сортируются
+  if (!idx) return;                 // «Просмотрено», «#», «Телефон» не сортируются
   sortTable(idx);
 }
 
@@ -1276,7 +1289,21 @@ function sortTable(col) {
   const th = _thByCol(SORT_INDEX_COL[col]);
   if (!th) return;
   if (sortCol === col) { sortAsc = !sortAsc; }
-  else { sortCol = col; sortAsc = true; }
+  // «Соцсети»: первый клик показывает компании с бо́льшим числом сетей —
+  // именно этого ждут от такой сортировки; дальше направление меняется.
+  else { sortCol = col; sortAsc = col !== 9; }
+  // «Соцсети»: строки с большим числом сетей — первыми. Сравнение числом,
+  // поэтому 0 (нет сетей) честно уезжает в конец при сортировке по убыванию.
+  if (col === 9) {
+    resetSortHeaders();
+    th.classList.add(sortAsc ? 'asc' : 'desc');
+    filteredRows.sort((a, b) => {
+      const va = socialsCount(a), vb = socialsCount(b);
+      return sortAsc ? va - vb : vb - va;
+    });
+    renderPage();
+    return;
+  }
   // Score is a number — compare it as one, not as a string.
   if (col === 6) {
     resetSortHeaders();

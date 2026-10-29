@@ -104,6 +104,10 @@ CRAWL_SKIP_LABELS = {
 # ── Непрочитанные карточки ─────────────────────────────────────
 _READ_FAILURES: dict[str, int] = {}
 _READ_FAILURES_LOGGED: dict[str, int] = {}
+# Уже посчитанные карточки: два запроса идут одновременно и могут не прочитать
+# одну и ту же организацию дважды. Без этого «не прочитано 126» при 105
+# открытых карточках выглядело как ошибка счёта.
+_READ_FAILED_KEYS: set[str] = set()
 _read_failures_lock = threading.Lock()
 READ_FAILURE_LABELS = {
     "no_page":     "карточка не открылась",
@@ -446,16 +450,25 @@ def crawl_skip_take_delta() -> dict:
 
 def reset_read_failures() -> None:
     """Обнулить счётчики непрочитанных карточек (вызывается на старте прогона)."""
-    global _READ_FAILURES, _READ_FAILURES_LOGGED
+    global _READ_FAILURES, _READ_FAILURES_LOGGED, _READ_FAILED_KEYS
     with _read_failures_lock:
         _READ_FAILURES = {}
         _READ_FAILURES_LOGGED = {}
+        _READ_FAILED_KEYS = set()
 
 
-def inc_read_failure(reason: str) -> None:
-    """Отметить карточку, которую не удалось прочитать (вызывают потоки сбора)."""
+def inc_read_failure(reason: str, key: str = "") -> None:
+    """Отметить карточку, которую не удалось прочитать (вызывают потоки сбора).
+
+    `key` — идентификатор карточки. Одна и та же организация может не открыться
+    в двух параллельных запросах, но в итоге это одна непрочитанная карточка.
+    """
     global _READ_FAILURES
     with _read_failures_lock:
+        if key:
+            if key in _READ_FAILED_KEYS:
+                return
+            _READ_FAILED_KEYS.add(key)
         _READ_FAILURES = {**_READ_FAILURES,
                           reason: _READ_FAILURES.get(reason, 0) + 1}
 
