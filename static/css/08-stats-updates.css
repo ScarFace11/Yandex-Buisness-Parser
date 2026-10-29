@@ -4,18 +4,26 @@
 /* ════════════════════════════════
    STATS PER-CITY BREAKDOWN
    ════════════════════════════════ */
-.stat-city-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px}
-.stat-city-card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);padding:15px 17px}
-/* Разбивки рядом: слева карточки/полосы, справа — кольцо соцсетей. На
-   узком экране кольцо переезжает вниз, под список. */
-.stat-split{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
-.stat-split>.stat-split-main{flex:1 1 340px;min-width:0}
-.stat-split>.stat-split-side{flex:0 1 300px}
+/* Города живут внутри своей карточки статистики — в один столбец: сетка
+   на всю ширину раньше растягивала блок и делала вкладку бесконечной. */
+.stat-city-grid{display:grid;grid-template-columns:1fr;gap:8px;margin:0}
+.stat-city-card{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r-sm);padding:11px 12px}
 /* Кольцо «По соцсетям»: доли соцсетей читаются формой, точные значения —
    в подписи легенды рядом (внутри центрируется итог и подпись). */
 .donut-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
 .donut{position:relative;width:168px;height:168px}
 .donut svg{display:block;transform:rotate(-90deg)}
+/* Две карточки в ряд (861–1199px) уже 168px кольца: уменьшаем его, чтобы
+   оно не вылезало за карточку на 900px. */
+@media(max-width:1199px){
+  .donut{width:152px;height:152px}
+  .donut svg{width:152px;height:152px}
+}
+/* Сайдбар ушёл наверх — карточки снова шире, кольцо возвращается к 168px. */
+@media(max-width:860px){
+  .donut{width:168px;height:168px}
+  .donut svg{width:168px;height:168px}
+}
 .donut circle{fill:none;stroke-width:16}
 /* Дуги вырастают из нуля при появлении (анимация только на вставку:
    .donut отрисовывается заново при каждом рендере статистики, а повторный

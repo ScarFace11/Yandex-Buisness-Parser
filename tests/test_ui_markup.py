@@ -1529,13 +1529,30 @@ class TestDailyDynamics:
         assert re.search(r'#results-table th\[data-col="socials"\],#results-table td\[data-col="socials"\]\{min-width:\d+px', STYLE)
         assert ".tbl-phone{" in STYLE and ".tbl-phone span{display:block" in STYLE
 
-    def test_stats_breakdowns_use_donut_and_split(self):
-        """Соцсети — кольцо с долями, категории — полосы рядом: два ряда
-        полос на всю ширину читались как два одинаковых списка."""
+    def test_stats_breakdowns_use_donut_and_cards(self):
+        """Соцсети — кольцо с долями, каждый разбор — своя карточка сеткой:
+        длинная колонка секций читалась как один сплошной список."""
         assert "function donutHTML(" in APP_JS
         assert "donutHTML(socialCounts" in APP_JS
-        assert ".stat-split{" in STYLE and ".donut{" in STYLE
+        assert ".stats-grid{" in STYLE and ".stats-panel{" in STYLE
+        assert "grid-template-columns:repeat(3,minmax(0,1fr))" in STYLE
+        assert ".donut{" in STYLE
         assert ".donut-legend-row{" in STYLE
+
+    def test_stats_tab_has_no_service_analytics(self):
+        """RPS, задержки и кэш — служебные числа: в статистике их больше нет."""
+        assert "${UI_ICONS.bolt}Аналитика" not in APP_JS
+        assert "RPS (факт.)" not in APP_JS
+        assert "fetch('/cache/stats')" not in APP_JS
+
+    def test_results_have_one_source_and_no_raw_processed_toggle(self):
+        """После обработки «Сырые» и «Обработанные» совпадали — переключатель
+        убран, таблица сразу показывает итог этапа 2."""
+        assert "results-toggle" not in TEMPLATE
+        assert 'id="results-toggle"' not in APP_JS
+        assert "let _resultsView = 'processed';" in APP_JS
+        assert "Сырые данные</button>" not in TEMPLATE
+        assert "Обработанные</button>" not in TEMPLATE
 
     def test_dashboard_facts_are_readable(self):
         """Итоги периода — не сноска: средний темп крупнее, лучший день
@@ -1957,9 +1974,14 @@ class TestStatsGraphics:
             assert name in APP_JS, name
 
     def test_graphics_are_rendered_into_the_stats_panel(self):
-        for call in ("${ratingSectionHTML(data)}", "${leadSectionHTML(data)}",
-                     "${coverageSectionHTML(data)}", "${newSectionHTML(data)}"):
+        for call in ("ratingSectionHTML(data)", "leadSectionHTML(data)",
+                     "coverageSectionHTML(data)", "newSectionHTML(data)"):
             assert call in APP_JS, call
+        assert "class=\"stats-grid\"" in APP_JS
+        assert "function statsPanelHTML(" in APP_JS
+        for title in ("'Распределение рейтинга'", "'Готовность лидов'",
+                      "'Полнота данных'", "'Новые организации'"):
+            assert title in APP_JS, title
 
     def test_bucket_colors_are_theme_tokens(self):
         """Полосы носят var(--…) — цвет следует за темой, а не за строкой."""

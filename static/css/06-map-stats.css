@@ -43,6 +43,38 @@
 .stat-section{margin-bottom:26px}
 .stat-section h3{font-size:13px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:13px}
 
+/* ── Карточки статистики: 7 блоков сеткой, а не длинная колонка ─────────
+   Каждый разбор — самостоятельная карточка с заголовком и границей. Так
+   вкладка читается блоками: города, категории, соцсети, рейтинг, лиды,
+   полнота, новые. Заголовок с линией отделяет один разбор от другого
+   заметнее, чем отступ. */
+.stats-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;align-items:stretch;
+}
+.stats-panel{
+  min-width:0;display:flex;flex-direction:column;
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);
+  padding:15px 16px 17px;
+  transition:border-color .13s,box-shadow .13s;
+}
+.stats-panel:hover{border-color:var(--bdr-h);box-shadow:var(--sh)}
+.stats-panel h3{
+  margin:0 0 13px;padding-bottom:9px;border-bottom:1px solid var(--bdr);
+  font-size:12px;font-weight:800;color:var(--sub);
+  text-transform:uppercase;letter-spacing:.05em;
+}
+/* Полосы в узкой карточке: подпись не должна съедать дорожку. */
+.stats-panel .bar-row{gap:8px;margin-bottom:8px}
+.stats-panel .bar-row:last-child{margin-bottom:0}
+.stats-panel .bar-lbl{width:38%;min-width:64px;max-width:150px}
+/* 1200–861px — две карточки в ряд: три по 250px уже теснят полосы. */
+@media(max-width:1199px){.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Ниже 860px боковая панель уходит наверх, ширина освобождается — снова три. */
+@media(max-width:860px){.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.stats-grid{grid-template-columns:1fr}}
+
 /* ── «Новые организации»: одна полоса на две доли ──────────────────────
    Слева новые — тот же зелёный, что у «Горячих лидов» (свежие данные),
    справа уже встречавшиеся — нейтральный --bdr-h. Процент крупно в

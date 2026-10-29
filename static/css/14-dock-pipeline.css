@@ -123,22 +123,10 @@
 /* Dark theme: deep teal fill + white text (was too light to read) */
 [data-theme="dark"] #btn-run:disabled{background:var(--bdr);color:var(--sub);cursor:not-allowed}
 /* ══════════════════════════════════════════════════════════
-   TWO-STAGE PIPELINE: results view toggle + accordion 05
+   TWO-STAGE PIPELINE: accordion 05
+   Переключатель «Сырые / Обработанные» убран — таблица показывает единый
+   итог обработки.
    ══════════════════════════════════════════════════════════ */
-.results-toggle{
-  display:inline-flex;border:1px solid var(--bdr);border-radius:8px;
-  overflow:hidden;background:var(--card);flex-shrink:0;
-}
-.rt-btn{
-  border:none;background:transparent;padding:7px 13px;font-size:12px;
-  font-weight:700;color:var(--sub);cursor:pointer;font-family:inherit;
-  border-right:1px solid var(--bdr);transition:background .12s,color .12s;
-  white-space:nowrap;
-}
-.rt-btn:last-child{border-right:none}
-.rt-btn:hover{background:var(--cl);color:var(--c)}
-.rt-btn.active{background:var(--brand);color:var(--on-accent)}
-[data-theme="dark"] .rt-btn:hover{background:var(--hdr)}
 #btn-refilter:hover:not(:disabled){border-color:var(--c);color:var(--c)}
 #btn-refilter:disabled{opacity:.55;cursor:wait}
 
@@ -283,12 +271,6 @@
 [data-theme="dark"] .city-option:hover{background:var(--field)}
 [data-theme="dark"] .soc-tile{border-color:var(--bdr-h);background:var(--card);color:var(--sub)}
 [data-theme="dark"] .tech-box{background:var(--tip-bg);border-color:var(--bdr)}
-[data-theme="dark"] .rt-btn{color:var(--sub)}
-/* Активная кнопка режима таблицы: правило выше перебивало .rt-btn.active
-   (одинаковая специфичность, но оно ниже по файлу), и надпись оставалась
-   серой на плотном --brand — 4.46:1 вместо нужных 4.5. */
-[data-theme="dark"] .rt-btn.active{color:var(--on-accent)}
-
 /* ══════════════════════════════════════════════════════════
    DARK THEME: contrast pass (inputs, ghost buttons, cards)
    Оформление — только через токены из блока [data-theme="dark"] выше.

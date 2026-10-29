@@ -263,9 +263,13 @@ function resetBtn() {
 //  Downloads
 // ═══════════════════════════════════════════
 // ═════════════════════════════════════════
-//  Results view: raw / processed / all (two-stage pipeline)
+//  Results view: единый список обработанных результатов
 // ═════════════════════════════════════════
-let _resultsView = 'raw';
+// Переключатель «Сырые / Обработанные» убран: после этапа 2 оба списка
+// совпадали, а разница между ними — служебная, не пользовательская. Таблица
+// показывает итог обработки; сырые файлы при необходимости открываются из
+// «Истории файлов».
+let _resultsView = 'processed';
 // Первое открытие вкладки «Результаты» должно само подтянуть данные с
 // сервера — иначе таблица остаётся на плейсхолдере «Запустите парсер».
 let _resultsLoadedOnce = false;
@@ -350,14 +354,11 @@ function toggleOnlyNewFilter() {
 function onlyNewNote() { return onlyNewFilter ? ' · только новые' : ''; }
 
 function setResultsView(view) {
-  // Кнопка «Все» убрана из интерфейса: режим объединял два источника, но по
-  // факту показывал обработанные — непонятный дубль. Значение 'all' из
-  // старых вызовов/API приводится к «Обработанные», остальное — к сырым.
-  if (!['raw', 'processed'].includes(view)) view = view === 'all' ? 'processed' : 'raw';
+  // Источник один — обработанные записи (этап 2). Старые вызовы передают
+  // 'raw'/'all', их молча приводим к нему: отдельного переключателя больше нет.
+  view = 'processed';
   _resultsView = view;
   _resultsLoadedOnce = true;   // вкладка больше не «пустая» — запрос ушёл
-  document.querySelectorAll('#results-toggle .rt-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.view === view));
   const body = document.getElementById('tbl-body');
   if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Загрузка…</td></tr>`;
   currentFileNote = _resultsScope === 'all' ? ' · все файлы в папке' : '';
@@ -373,12 +374,14 @@ function setResultsView(view) {
       _resetTableBadge();
       loadReviewed();
       renderTable(allResults);
+      // Статистика живёт на том же срезе: открыв её первой, пользователь
+      // должен увидеть цифры, а не нули при непустых файлах.
+      if (allResults.length) renderStats(allResults, _runElapsed(), _lastSkippedCities);
       if (!allResults.length) {
-        let msg = view === 'processed'
-          ? 'По фильтрам ничего не видно — снимите часть условий в «Фильтрации результата».'
-          : 'Сырых результатов пока нет — они появятся после первого поиска.';
+        let msg = 'Результатов пока нет — запустите поиск. Если поиск уже был, '
+          + 'проверьте фильтры или откройте сырые файлы в «Истории файлов».';
         if (scope === 'current') {
-          msg += ' Файлы прошлых поисков — в «Истории файлов» (или включите «Все поиски»).';
+          msg += ' Файлы прошлых поисков — там же или по кнопке «Все поиски».';
         }
         document.getElementById('tbl-body').innerHTML =
           `<tr><td colspan="${_tableColspan()}" class="no-data">${msg}</td></tr>`;
@@ -609,7 +612,7 @@ function refilterNow() {
       appendLog('ok', `  🎯 Processed: ${data.count} организаций → ${data.files.length} файлов в ${outDir}/processed/`);
       // The file lists just changed under the user's feet — refresh them.
       loadFilesPanel(true);
-      setResultsView(_resultsView === 'raw' ? 'processed' : _resultsView);
+      setResultsView(_resultsView);
       updateStatsBadge();
     })
     .catch(() => showToast('Ошибка обработки', 'error'))

@@ -50,7 +50,7 @@ function grab(name) {
 
 (0, eval)(['RATING_BUCKETS', 'LEAD_BUCKETS', 'SOCIALS'].map(grabConst).join('\n'));
 (0, eval)(['escapeHtml', 'scoreNum', 'scoreRating', 'barRows', 'pctBarRows',
-           'ratingBucketRows', 'leadBucketRows', 'coverageRows',
+           'ratingBucketRows', 'leadBucketRows', 'coverageRows', 'statsPanelHTML',
            'ratingSectionHTML', 'leadSectionHTML', 'coverageSectionHTML',
            'newShare', 'newSectionHTML', 'statsEmptyArtHTML'].map(grab).join('\n'));
 
@@ -91,6 +91,7 @@ test('рейтинг: без единой оценки корзин нет (се
 test('секция рейтинга пустая строка без данных, с данными — полосы с токенами', () => {
   assert.equal(ratingSectionHTML([row({})]), '');
   const html = ratingSectionHTML([row({ rating: 5 }), row({ rating: 3 })]);
+  assert.match(html, /class="stats-panel"/);
   assert.match(html, /Распределение рейтинга/);
   assert.match(html, /var\(--grn\)/);
   assert.match(html, /var\(--red\)/);

@@ -83,7 +83,6 @@ h1,h2,h3,.acc-title,.card-hdr,.panel-title{
 .hist-dl,
 .log-filter,
 .tpl-cat,
-.rt-btn,
 .bulk-preset,
 .bulk-copy-btn,
 .bulk-persist-btn,
@@ -95,7 +94,6 @@ h1,h2,h3,.acc-title,.card-hdr,.panel-title{
 .subt-link:active:not(:disabled),
 .term-clear:active:not(:disabled),
 .log-filter:active:not(:disabled),
-.rt-btn:active:not(:disabled),
 .bulk-preset:active:not(:disabled),
 .score-preset:active:not(:disabled){
   transform:translateY(1px);

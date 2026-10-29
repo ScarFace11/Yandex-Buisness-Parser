@@ -60,6 +60,10 @@ function showTab(name) {
   // грузится всегда — даже когда результатов в этой сессии ещё нет.
   if (name === 'stats') {
     loadDailyDynamics();
+    // Карточки считаются из тех же записей, что таблица. Если «Результаты»
+    // ещё не открывали, подтягиваем срез здесь — иначе под графиком стоят
+    // нули, хотя файлы на диске есть.
+    if (!allResults.length && !_resultsLoadedOnce && !isRunActive()) setResultsView(_resultsView);
   }
   // Re-render stats when switching to the stats tab. During an active run
   // only finished cities are shown (stable numbers); after the run ends the

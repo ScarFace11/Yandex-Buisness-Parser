@@ -189,6 +189,16 @@ function renderDefaultStats() {
     </div>`;
 }
 
+// Одна карточка статистики: заголовок и свой разбор внутри. Сетка из таких
+// карточек заменяет длинную колонку секций — вкладка читается по блокам,
+// а не как один сплошной список.
+function statsPanelHTML(title, body, cls) {
+  return `<section class="stats-panel${cls ? ' ' + cls : ''}">
+      <h3>${title}</h3>
+      ${body}
+    </section>`;
+}
+
 // Shared bar renderer for the stats sections. Bars are normalized against
 // the MAXIMUM value (not the record total), so the largest bar is always
 // full width and small values stay comparable. Tiny counts (<3) get a
@@ -349,28 +359,19 @@ function pctBarRows(rows) {
 function ratingSectionHTML(data) {
   const rows = ratingBucketRows(data);
   if (!rows) return '';
-  return `<div class="stat-section">
-      <h3>Распределение рейтинга</h3>
-      ${barRows(rows)}
-    </div>`;
+  return statsPanelHTML('Распределение рейтинга', barRows(rows));
 }
 
 function leadSectionHTML(data) {
   const info = leadBucketRows(data);
   if (!info) return '';
-  return `<div class="stat-section">
-      <h3>Готовность лидов</h3>
-      ${barRows(info.rows)}
-    </div>`;
+  return statsPanelHTML('Готовность лидов', barRows(info.rows));
 }
 
 function coverageSectionHTML(data) {
   const rows = coverageRows(data);
   if (!rows.length) return '';
-  return `<div class="stat-section">
-      <h3>Полнота данных</h3>
-      ${pctBarRows(rows)}
-    </div>`;
+  return statsPanelHTML('Полнота данных', pctBarRows(rows));
 }
 
 // «Новые организации»: сколько записей текущего прогона не встречалось в
@@ -395,9 +396,7 @@ function newSectionHTML(data) {
   const s = newShare(data);
   if (!s) return '';
   const repeatPct = 100 - s.pct;
-  return `<div class="stat-section">
-      <h3>Новые организации</h3>
-      <div class="new-split">
+  return statsPanelHTML('Новые организации', `<div class="new-split">
         <div class="new-split-head"><b>${s.pct}%</b><span>${s.fresh} из ${s.known} не встречались в прошлых прогонах</span></div>
         <div class="new-split-bar" role="img" aria-label="Новые — ${s.pct}%, уже встречались — ${repeatPct}%">
           <span class="new-split-fresh" style="width:${s.pct}%"></span>
@@ -408,7 +407,7 @@ function newSectionHTML(data) {
           <span class="new-split-item"><i class="new-split-dot repeat"></i>Уже встречались<b>${s.repeat} · ${repeatPct}%</b></span>
         </div>
       </div>
-    </div>`;
+    `);
 }
 
 // Пустая «Статистика»: столбцы и тренд — та же идея, что в онбординге,
@@ -479,7 +478,7 @@ function renderStats(data, elapsed, skippedCities) {
     (byCity[c] = byCity[c] || []).push(r);
   });
   const cityNames = Object.keys(byCity).filter(c => c !== '—');
-  const cityCardsHtml = cityNames.length > 0 ? `<div class="stat-section"><h3>По городам</h3><div class="stat-city-grid">`
+  const cityCardsHtml = cityNames.length > 0 ? `<div class="stat-city-grid">`
     + cityNames.map(name => {
       const cd = byCity[name];
       const cityTotal = cd.length;
@@ -501,13 +500,13 @@ function renderStats(data, elapsed, skippedCities) {
         <div class="stat-mini-row"><span>Без соцсетей</span><span>${cityTotal - cityWithSo}</span></div>
         ${chips}` : ''}
       </div>`;
-    }).join('') + `</div></div>` : '';
+    }).join('') + `</div>` : '';
 
 
   // Show skipped cities if any
   let skippedHtml = '';
   if (skippedCities && skippedCities.length > 0) {
-    skippedHtml = `<div class="stat-section"><h3>⏭ Пропущенные города</h3><div class="stat-city-grid">`;
+    skippedHtml = `<div class="stat-city-grid">`;
     skippedCities.forEach(sc => {
       skippedHtml += `<div class="stat-city-card" style="border-left:3px solid rgba(100,140,200,.6)">
         <h4>${escapeHtml(sc.name)}</h4>
@@ -515,79 +514,42 @@ function renderStats(data, elapsed, skippedCities) {
         <div class="stat-mini-row"><span>Записей собрано</span><span>${sc.records_found}</span></div>
       </div>`;
     });
-    skippedHtml += `</div></div>`;
+    skippedHtml += `</div>`;
   }
 
+  // Сетка карточек: три в ряд на широком экране. Разбивки больше не идут
+  // одной длинной колонкой — каждая живёт в своей карточке, и вкладка
+  // читается блоками. «Аналитика» (RPS, кэш) убрана: это служебные числа,
+  // они не помогают выбрать бизнес для письма.
+  const catBody = cats.length
+    ? barRows(cats.map(([name, cnt], i) => ({label: name, count: cnt, color: CAT_COLORS[i%CAT_COLORS.length]})))
+    : '<div class="no-data" style="padding:16px 12px">В этих записях категории не заполнены</div>';
+  const socialBody = (socOn && socialCounts.length)
+    ? donutHTML(socialCounts.map(s => ({label: s.name, count: s.count, color: s.color})), 'записей')
+    : '<div class="no-data" style="padding:16px 12px">' + (socOn ? 'В этих записях соцсети не найдены' : 'Соцсети отключены в «Что парсить»') + '</div>';
+
+  const panels = [
+    cityCardsHtml ? statsPanelHTML('По городам', cityCardsHtml, 'stats-panel-cities') : '',
+    statsPanelHTML('Топ категорий', catBody),
+    statsPanelHTML('По соцсетям', socialBody),
+    ratingSectionHTML(data),
+    leadSectionHTML(data),
+    coverageSectionHTML(data),
+    newSectionHTML(data),
+    skippedHtml ? statsPanelHTML('⏭ Пропущенные города', skippedHtml) : '',
+  ].filter(Boolean).join('');
+
   const body = document.getElementById('stats-body');
-  // Fetch live analytics + cache stats
-  Promise.all([
-    fetch('/analytics').then(r=>r.json()).catch(()=>({})),
-    fetch('/cache/stats').then(r=>r.json()).catch(()=>({})),
-    fetch('/status').then(r=>r.json()).catch(()=>({}))
-  ]).then(([a, c, st]) => {
-    const analyticsHtml = (a && a.total_requests) || (c && c.total) ? `
-    <div class="stat-section">
-      <h3>${UI_ICONS.bolt}Аналитика</h3>
-      <div class="stat-cards">
-        ${a.total_requests ? `
-        <div class="stat-card" title="Фактическая скорость запросов к API (запросов в секунду)"><div class="num">${a.rps_actual}</div><div class="lbl">RPS (факт.)</div></div>
-        <div class="stat-card" title="Целевая скорость запросов — лимит, который мы стараемся не превышать"><div class="num">${a.rps_target}</div><div class="lbl">RPS (цель)</div></div>
-        <div class="stat-card" title="Средняя задержка ответа сервера"><div class="num">${a.avg_latency}с</div><div class="lbl">Среднее</div></div>
-        <div class="stat-card" title="Медианная задержка: половина запросов отвечает быстрее этого времени"><div class="num">${a.p50_latency}с</div><div class="lbl">P50</div></div>
-        <div class="stat-card" title="95-й процентиль: 95% запросов отвечают быстрее этого времени (показывает самые медленные ответы)"><div class="num">${a.p95_latency}с</div><div class="lbl">P95</div></div>
-        <div class="stat-card"><div class="num">${a.total_requests}</div><div class="lbl">Запросов</div></div>
-        <div class="stat-card"><div class="num">${a.errors}</div><div class="lbl">Ошибок</div></div>
-        <div class="stat-card"><div class="num">${a.rate_limits}</div><div class="lbl">429</div></div>
-        ` : ''}
-        ${c.valid ? `
-        <div class="stat-card" title="Свежие страницы карточек в кэше — повторная загрузка берётся с диска мгновенно и не тратит лимит API"><div class="num">${c.valid}</div><div class="lbl">Кэш (активных)</div></div>
-        <div class="stat-card" title="Устаревшие страницы кэша — данные старше ${c.ttl_hours || 24} ч, будут перезапрошены"><div class="num">${c.expired}</div><div class="lbl">Кэш (устаревших)</div></div>
-        ${c.hits ? `
-        <div class="stat-card" title="Столько раз карточка взята из кэша вместо повторной загрузки браузером (один прогон)"><div class="num">${c.hits}</div><div class="lbl">Из кэша</div></div>
-        ` : ''}
-        ` : ''}
-      </div>
-    </div>` : '';
-    body.innerHTML = `
+  if (!body) return;
+  body.innerHTML = `
     <div class="stat-cards">${cards.map(c =>
       `<div class="stat-card"${c.tip ? ` title="${escapeHtml(c.tip)}"` : ''}><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`
     ).join('')}</div>
-
-    ${analyticsHtml}
-
-    ${cityCardsHtml}
-
-    ${skippedHtml}
-
-    <div class="stat-split">
-      <div class="stat-split-main">
-        <div class="stat-section">
-          <h3>Топ категорий</h3>
-          ${cats.length
-            ? barRows(cats.map(([name, cnt], i) => ({label: name, count: cnt, color: CAT_COLORS[i%CAT_COLORS.length]})))
-            : '<div class="no-data" style="padding:16px 12px">В этих записях категории не заполнены</div>'}
-        </div>
-      </div>
-      <div class="stat-split-side">
-        <div class="stat-section">
-          <h3>По соцсетям</h3>
-          ${(socOn && socialCounts.length)
-            ? donutHTML(socialCounts.map(s => ({label: s.name, count: s.count, color: s.color})), 'записей')
-            : '<div class="no-data" style="padding:16px 12px">' + (socOn ? 'В этих записях соцсети не найдены' : 'Соцсети отключены в «Что парсить»') + '</div>'}
-        </div>
-      </div>
-    </div>
-
-    ${ratingSectionHTML(data)}
-    ${leadSectionHTML(data)}
-    ${coverageSectionHTML(data)}
-    ${newSectionHTML(data)}
-  `;
-    // Свежие файлы и отметки могли появиться только что — обновляем динамику,
-    // но не во время прогона: там renderStats зовётся каждые 1.5 с, а обход
-    // папки с пересчётом строк дешевле не становится.
-    if (!isRunActive()) loadDailyDynamics();
-  }).catch(()=>{});
+    <div class="stats-grid">${panels}</div>`;
+  // Свежие файлы и отметки могли появиться только что — обновляем динамику,
+  // но не во время прогона: там renderStats зовётся каждые 1.5 с, а обход
+  // папки с пересчётом строк дешевле не становится.
+  if (!isRunActive()) loadDailyDynamics();
 }
 
 // ═══════════════════════════════════════════

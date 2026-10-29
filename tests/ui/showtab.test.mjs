@@ -154,6 +154,18 @@ test("switching to «Статистика» always reloads the daily dynamics", 
   assert.equal(calls.setResultsView.length, 0);
 });
 
+test("opening «Статистика» first loads the results snapshot for its cards", () => {
+  // Иначе под графиком стоят нули, хотя файлы на диске есть.
+  reset({ runActive: false });
+  globalThis.showTab('stats');
+  assert.deepEqual(calls.setResultsView, ['processed']);
+
+  // Уже загруженный срез второй раз не читаем.
+  reset({ runActive: false, loadedOnce: true });
+  globalThis.showTab('stats');
+  assert.equal(calls.setResultsView.length, 0);
+});
+
 test("switching to «История» loads the file list", () => {
   reset({ runActive: false });
   globalThis.showTab('history');
