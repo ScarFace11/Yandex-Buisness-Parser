@@ -112,11 +112,35 @@ class TestJumpToBottom:
 
 
 class TestProgressStrip:
-    def test_current_city_eta_and_overall_bar_are_rendered(self):
-        for needle in ('id="tp-city"', 'id="tp-eta"', 'id="tp-fill"'):
+    def test_one_strip_shows_percent_city_and_counts(self):
+        """Процент, полоска, город и счётчики — в одном месте, а не в трёх."""
+        for needle in ('id="run-hero"', 'id="run-pct"', 'id="run-fill"',
+                       'id="run-city"', 'id="run-org"', 'id="run-cities"',
+                       'id="run-found"', 'id="run-stage"'):
             assert needle in TEMPLATE, needle
-        assert "set('tp-city'" in APP_JS
-        assert ".term-progress-info .tp-city{font-size:13px" in STYLE
+        assert "function setProgress(" in APP_JS
+        assert "function updateRunCities(" in APP_JS
+        assert "function setRunEntity(" in APP_JS
+        # В журнале больше нет своей панели прогресса: она повторяла числа.
+        assert 'id="term-progress"' not in TEMPLATE
+        assert ".term-progress" not in STYLE
+        assert "updateTermProgress" not in APP_JS
+        hero = STYLE[STYLE.index(".run-hero{"):]
+        assert "background:var(--hdr)" in hero[:400]
+
+    def test_secondary_log_actions_live_in_one_menu(self):
+        """Пять кнопок в полосе фильтров → одна кнопка с меню."""
+        assert 'id="btn-log-more"' in TEMPLATE
+        assert 'id="log-more-menu"' in TEMPLATE
+        assert 'aria-haspopup="true"' in TEMPLATE
+        menu = TEMPLATE[TEMPLATE.index('id="log-more-menu"'):]
+        menu = menu[:menu.index("</div>")]
+        for call in ("toggleTechDetails()", "saveLogFile()", "copyLogText()", "clearLog()"):
+            assert call in menu, call
+        assert "function toggleLogMenu(" in APP_JS
+        assert "function closeLogMenu(" in APP_JS
+        assert "function initLogMenu(" in APP_JS
+        assert ".log-more-menu{" in STYLE
 
     def test_cities_are_listed_once(self):
         """Полоска городов одна: верхняя полоса, а не ещё и лог-панель."""

@@ -1853,15 +1853,15 @@ class TestInteractivity:
     """Оживление интерфейса: движения только там, где они что-то сообщают."""
 
     def test_counter_pops_only_when_the_number_changes(self):
-        start = APP_JS.index("const lsFound = document.getElementById('ls-found-num')")
-        body = APP_JS[start:start + 420]
-        assert "lsFound.textContent !== next" in body, "пульсация должна зависеть от смены значения"
+        start = APP_JS.index("function setRunFound(")
+        body = APP_JS[start:start + 520]
+        assert "el.textContent === next" in body, "пульсация должна зависеть от смены значения"
         assert "classList.add('pop')" in body
-        assert "#ls-found-num.pop{animation:found-pop" in STYLE
+        assert "#run-found.pop{animation:found-pop" in STYLE
 
-    def test_progress_bar_shews_while_the_run_is_live(self):
-        assert "body:has(.live-stats:not(.is-hidden)) #prog-bar::after" in STYLE
-        assert "@keyframes prog-sheen" in STYLE
+    def test_progress_track_breathes_while_the_run_is_live(self):
+        assert "body:has(.run-hero:not(.is-hidden)) #run-track" in STYLE
+        assert "@keyframes hero-breathe" in STYLE
 
     def test_panel_and_chip_entrance_animations_exist(self):
         assert "@keyframes panel-in" in STYLE
@@ -1872,9 +1872,9 @@ class TestInteractivity:
         """Все новые анимации выключаются при prefers-reduced-motion."""
         tail = STYLE[STYLE.index("/* ── Уважать «уменьшенное движение» ── */"):]
         for needle in (".setup-sum,", ".setup-chip.bump .setup-chip-val",
-                       "#ls-found-num.pop",
-                       # Волна на полосе прогресса гасится вместе с анимацией.
-                       "#prog-bar::after{animation:none"):
+                       "#run-found.pop",
+                       # Дыхание дорожки прогресса гасится вместе с анимацией.
+                       "body:has(.run-hero:not(.is-hidden)) #run-track{animation:none"):
             assert needle in tail, needle
 
 

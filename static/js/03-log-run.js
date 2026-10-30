@@ -87,48 +87,83 @@ function setStatus(cls, text, icon) {
   b.className = cls;
   b.innerHTML = (icon || STATUS_ICONS[cls] || UI_ICONS.info) + escapeHtml(text);
 }
+// ── Полоса хода поиска ────────────────────────────────────────────────
+// Одно место для числа, полоски и города. Раньше те же значения жили в
+// трёх полосах (процент под шапкой, «Прямо сейчас» и панель над журналом),
+// и они расходились: одно показывало запрос, другое города.
 function setProgress(pct, label) {
-  const pw = document.getElementById('prog-wrap');
-  const pb = document.getElementById('prog-bar');
-  const pl = document.getElementById('prog-label');
-  // '' не годится: в CSS у обоих display:none, а снятие инлайна лишь
-  // возвращает к нему — прогресс-бар так и не показывался.
-  pw.style.display = pct >= 0 ? 'block' : 'none';
-  pl.style.display = pct >= 0 ? 'block' : 'none';
-  if (pct >= 0) { pb.style.width = pct + '%'; pl.textContent = label || ''; }
+  const hero = document.getElementById('run-hero');
+  if (!hero) return;
+  if (pct < 0) { hero.classList.add('is-hidden'); return; }
+  hero.classList.remove('is-hidden');
+  const num = document.getElementById('run-pct');
+  if (num) num.textContent = String(pct);
+  const fill = document.getElementById('run-fill');
+  if (fill) fill.style.width = pct + '%';
+  const track = document.getElementById('run-track');
+  if (track) track.setAttribute('aria-valuenow', String(pct));
+  // Для состояний без процента («Запуск…», «Очередь: позиция 2»): это
+  // подпись к текущему шагу, а не второе число прогресса.
+  const stage = document.getElementById('run-stage');
+  if (stage) stage.textContent = label || '';
 }
 function hideProgress() {
   setProgress(-1);
-  const ls = document.getElementById('live-stats');
-  if (ls) ls.style.display = 'none';
 }
-
-// ── Aggregate run progress above the log ────────────────────────
-// The bar shows the share of the WHOLE run (finished cities + the running
-// one's own %), the label counts CITIES — the two metrics never share a slot.
-function updateTermProgress() {
-  const wrap = document.getElementById('term-progress');
-  if (!wrap) return;
+// Число «найдено» пульсирует только при смене значения — иначе счётчик
+// читался как статичная цифра, а не как «идёт прямо сейчас».
+function setRunFound(found) {
+  const el = document.getElementById('run-found');
+  if (!el) return;
+  const next = String(found);
+  if (el.textContent === next) return;
+  el.textContent = next;
+  el.classList.remove('pop');
+  void el.offsetWidth;            // перезапуск анимации
+  el.classList.add('pop');
+}
+// Город и последняя найденная организация — тихая строка справа от
+// процента: они объясняют число, но не спорят с ним по яркости.
+function setRunEntity(city, org) {
+  if (city) {
+    const c = document.getElementById('run-city');
+    if (c) c.textContent = city;
+  }
+  if (org !== undefined) {
+    const o = document.getElementById('run-org');
+    if (o) o.textContent = org;
+  }
+}
+function setRunEta(text) {
+  const el = document.getElementById('run-eta');
+  if (el) el.textContent = text || '';
+}
+// Доля ГОРОДОВ: завершённые + доля идущего. Это и есть «общий» прогресс
+// прогона — в отличие от процента текущего запроса.
+function _runOverallFrac() {
   const total = _totalCities || 0;
-  if (total < 2) { wrap.hidden = true; return; }   // single city → header panel is hidden too
-  const entries = Object.entries(_cityProgressData);
-  const done = entries.filter(([, d]) => d.status === 'done' || d.status === 'skipped').length;
-  const running = entries.reduce((s, [, d]) => s + (d.status === 'running' ? (d.pct || 0) / 100 : 0), 0);
-  const frac = Math.min(1, (done + running) / total);
-  wrap.hidden = false;
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('tp-done', done);
-  set('tp-total', total);
-  // Which city is being worked on right now — «3 из 12» alone never said it.
-  const runningEntry = entries.find(([, d]) => d.status === 'running');
-  set('tp-city', (runningEntry && runningEntry[0]) || _currentCityName || '—');
-  const fill = document.getElementById('tp-fill');
-  if (fill) fill.style.width = (frac * 100).toFixed(1) + '%';
-  const eta = document.getElementById('tp-eta');
-  if (eta) eta.textContent = (typeof isRunActive === 'function' && isRunActive()) ? _etaText(frac) : '';
-  // The per-city bars are NOT repeated here: the top strip (#city-progress)
-  // already shows every city with its own bar, and painting them twice made
-  // a 50-city run impossible to read.
+  if (!total) return 0;
+  const entries = Object.values(_cityProgressData);
+  const done = entries.filter(d => d.status === 'done' || d.status === 'skipped').length;
+  const running = entries.reduce((s, d) => s + (d.status === 'running' ? (d.pct || 0) / 100 : 0), 0);
+  return Math.min(1, (done + running) / total);
+}
+// «4 из 4 городов» — единственное место, где считается число городов
+// (раньше оно дублировалось строкой под списком городов).
+function updateRunCities() {
+  const total = _totalCities || 0;
+  const done = Object.values(_cityProgressData)
+    .filter(d => d.status === 'done' || d.status === 'skipped').length;
+  const el = document.getElementById('run-cities');
+  if (el) {
+    const word = total % 10 === 1 && total % 100 !== 11 ? 'города' : 'городов';
+    el.textContent = `${done} из ${total} ${word}`;
+  }
+  const eta = document.getElementById('run-eta');
+  if (eta) {
+    const live = typeof isRunActive === 'function' && isRunActive();
+    eta.textContent = (live && total > 1) ? _etaText(_runOverallFrac()) : '';
+  }
 }
 
 function _etaText(frac) {
@@ -613,6 +648,39 @@ const STATUS_ICONS = {
   done:    UI_ICONS.check,
 };
 
+// ── Меню действий журнала (три точки) ─────────────────────────────
+// Детали, сохранение и копирование — редкие действия; держать их пятью
+// кнопками в полосе фильтров значило отнимать место у самих фильтров.
+// Меню закрывается по Esc и клику вне (initLogMenu в 11-app-init.js).
+function toggleLogMenu(ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  const menu = document.getElementById('log-more-menu');
+  const btn = document.getElementById('btn-log-more');
+  if (!menu || !btn) return;
+  const open = menu.hidden;
+  menu.hidden = !open;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function closeLogMenu() {
+  const menu = document.getElementById('log-more-menu');
+  const btn = document.getElementById('btn-log-more');
+  if (menu) menu.hidden = true;
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+function initLogMenu() {
+  if (typeof document === 'undefined' || !document.addEventListener) return;
+  const wrap = document.getElementById('log-more');
+  if (!wrap || wrap.dataset.menuReady) return;
+  wrap.dataset.menuReady = '1';
+  document.addEventListener('click', e => {
+    const t = e && e.target;
+    if (!t || typeof t.closest !== 'function' || !t.closest('#log-more')) closeLogMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLogMenu();
+  });
+}
+
 // Show/hide developer-detail lines collected behind the toggle.
 function toggleTechDetails() {
   _showTechDetails = !_showTechDetails;
@@ -716,10 +784,10 @@ function handleProgress(raw) {
     const total = parseInt(parts[2]);
     const name  = parts.slice(3).join('/');
     const label = `🏙  Город ${idx}/${total}: ${name}`;
-    setProgress(-1, label);
     appendLog('info', label);
-    const lsStage = document.getElementById('ls-stage');
-    if (lsStage) lsStage.textContent = name;
+    setProgress(0);
+    setRunEntity(name, 'ждём первую организацию');
+    setRunEta('');
     _lastCompletedCityIdx = idx;
     // Init multi-city progress
     if (total > 1) initCityProgress(total);
@@ -732,44 +800,18 @@ function handleProgress(raw) {
     const stage = parts[2] || '';
     const found = parts.length >= 4 ? parseInt(parts[3]) : 0;
     const pct = tot > 0 ? Math.round(cur / tot * 100) : 0;
-    const elapsedSec = (Date.now() - startTime) / 1000;
 
-    let etaStr = '';
-    if (cur > 2 && tot > cur && elapsedSec > 1) {
-      const speed = cur / elapsedSec;
-      const etaSec = Math.round((tot - cur) / speed);
-      if (etaSec > 0) {
-        etaStr = etaSec < 60
-          ? ` · осталось ~${etaSec}с`
-          : ` · осталось ~${Math.ceil(etaSec / 60)}м`;
-      }
-    }
-
-    const stageLabel = stage ? ` · «${stage}»` : '';
-    const foundLabel = found > 0 ? ` · ${found} найдено` : '';
-    setProgress(pct, `${pct}%${stageLabel}${foundLabel}${etaStr}`);
+    setProgress(pct, stage ? `«${stage}»` : '');
     document.title = `${pct}% ⏳ (${found} найдено) — Парсер`;
+    setRunFound(found);
 
-    // Update live stats strip. Число растёт рывками, поэтому смена значения
-    // отмечается короткой пульсацией: без неё счётчик читается как статичная
-    // цифра, а не как «идёт прямо сейчас».
-    const lsFound = document.getElementById('ls-found-num');
-    if (lsFound) {
-      const next = String(found);
-      if (lsFound.textContent !== next) {
-        lsFound.textContent = next;
-        lsFound.classList.remove('pop');
-        void lsFound.offsetWidth;          // перезапуск анимации
-        lsFound.classList.add('pop');
-      }
-    }
-    const lsStage = document.getElementById('ls-stage');
-    if (lsStage) lsStage.textContent = stage ? `«${stage}» · ${cur} из ${tot}` : `${cur} из ${tot}`;
-
-    // Update city-specific progress
+    // Города — отдельный счётчик: доля запроса и число городов больше не
+    // делят одно место и не читаются как один и тот же прогресс.
     if (_currentCityName) {
       updateCityProgress(_currentCityName, pct, found, 'running');
     }
+    setRunEntity(_currentCityName || '');
+    setRunEta(_etaText(_totalCities > 1 ? _runOverallFrac() : pct / 100));
   }
 }
 
@@ -854,11 +896,14 @@ function resetRunUI() {
   if (listEl) listEl.innerHTML = '';
   const cpEl = document.getElementById('city-progress');
   if (cpEl) cpEl.style.display = 'none';
-  const lsNum = document.getElementById('ls-found-num');
-  if (lsNum) lsNum.textContent = '0';
-  const lsStage = document.getElementById('ls-stage');
-  if (lsStage) lsStage.textContent = '';
-  updateTermProgress();
+  const heroNum = document.getElementById('run-found');
+  if (heroNum) heroNum.textContent = '0';
+  const heroStage = document.getElementById('run-stage');
+  if (heroStage) heroStage.textContent = '';
+  const heroFill = document.getElementById('run-fill');
+  if (heroFill) heroFill.style.width = '0%';
+  setRunEntity('', 'готовим поиск');
+  updateRunCities();
   updateStatsBadge();
 }
 
@@ -938,13 +983,11 @@ function _startRunWithParams(params) {
   }
   startTime = Date.now();
   _runEnd = null;   // новый поиск — таймер «Время» снова живой
-  // Show live stats strip and reset counters
-  const ls = document.getElementById('live-stats');
-  if (ls) { ls.style.display = 'flex'; }
-  const lsNum = document.getElementById('ls-found-num');
-  if (lsNum) lsNum.textContent = '0';
-  const lsStage = document.getElementById('ls-stage');
-  if (lsStage) lsStage.textContent = 'запуск…';
+  // Полоса хода поиска: показать и сбросить прошлые значения. Первый город
+  // известен из параметров — ждать события city не нужно.
+  const hero = document.getElementById('run-hero');
+  if (hero) hero.classList.remove('is-hidden');
+  setRunEntity((params.cities || [])[0] || '', 'ждём первую организацию');
 
   showTab('log');
   saveSettings();

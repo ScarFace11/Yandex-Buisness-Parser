@@ -89,6 +89,11 @@ let _liveRenderTimer = null;
 
 function onLiveResult(rec) {
   allResults.push(rec);
+  // Тихая строка в полосе хода поиска: город и последняя найденная
+  // организация. Имён в событиях прогресса нет — источник только результат.
+  if (typeof setRunEntity === 'function') {
+    setRunEntity(rec && rec.city, (rec && rec.name) || '');
+  }
 
   // On first result: reveal the right panel
   if (allResults.length === 1) {

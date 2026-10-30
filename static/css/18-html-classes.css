@@ -9,29 +9,7 @@
    исходный display элемента (flex/grid), если JS переключает класс. */
 .is-hidden{display:none}
 
-/* ── Живая сводка прогона ─────────────────────────────────
-   Раньше жила в inline-стилях #live-stats: в тёмной теме полоса
-   оставалась светлой, а её подписи выпадали из контраста. */
-.live-stats{
-  display:flex;align-items:center;flex-wrap:wrap;gap:16px;
-  padding:7px 24px;
-  background:var(--cl);
-  border-bottom:1px solid var(--bdr);
-  font-size:12.5px;
-}
-.live-stats.is-hidden{display:none}
-.live-stats-title{
-  font-weight:700;color:var(--sub);letter-spacing:.01em;
-}
-.live-stats-right{
-  margin-left:auto;display:flex;align-items:center;gap:5px;
-  color:var(--muted);font-size:12px;font-weight:600;
-}
-.live-found-num{font-size:15px;font-weight:800;color:var(--grn)}
-.live-found-lbl{color:var(--sub);font-weight:600}
-#ls-stage{color:var(--sub);font-weight:600;font-style:italic}
-
-/* Мини-спиннер для живой сводки */
+/* Мини-спиннер для полосы хода поиска */
 .spin-sm{width:10px;height:10px;border-width:1.5px}
 
 /* ── Мульти-город: список под шапкой ── */
@@ -47,9 +25,5 @@
 .sender-stat-sep{color:var(--bdr)}
 
 /* ── Тёмная тема: то же, через токены ── */
-[data-theme="dark"] .live-stats{background:var(--panel);border-bottom-color:var(--bdr)}
-[data-theme="dark"] .live-stats-title{color:var(--sub)}
-[data-theme="dark"] .live-stats-right{color:var(--muted)}
-[data-theme="dark"] .live-found-lbl{color:var(--sub)}
 [data-theme="dark"] .sender-stat-sep{color:var(--bdr-h)}
 

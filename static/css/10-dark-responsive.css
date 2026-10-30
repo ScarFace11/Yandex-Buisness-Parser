@@ -73,6 +73,9 @@
   --sh-lg:0 4px 12px rgba(0,0,0,.42),0 18px 44px rgba(0,0,0,.38);
   --r:var(--r-md);
   --g:var(--c);--gl:var(--cl);--g2:var(--cd);
+  /* Те же значения, что в светлой теме: полоса хода поиска не светлеет
+     вместе с карточками. */
+  --hero-sub:rgba(255,255,255,.68);--hero-line:rgba(255,255,255,.20);
   /* Высота шапки задаётся в :root; повторена для паритета токенов светлой/тёмной тем. */
   --hdr-h:56px;
 }
@@ -133,9 +136,6 @@ html.theme-anim #log-output{
 [data-theme="dark"] .tbl-toolbar,[data-theme="dark"] .tbl-social-row,[data-theme="dark"] .pager{background:var(--panel)}
 [data-theme="dark"] .pager button{background:var(--panel);color:var(--txt);border-color:var(--bdr)}
 [data-theme="dark"] .btn-sm,[data-theme="dark"] #btn-cols{background:var(--panel)}
-[data-theme="dark"] #prog-label{background:var(--cl);border-color:var(--bdr)}
-[data-theme="dark"] #live-stats{background:var(--cl);border-color:var(--bdr)}
-[data-theme="dark"] .live-pill{background:rgba(255,255,255,.06);border-color:var(--bdr)}
 [data-theme="dark"] .term-top{background:var(--panel);border-color:var(--bdr)}
 
 [data-theme="dark"] h1,[data-theme="dark"] h2,[data-theme="dark"] h3,

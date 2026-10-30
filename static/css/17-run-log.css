@@ -18,18 +18,32 @@
   #log-output{max-height:60vh}
 }
 
-/* Aggregate run progress above the log */
-.term-progress{padding:9px 15px;background:var(--card);border-bottom:1px solid var(--bdr)}
-.term-progress[hidden]{display:none}
-.term-progress-info{
-  display:flex;justify-content:space-between;gap:10px;
-  font-size:12px;font-weight:600;color:var(--sub);margin-bottom:6px;
+/* ── Действия журнала: три точки вместо пяти кнопок ────────────────
+   Кнопка — 28×26 (зона нажатия больше глифа), меню раскрывается вниз и
+   перекрывает журнал, а не сдвигает фильтры на вторую строку. */
+#btn-log-howto{margin-left:auto}
+.log-more{position:relative;flex:0 0 auto}
+.log-more-btn{display:inline-grid;place-items:center;width:28px;height:26px;padding:0}
+.log-more-btn .ico{margin:0}
+.log-more-btn[aria-expanded="true"]{border-color:var(--c);color:var(--c);background:var(--cl)}
+.log-more-menu{
+  position:absolute;right:0;top:calc(100% + 6px);z-index:60;
+  min-width:190px;padding:5px;display:flex;flex-direction:column;gap:2px;
+  background:var(--card);border:1px solid var(--bdr);border-radius:10px;
+  box-shadow:var(--sh-lg);
 }
-.term-progress-info b{color:var(--txt)}
-.term-progress-eta{color:var(--muted)}
-.term-progress-bar{height:6px;border-radius:3px;background:var(--cl);overflow:hidden}
-.term-progress-fill{height:100%;width:0;border-radius:3px;background:var(--c);transition:width .3s ease}
-[data-theme="dark"] .term-progress-bar{background:var(--bdr)}
+.log-more-menu[hidden]{display:none}
+.log-more-menu .term-clear{
+  display:flex;align-items:center;justify-content:flex-start;
+  width:100%;padding:7px 9px;border:none;border-radius:7px;
+  background:transparent;text-align:left;font-size:12.5px;
+}
+.log-more-menu .term-clear:hover{background:var(--cl);color:var(--c)}
+.log-more-menu .term-clear.danger:hover{background:var(--err-bg);color:var(--red)}
+[data-theme="dark"] .log-more-menu .term-clear{background:transparent}
+[data-theme="dark"] .log-more-menu .term-clear:hover{background:var(--c-soft);color:var(--c)}
+[data-theme="dark"] .log-more-menu .term-clear.danger:hover{background:var(--err-on);color:var(--red)}
+[data-theme="dark"] .log-more-btn[aria-expanded="true"]{background:var(--c-soft)}
 
 /* Pulsing dot on the «Ход поиска» tab while a run is active */
 /* display:inline-block обязателен: <span> инлайновый, и без него width/
@@ -143,9 +157,6 @@
 }
 .log-jump:hover{filter:brightness(1.08)}
 .log-jump[hidden]{display:none}
-
-/* ── Прогресс: город крупно (полоски по городам живут в верхней полосе) ── */
-.term-progress-info .tp-city{font-size:13px;font-weight:800;color:var(--txt);letter-spacing:-.01em}
 
 /* Режим выбора шаблона: на телефоне — стек, модалка на всю ширину */
 @media(max-width:860px){

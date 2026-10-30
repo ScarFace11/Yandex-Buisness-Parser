@@ -209,35 +209,27 @@
 }
 
 /* Число «найдено» подпрыгивает, когда меняется (см. handleProgress). */
-#ls-found-num{display:inline-block}
-#ls-found-num.pop{animation:found-pop .34s ease}
+#run-found{display:inline-block}
+#run-found.pop{animation:found-pop .34s ease}
 @keyframes found-pop{
   0%{transform:scale(1)}
   35%{transform:scale(1.22)}
   100%{transform:scale(1)}
 }
 
-/* Полоса прогресса: пока поиск идёт, по ней едет светлая волна — видно,
-   что процесс живой, а не замер на одной цифре. Активность определяется по
-   видимой строке «Прямо сейчас». */
-body:has(.live-stats:not(.is-hidden)) #prog-bar{position:relative;overflow:hidden}
-body:has(.live-stats:not(.is-hidden)) #prog-bar::after{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.38),transparent);
-  animation:prog-sheen 1.5s linear infinite;
+/* Дорожка прогресса пока сбор идёт — дышит: подтверждение, что движение
+   не застряло на одной цифре. Активность определяется по видимой полосе. */
+body:has(.run-hero:not(.is-hidden)) #run-track{animation:hero-breathe 1.8s ease-in-out infinite}
+@keyframes hero-breathe{
+  0%,100%{box-shadow:0 0 0 0 transparent}
+  50%{box-shadow:0 0 0 2px var(--hero-line)}
 }
-@keyframes prog-sheen{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
-/* Сама полоса пока сбор идёт — дышит: подтверждение, что движение не
-   застряло на одной цифре (волна едет и по пустой полосе). */
-body:has(.live-stats:not(.is-hidden)) #prog-bar{animation:prog-breathe 1.6s ease-in-out infinite}
-@keyframes prog-breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
 
 /* ── Уважать «уменьшенное движение» ── */
 @media (prefers-reduced-motion:reduce){
   .setup-sum,.setup-chip.bump .setup-chip-val,.tab-panel.active,
-  #ls-found-num.pop{animation:none}
-  body:has(.live-stats:not(.is-hidden)) #prog-bar::after{animation:none;opacity:0}
-  body:has(.live-stats:not(.is-hidden)) #prog-bar{animation:none}
+  #run-found.pop,#run-globe-grid{animation:none}
+  body:has(.run-hero:not(.is-hidden)) #run-track{animation:none}
   .setup-chip:hover{transform:none}
   .tab-btn:active,.acc-hdr:active,.log-filter:active,.sf-tag:active{transform:none}
   #btn-cols:active:not(:disabled),#btn-scope-all:active:not(:disabled),

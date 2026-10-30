@@ -32,8 +32,10 @@ function mkEl(id) {
   const classes = new Set();
   let html = '';
   const el = {
-    id, value: '', textContent: '', hidden: true, style: {},
+    id, value: '', textContent: '', hidden: true, style: {}, attrs: {},
     children: [], firstChild: null, scrollTop: 0, scrollHeight: 0,
+    setAttribute(k, v) { el.attrs[k] = String(v); },
+    getAttribute(k) { return Object.prototype.hasOwnProperty.call(el.attrs, k) ? el.attrs[k] : null; },
     classList: {
       add: (...c) => c.forEach(x => classes.add(x)),
       remove: (...c) => c.forEach(x => classes.delete(x)),
@@ -66,8 +68,9 @@ function mkEl(id) {
 const els = {};
 for (const id of ['log-output', 'log-ph', 'onboarding-screen', 'log-skeleton',
   'city-progress-list', 'city-progress', 'btn-tech-details', 'term-log-lbl',
-  'ls-stage', 'ls-found-num', 't-stats',
-  'term-progress', 'tp-done', 'tp-total', 'tp-fill', 'tp-eta', 'tp-city',
+  't-stats', 'run-hero', 'run-pct', 'run-fill', 'run-track', 'run-found',
+  'run-city', 'run-org', 'run-cities', 'run-eta', 'run-stage',
+  'log-more', 'btn-log-more', 'log-more-menu',
   'log-jump', 'log-jump-n', 'log-filter-empty', 'log-err-count',
   'log-autoscroll', 'tab-log-dot']) {
   els[id] = mkEl(id);
@@ -86,7 +89,6 @@ const _mkDoc = {
 globalThis.document = _mkDoc;
 globalThis.window = {};
 globalThis.showToast = () => {};
-globalThis.setProgress = () => {};
 globalThis.updateStatsBadge = () => {};
 globalThis.refreshLiveStats = () => {};
 globalThis.playCityDoneSound = () => {};
@@ -117,7 +119,10 @@ const fns = ['_trimLog', '_isDup', 'appendLog', 'toggleTechDetails', 'clearLog',
   'closeOnboardingHelp', 'toggleOnboardingHelp',
   'initCityProgress', 'updateCityProgress', 'renderCityProgress',
   'handleProgress', 'handleCityDone',
-  'logStamp', '_elapsedStamp', '_logNorm', '_scrollLogIfFollowing', 'updateTermProgress', '_etaText',
+  'logStamp', '_elapsedStamp', '_logNorm', '_scrollLogIfFollowing', '_etaText',
+  'setProgress', 'hideProgress', 'setRunFound', 'setRunEntity', 'setRunEta',
+  '_runOverallFrac', 'updateRunCities',
+  'toggleLogMenu', 'closeLogMenu',
   'setRunIndicator', 'renderLogStats',
   '_ls', '_logLevel', '_logIsNoise', '_logIsSummary', '_logIsCity', '_logIndent', '_onLogScroll',
   '_updateLogJump', 'logJumpToBottom', 'setLogFilter', '_refreshLogFilter',
@@ -249,9 +254,7 @@ test('city_list event prefills queued cities with ⏸ and (ожидание)', (
   const html = els['city-progress-list'].innerHTML;
   assert.match(html, /⏸/);
   assert.match(html, /\(ожидание\)/);
-  const sum = els['city-progress'].children.find(c => c.id === 'cp-summary');
-  assert.ok(sum, 'summary element created');
-  assert.match(sum.innerHTML, /Городов обработано: <b>0<\/b> из <b>2<\/b>/);
+  assert.equal(els['run-cities'].textContent, '0 из 2 городов');
 });
 
 test('city transition marks the current city as running (⏳)', () => {
@@ -281,8 +284,7 @@ test('city_done marks ✓, 100% and updates the «обработано» counter
   assert.match(html, /✓/);
   assert.match(html, /100%/);
   assert.match(html, /\(45 найд\.\)/);
-  const sum = els['city-progress'].children.find(c => c.id === 'cp-summary');
-  assert.match(sum.innerHTML, /Городов обработано: <b>1<\/b> из <b>2<\/b>/);
+  assert.equal(els['run-cities'].textContent, '1 из 2 городов');
 });
 
 test('queued city stays grey (cp-queued) while another is running', () => {
@@ -344,22 +346,21 @@ test('app.js has no leftover autoscroll switch wiring', () => {
   assert.ok(!/Здесь появится ход поиска/.test(src), 'the old placeholder caption is gone');
 });
 
-// ── 6. Aggregate progress above the log ──────────────────────
-test('aggregate bar counts finished cities + the running one\u2019s %', () => {
+// ── 6. Aggregate progress in the single top strip ─────────────
+test('city counter counts finished cities and names the total', () => {
   globalThis._cityProgressData = {
     'Ташкент': {pct: 100, found: 45, status: 'done'},
     'Санкт-Петербург': {pct: 50, found: 10, status: 'running'},
   };
   globalThis._totalCities = 2;
-  globalThis.updateTermProgress();
-  assert.equal(els['term-progress'].hidden, false);
-  assert.equal(els['tp-done'].textContent, 1);
-  assert.equal(els['tp-total'].textContent, 2);
-  assert.equal(els['tp-fill'].style.width, '75.0%');
+  globalThis.updateRunCities();
+  assert.equal(els['run-cities'].textContent, '1 из 2 городов');
+  // 1 finished city + the running one at 50% of 2 cities = 75%.
+  assert.equal(globalThis._runOverallFrac(), 0.75);
 
   globalThis._totalCities = 1;
-  globalThis.updateTermProgress();
-  assert.equal(els['term-progress'].hidden, true, 'single city → hidden');
+  globalThis.updateRunCities();
+  assert.equal(els['run-cities'].textContent, '1 из 1 города');
 });
 
 // ── 7. Run indicator on the «Ход поиска» tab ─────────────────
@@ -575,21 +576,31 @@ test('_logPlainText writes one stamped line per log row', () => {
   assert.equal(globalThis._logPlainText(), '');
 });
 
-// ── 14. Progress strip: current city + overall bar (no per-city dupe) ──
-// The run used to paint every city twice: as mini bars here and in the top
-// strip. The log panel now owns the AGGREGATE only.
-test('progress strip names the running city and sizes the overall bar', () => {
-  globalThis._cityProgressData = {
-    'Ташкент': {pct: 100, found: 45, status: 'done'},
-    'Санкт-Петербург': {pct: 50, found: 10, status: 'running'},
-  };
-  globalThis._totalCities = 2;
-  globalThis.updateTermProgress();
-  assert.equal(els['tp-city'].textContent, 'Санкт-Петербург');
-  assert.equal(els['tp-done'].textContent, 1);
-  assert.equal(els['tp-total'].textContent, 2);
-  // 1 finished city + the running one at 50% of 2 cities = 75%.
-  assert.equal(els['tp-fill'].style.width, '75.0%');
+// ── 14. One progress strip: percent + city + last organization ──
+test('the hero shows the percent, the city and the last found organization', () => {
+  globalThis.setProgress(37, '«кафе»');
+  assert.equal(els['run-hero']._classes.has('is-hidden'), false);
+  assert.equal(els['run-pct'].textContent, '37');
+  assert.equal(els['run-fill'].style.width, '37%');
+  assert.equal(els['run-track'].getAttribute('aria-valuenow'), '37');
+  assert.equal(els['run-stage'].textContent, '«кафе»');
+
+  globalThis.setRunEntity('Санкт-Петербург', 'Кофейня «Ветер»');
+  assert.equal(els['run-city'].textContent, 'Санкт-Петербург');
+  assert.equal(els['run-org'].textContent, 'Кофейня «Ветер»');
+
+  globalThis.hideProgress();
+  assert.equal(els['run-hero']._classes.has('is-hidden'), true, 'run over → strip hidden');
+});
+
+test('the log toolbar menu opens, closes and reports its state', () => {
+  els['log-more-menu'].hidden = true;
+  globalThis.toggleLogMenu();
+  assert.equal(els['log-more-menu'].hidden, false);
+  assert.equal(els['btn-log-more'].getAttribute('aria-expanded'), 'true');
+  globalThis.closeLogMenu();
+  assert.equal(els['log-more-menu'].hidden, true);
+  assert.equal(els['btn-log-more'].getAttribute('aria-expanded'), 'false');
 });
 
 test('the log panel never repeats the city list (top strip owns it)', () => {

@@ -4,8 +4,6 @@
 /* ══════════════════════════════════════════════════════════
    Multi-city progress panel (top bar): statuses, %, found count
    ══════════════════════════════════════════════════════════ */
-#cp-summary{font-size:12px;color:var(--sub);font-weight:600;margin-bottom:6px}
-#cp-summary b{color:var(--txt)}
 .cp-item{display:flex;align-items:center;gap:6px;min-width:190px}
 .cp-ico{font-size:12px;width:15px;text-align:center;flex-shrink:0}
 .cp-name{font-weight:600;color:var(--txt);font-size:12px;min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -21,7 +19,8 @@
 .ll.tech{color:var(--muted);font-style:italic;font-size:12px}
 .ll.tech::before{content:'⌙ ';opacity:.7}
 [data-theme="dark"] .ll.tech{color:var(--sub)}
-#btn-tech-details{margin-left:auto}
+/* В меню кнопка стоит в столбце и не должна уезжать вправо. */
+.log-more-menu #btn-tech-details{margin-left:0}
 #btn-tech-details.active{background:var(--brand-dark);color:var(--tip-ok);border-color:var(--c)}
 
 /* ── Sticky dock: «Найти компании» is always visible at the bottom of the

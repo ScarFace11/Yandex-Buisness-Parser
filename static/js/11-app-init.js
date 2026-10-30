@@ -871,6 +871,8 @@ function initTermsGate() {
   // Снимок инструкции до первой строки лога: кнопка «Как это работает»
   // показывает её заново во время и после поиска.
   cacheOnboardingHtml();
+  // Три точки в полосе журнала: закрытие по Esc и клику вне меню.
+  initLogMenu();
   // Set initial social mode active state + social net checkboxes
   initSocialNetCheckboxes();
   setSocialMode(socialMode);

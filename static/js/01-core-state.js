@@ -115,7 +115,7 @@ function initCityProgress(totalCities) {
   } else {
     el.style.display = 'none';
   }
-  updateTermProgress();
+  updateRunCities();
 }
 
 function updateCityProgress(cityName, pct, found, status) {
@@ -147,19 +147,9 @@ function renderCityProgress() {
       <span class="cp-val">${data.pct}%<span class="cp-found">${foundTxt}</span></span>
     </div>`;
   }).join('');
-  updateTermProgress();
-  // Summary line: «Городов обработано: X из Y»
-  const wrap = document.getElementById('city-progress');
-  if (wrap) {
-    const done = entries.filter(([, d]) => d.status === 'done' || d.status === 'skipped').length;
-    let sumEl = document.getElementById('cp-summary');
-    if (!sumEl) {
-      sumEl = document.createElement('div');
-      sumEl.id = 'cp-summary';
-      wrap.insertBefore(sumEl, list);
-    }
-    sumEl.innerHTML = `Городов обработано: <b>${done}</b> из <b>${entries.length}</b>`;
-  }
+  // «4 из 4 городов» живёт в полосе хода поиска: вторая строка под списком
+  // городов была тем самым дублем, из-за которого счётчики расходились.
+  updateRunCities();
 }
 
 // ═══════════════════════════════════════════

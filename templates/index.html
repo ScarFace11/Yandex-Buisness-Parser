@@ -86,6 +86,10 @@
   <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h3.8l1.7 2H19a1.5 1.5 0 0 1 1.5 1.5V11"/><path d="M3.5 10.5h16l-1.7 7.2a1.5 1.5 0 0 1-1.5 1.1H5.6a1.5 1.5 0 0 1-1.5-1.1z"/></symbol>
   <symbol id="i-spreadsheet" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M10 10v9"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 11h16"/><path d="M4 16h10"/></symbol>
+  <!-- «Ещё»: второстепенные действия журнала живут в одном меню, а не
+       занимают полосу кнопками. Точки залиты, иначе на 15px они читались
+       бы как три пустых кружка. -->
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.7" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16"/></symbol>
   <symbol id="i-bug" viewBox="0 0 24 24"><rect x="8" y="8" width="8" height="12" rx="4"/><path d="M9.5 8C9.5 5.8 10.6 4.4 12 4.4s2.5 1.4 2.5 3.6"/><path d="M8 11H4.6M8 14.4H4.2M8 17.8H5M16 11h3.4M16 14.4h3.8M16 17.8h3"/></symbol>
   <symbol id="i-undo" viewBox="0 0 24 24"><path d="M4.5 9h9.8a5.5 5.5 0 1 1 0 11H8.5"/><polyline points="8 5.2 4.5 9 8 12.6"/></symbol>
@@ -238,21 +242,34 @@
   </div>
 </header>
 
-<!-- ══ PROGRESS ══════════════════════════════════════════════════════ -->
-<div id="prog-wrap" role="progressbar" aria-label="Общий прогресс"><div id="prog-bar"></div></div>
-<div id="prog-label" aria-live="polite"></div>
-
-<!-- Живая сводка текущего запуска -->
-<div id="live-stats" class="live-stats is-hidden">
-  <span class="live-stats-title">Прямо сейчас:</span>
-  <span class="live-pill" id="ls-found" title="Найдено бизнесов с соцсетями">
-    <span class="live-found-num" id="ls-found-num">0</span>
-    <span class="live-found-lbl">найдено</span>
-  </span>
-  <span class="live-pill" id="ls-stage">—</span>
-  <span class="live-stats-right">
-    <span class="spin spin-sm"></span> работает
-  </span>
+<!-- ══ ХОД ПОИСКА: одна полоса вместо трёх ═══════════════════════════
+     Раньше одно и то же показывалось трижды: тонкая полоса под шапкой,
+     строка «Прямо сейчас» и панель над журналом. Здесь одно место: глобус →
+     процент с полоской → что происходит сейчас (город и последняя
+     организация) → счётчики. Белым — только главное; город и организация
+     тише, чтобы не спорить с процентом. -->
+<div id="run-hero" class="run-hero is-hidden">
+  <div class="run-globe" aria-hidden="true">
+    <span class="run-globe-grid"></span><span class="run-globe-shine"></span>
+  </div>
+  <div class="run-hero-pct-wrap">
+    <div class="run-hero-pct"><b id="run-pct">0</b><span class="run-hero-sign">%</span></div>
+    <div class="run-hero-track" id="run-track" role="progressbar"
+         aria-label="Общий прогресс" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div id="run-fill"></div>
+    </div>
+  </div>
+  <div class="run-hero-now">
+    <span class="run-hero-city" id="run-city">—</span>
+    <span class="run-hero-org" id="run-org">готовим поиск</span>
+  </div>
+  <div class="run-hero-meta">
+    <span title="Найдено организаций с соцсетями"><b id="run-found">0</b> найдено</span>
+    <span id="run-cities">0 из 0 городов</span>
+    <span id="run-eta"></span>
+    <span id="run-stage"></span>
+  </div>
+  <span class="run-hero-state"><span class="spin spin-sm"></span>работает</span>
 </div>
 
 <!-- Мульти-город: прогресс по каждому городу (>1 города) -->
@@ -1038,27 +1055,34 @@
                   aria-controls="onboarding-screen onboarding-help" aria-expanded="true"
                   title="Открыть инструкцию: три шага поиска">
             <svg class="ico" aria-hidden="true"><use href="#i-book"/></svg>Как это работает</button>
-          <button class="term-clear" id="btn-tech-details" onclick="toggleTechDetails()"
-                  title="Показать сырые ошибки API и служебную информацию">
-            <svg class="ico" aria-hidden="true"><use href="#i-code"/></svg>Детали</button>
-          <button class="term-clear" id="btn-log-save" onclick="saveLogFile()" title="Скачать журнал как .log-файл">
-            <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>Сохранить лог</button>
-          <button class="term-clear" id="btn-log-copy" onclick="copyLogText()" title="Скопировать весь журнал в буфер обмена">
-            <svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>Копировать</button>
-          <button class="term-clear danger" id="btn-clear-log" onclick="clearLog()" title="Очистить окно лога">
-            <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить</button>
+          <!-- Второстепенные действия — в одном меню: пять кнопок подряд
+               отнимали ширину у фильтров и на 1024px уезжали на вторую
+               строку. Открывается кликом, закрывается Esc и кликом вне. -->
+          <div class="log-more" id="log-more">
+            <button type="button" class="term-clear log-more-btn" id="btn-log-more"
+                    onclick="toggleLogMenu(event)" aria-haspopup="true" aria-expanded="false"
+                    aria-controls="log-more-menu" aria-label="Действия с журналом"
+                    title="Действия с журналом">
+              <svg class="ico" aria-hidden="true"><use href="#i-more"/></svg></button>
+            <div class="log-more-menu" id="log-more-menu" role="menu" hidden>
+              <button type="button" role="menuitem" class="term-clear" id="btn-tech-details"
+                      onclick="toggleTechDetails(); closeLogMenu()"
+                      title="Показать сырые ошибки API и служебную информацию">
+                <svg class="ico" aria-hidden="true"><use href="#i-code"/></svg>Детали</button>
+              <button type="button" role="menuitem" class="term-clear" id="btn-log-save"
+                      onclick="saveLogFile(); closeLogMenu()" title="Скачать журнал как .log-файл">
+                <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>Сохранить лог</button>
+              <button type="button" role="menuitem" class="term-clear" id="btn-log-copy"
+                      onclick="copyLogText(); closeLogMenu()" title="Скопировать весь журнал в буфер обмена">
+                <svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>Копировать</button>
+              <button type="button" role="menuitem" class="term-clear danger" id="btn-clear-log"
+                      onclick="clearLog(); closeLogMenu()" title="Очистить окно лога">
+                <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить</button>
+            </div>
+          </div>
         </div>
 
         <div class="log-empty" id="log-filter-empty" hidden></div>
-
-        <div class="term-progress" id="term-progress" hidden>
-          <div class="term-progress-info">
-            <span class="tp-city" id="tp-city">—</span>
-            <span>Обработано: <b id="tp-done">0</b> из <b id="tp-total">0</b> городов</span>
-            <span class="term-progress-eta" id="tp-eta"></span>
-          </div>
-          <div class="term-progress-bar"><div class="term-progress-fill" id="tp-fill"></div></div>
-        </div>
 
         <div id="log-output">
           <div id="onboarding-screen" class="onboarding">
