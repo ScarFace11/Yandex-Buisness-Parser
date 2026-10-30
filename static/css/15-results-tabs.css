@@ -1,4 +1,4 @@
-/* 15-results-tabs.css · Результаты: подвкладки, массовый обход, файлы
+/* 15-results-tabs.css · Результаты: массовый обход и таблица; подвкладки истории
    Часть 16 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
 
 /* ════════════════════════════════
@@ -6,7 +6,7 @@
    Sub-tabs · city tabs · bulk outreach · file browser
    ════════════════════════════════ */
 
-/* ── Sub-tabs: «Текущий результат» / «История файлов» ── */
+/* ── Подвкладки вкладки «История»: «Поиски» / «Файлы» ── */
 .results-subtabs{
   display:flex;align-items:center;gap:6px;padding:8px 15px 0;
   border-bottom:1px solid var(--bdr);background:var(--card);flex:0 0 auto;
@@ -26,13 +26,12 @@
 }
 .subt-link:hover{border-color:var(--c);color:var(--c)}
 
-/* Both sub-tab bodies; the current one behaves like the old #p-table child.
-   Панель «Результаты» прокручивается целиком: панель массового обхода и
-   таблица больше не конкурируют за высоту — на небольших мониторах всё
-   доступно без потери строк таблицы. */
+/* Панель «Результаты» прокручивается целиком: панель массового обхода и
+   таблица не конкурируют за высоту — на небольших мониторах всё доступно
+   без потери строк. У «Истории» так же прокручивается активный вид. */
 #rs-current{display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto}
-#rs-history{flex:1;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;padding:15px 15px 24px}
-#rs-current[hidden],#rs-history[hidden],#bulk-body[hidden],#bulk-progress[hidden],
+#hist-files{flex:1;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;padding:15px 15px 24px}
+#hist-runs[hidden],#hist-files[hidden],#bulk-body[hidden],#bulk-progress[hidden],
 #bulk-warn[hidden],.city-tabs[hidden]{display:none}
 
 /* ── Bulk social outreach ── */
@@ -233,7 +232,7 @@
 .files-badge.archive{background:var(--warn-bg);color:var(--warn-txt);border-color:var(--warn-bdr)}
 .history-panel{display:grid;gap:22px;min-width:0}
 .history-section{display:grid;gap:8px;min-width:0}
-/* Разделы «Истории файлов» сворачиваются по клику на заголовок. */
+/* Разделы «Истории» → «Файлы» сворачиваются по клику на заголовок. */
 .history-collapse{cursor:pointer;user-select:none;border-radius:6px}
 .history-collapse:focus-visible{outline:2px solid var(--c);outline-offset:2px}
 .history-caret{margin-left:auto;font-size:12px;color:var(--muted);transition:transform .15s}

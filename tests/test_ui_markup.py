@@ -2245,6 +2245,51 @@ class TestEmptyStates:
             assert 'парсер не остановится' not in text
 
 
+class TestHistoryOwnsThePast:
+    """Прошлое — в одном месте: «История» с видами «Поиски» и «Файлы».
+
+    Раньше история поисков была отдельной вкладкой, а история файлов —
+    подвкладкой «Результатов»: два похожих раздела про одно и то же.
+    Теперь «Результаты» — только текущая таблица, а файлы лежат рядом с
+    поисками, которые их создали.
+    """
+
+    def _history_panel(self) -> str:
+        return TEMPLATE[TEMPLATE.index('id="p-history"'):TEMPLATE.index('id="p-templates"')]
+
+    def test_results_tab_is_only_the_current_table(self):
+        table = TEMPLATE[TEMPLATE.index('id="p-table"'):TEMPLATE.index('id="p-map"')]
+        assert 'id="rs-history"' not in table
+        assert 'id="results-subtabs"' not in TEMPLATE
+        assert 'История файлов' not in TEMPLATE
+
+    def test_history_has_runs_and_files_views(self):
+        panel = self._history_panel()
+        for needle in ('id="hist-runs"', 'id="hist-files"',
+                       'data-hsub="runs"', 'data-hsub="files"',
+                       "onclick=\"setHistorySubTab('files')\""):
+            assert needle in panel, needle
+        assert panel.index('id="hist-runs"') < panel.index('id="hist-files"')
+
+    def test_file_browser_lives_inside_history(self):
+        panel = self._history_panel()
+        for needle in ('id="history-raw"', 'id="history-processed"',
+                       'id="history-archive"', 'onclick="loadFilesPanel(true)"',
+                       'id="btn-files-bulk-delete"'):
+            assert needle in panel, needle
+
+    def test_views_toggle_without_replacing_the_table(self):
+        assert 'function setHistorySubTab(' in APP_JS
+        assert 'function setResultsSubTab(' not in APP_JS
+        body = APP_JS.split('function setHistorySubTab(')[1][:700]
+        assert 'runs.hidden = files' in body
+        assert 'hist.hidden = !files' in body
+        # Переход в «Результаты» из файла не должен просить общий срез:
+        # иначе он перетрёт открытый файл ответом «последний поиск».
+        assert "showTab('table', true)" in APP_JS
+        assert 'function showTab(name, skipLoad)' in APP_JS
+
+
 class TestCityInputCommit:
     """Город не теряется и фиксируется до клика по кнопке.
 

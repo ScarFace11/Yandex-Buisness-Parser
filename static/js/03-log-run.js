@@ -18,7 +18,9 @@ function _runElapsed() {
   return Math.max(0, (end - (startTime || end)) / 1000);
 }
 
-function showTab(name) {
+// skipLoad — не запрашивать общий срез при переходе в «Результаты»
+// (используется, когда сразу открывается конкретный файл из истории).
+function showTab(name, skipLoad) {
   // Активная вкладка — единственная в порядке табуляции, и только у неё
   // aria-selected="true". Раньше класс .active переезжал, а aria-selected
   // оставался на прежней вкладке: скринридер сообщал о выбранной не той
@@ -42,7 +44,7 @@ function showTab(name) {
     // подгрузка с диска заменяла накопленные записи пустым/частичным срезом
     // (таблица «пропадала» до следующих результатов) и смешивала
     // отфильтрованный срез с нефильтрованными live-записями.
-    if (!_resultsLoadedOnce && !isRunActive()) setResultsView(_resultsView);
+    if (!skipLoad && !_resultsLoadedOnce && !isRunActive()) setResultsView(_resultsView);
     if (allResults.length) renderCityTabs(_lastCities);
     updateBulkStats();
   }
@@ -51,6 +53,9 @@ function showTab(name) {
     loadHistory();
     loadSeenStatus();
     loadCityHistoryMeta();
+    // Список файлов грузится только когда открыт вид «Файлы» — иначе
+    // вкладка «История» делала бы лишний запрос ради скрытого списка.
+    if (_historySubTab === 'files') loadFilesPanel();
   }
   // Шаблоны сообщений: состояние общее, догружаем и перерисовываем карточки.
   if (name === 'templates') {

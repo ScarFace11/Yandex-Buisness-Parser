@@ -92,7 +92,7 @@ for (const id of [
   'bulk-skip-viewed', 'bulk-mark-viewed', 'bulk-warn', 'bulk-copy-btn', 'bulk-persist-btn',
   'reviewed-save-status',
   'history-raw', 'history-processed', 'history-archive', 'files-count', 'files-search',
-  'files-found',
+  'files-found', 'hist-runs', 'hist-files',
   // Bulk file actions: delete / archive / clear selection
   'btn-files-bulk-delete', 'btn-files-bulk-archive',
   'btn-files-bulk-cancel', 'files-bulk-n', 'files-bulk-arch-n',
@@ -124,12 +124,15 @@ els['f-sort-score'].checked = false;   // table order stays untouched by default
 
 // Preset buttons in the bulk panel
 const presets = [5, 10, 20].map(n => { const b = mkEl('preset' + n); b.dataset.count = String(n); return b; });
+// Виды «Истории»: кнопка хранит вид в data-hsub.
+const histTabs = ['runs', 'files'].map(n => { const b = mkEl('hsub-' + n); b.dataset.hsub = n; return b; });
 
 globalThis.document = {
   getElementById: id => els[id] ?? null,
   querySelector: () => null,
   querySelectorAll: sel => {
     if (sel === '#bulk-panel .bulk-preset') return presets;
+    if (sel === '#history-subtabs .subt-tab') return histTabs;
     return [];
   },
   createElement: () => mkEl('created'),
@@ -150,7 +153,8 @@ globalThis.SLABELS = { vk: 'VK', instagram: 'IG', telegram: 'TG', whatsapp: 'WA'
 globalThis.SNAMES = { vk: 'ВКонтакте', instagram: 'Instagram', telegram: 'Telegram', whatsapp: 'WhatsApp' };
 globalThis.BULK_SOCIALS = ['vk', 'telegram', 'whatsapp', 'instagram'];
 globalThis.BULK_MAX_TABS = 50;
-globalThis.SUBTAB_KEY = 'yp_results_subtab';
+globalThis.HIST_SUBTAB_KEY = 'yp_history_subtab';
+globalThis._historySubTab = 'runs';
 globalThis.CITY_TAB_KEY = 'yp_results_city_tab';
 globalThis.CITY_FAV_KEY = 'yp_results_city_favs';
 globalThis.ONLY_NEW_KEY = 'yp_only_new';
@@ -304,7 +308,7 @@ const fns = [
   'colHasData', 'syncAutoHiddenCols',
   // Автосохранение отметок «Просмотрено»
   'markReviewedDirty', 'updateReviewedSaveStatus', 'autoPersistReviewed', 'persistReviewedOnLeave',
-  'setResultsSubTab', 'exportFiltered', 'persistReviewedMarks',
+  'setHistorySubTab', 'exportFiltered', 'persistReviewedMarks',
   // Lead score: filterTable mirrors the server-side threshold + ordering,
   // renderPage renders the «Оценка» cell, scoreHTML explains it per record.
   'minScoreThreshold', 'onMinScoreInput', 'setMinScore',
@@ -1491,15 +1495,30 @@ test('closing the tab flushes the marks through sendBeacon', () => {
   }
 });
 
-test('switching to «История файлов» saves the marks first', async () => {
+test('«История» switches runs and files without touching the table', () => {
+  globalThis.filesLoaded = true;
+  globalThis.filesData = { raw: [], processed: [], archive: [] };
+  globalThis.setHistorySubTab('files');
+  assert.equal(els['hist-runs'].hidden, true, 'поиски спрятаны');
+  assert.equal(els['hist-files'].hidden, false, 'файлы показаны');
+  assert.ok(histTabs[1]._classes.has('active'));
+  assert.equal(histTabs[1].getAttribute('aria-pressed'), 'true');
+  assert.equal(globalThis._historySubTab, 'files');
+  globalThis.setHistorySubTab('runs');
+  assert.equal(els['hist-runs'].hidden, false);
+  assert.equal(els['hist-files'].hidden, true);
+  assert.equal(histTabs[0].getAttribute('aria-pressed'), 'true');
+});
+
+test('switching to «История» → «Файлы» saves the marks first', async () => {
   resetState();
   fetchCalls = [];
   globalThis.filesLoaded = true;          // панель файлов уже загружена — не ходим за ней
   globalThis.reviewedDirty = true;
-  globalThis.setResultsSubTab('history');
+  globalThis.setHistorySubTab('files');
   await new Promise(r => setImmediate(r));
   assert.ok(fetchCalls.some(c => c.url === '/reviewed/persist'),
-    'переключение подвкладки дописывает отметки в файлы');
+    'переключение на файлы дописывает отметки в файлы');
   assert.equal(globalThis.reviewedDirty, false);
 });
 

@@ -96,7 +96,7 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 /* ══════════════════════════════════════════════════════════
    6. HISTORY — collapsible cards
    ══════════════════════════════════════════════════════════ */
-.history-body{padding:18px 20px;overflow-y:auto;flex:1}
+.history-body{padding:18px 20px;overflow-y:auto;flex:1;min-height:0}
 .history-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .history-toolbar h3{margin:0;font-size:17px;font-weight:800;color:var(--txt);letter-spacing:-.02em}
 .history-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}

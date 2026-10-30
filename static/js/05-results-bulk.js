@@ -142,9 +142,10 @@ if (typeof document !== 'undefined' && document.addEventListener) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  Results tab: sub-tabs, city tabs, bulk outreach, file browser
+//  Results tab: city tabs, bulk outreach, file browser
+//  История файлов живёт в «Истории»: там два вида — «Поиски» и «Файлы».
 // ══════════════════════════════════════════════════════════════
-const SUBTAB_KEY    = 'yp_results_subtab';   // current | history
+const HIST_SUBTAB_KEY = 'yp_history_subtab';  // runs | files
 const CITY_TAB_KEY  = 'yp_results_city_tab';  // '' = все города
 const CITY_FAV_KEY  = 'yp_results_city_favs'; // избранные города («звёздочка»)
 const BULK_OPEN_KEY = 'yp_bulk_open';         // 1 — пользователь явно развёрнул; иначе свёрнута
@@ -154,13 +155,14 @@ const BULK_MAX_TABS = 50;                     // предел вкладок з�
 const BULK_SOCIALS = ['vk', 'telegram', 'whatsapp', 'instagram'];
 
 let activeCity = '';            // выбранная вкладка города ('' = все)
+let _historySubTab = 'runs';    // вид вкладки «История»: runs | files
 let _lastCities = [];           // города текущего вида (от /results-view)
 // Показ по отметке «Просмотрено»: 'all' | 'unviewed' | 'viewed'.
 // Переключается кликом по заголовку колонки ✓ (замена кнопки «Непросмотренные»).
 let reviewedFilter = 'all';
 let favoriteCities = new Set(); // города со звёздочкой — закрепляются сверху
 let currentFileNote = '';       // «· файл: …» когда таблица показывает один файл
-let currentFile = '';           // rel-путь файла, открытого из «Истории файлов»
+let currentFile = '';           // rel-путь файла, открытого из «История» → «Файлы»
 let bulkBusy = false;
 let bulkState = { social: 'vk', opened: 0, blocked: 0, keys: new Set(), copied: new Set(), texts: new Map(), copiedTexts: new Set() };
 let filesLoaded = false;
@@ -286,22 +288,36 @@ function postJSON(url, body) {
   });
 }
 
-// ── Sub-tabs: «Текущий результат» / «История файлов» ─────────
-function setResultsSubTab(name) {
-  const showCurrent = name !== 'history';
-  document.querySelectorAll('#results-subtabs .subt-tab').forEach(b =>
-    b.classList.toggle('active', (b.dataset.sub === 'history') === !showCurrent));
-  const rc = document.getElementById('rs-current');
-  const rh = document.getElementById('rs-history');
-  if (rc) rc.hidden = !showCurrent;
-  if (rh) rh.hidden = showCurrent;
-  try { localStorage.setItem(SUBTAB_KEY, showCurrent ? 'current' : 'history'); } catch (e) {}
-  if (!showCurrent) {
+// ── Вид вкладки «История»: «Поиски» / «Файлы» ─────────────────
+// Раньше история файлов была подвкладкой «Результатов», а история поисков —
+// отдельной вкладкой: обе показывали прошлое и читались как два похожих
+// раздела. Теперь прошлое живёт в одном месте, а «Результаты» — только
+// текущая таблица.
+function setHistorySubTab(name) {
+  const files = name === 'files';
+  document.querySelectorAll('#history-subtabs .subt-tab').forEach(b => {
+    const on = b.dataset.hsub === name;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const runs = document.getElementById('hist-runs');
+  const hist = document.getElementById('hist-files');
+  if (runs) runs.hidden = files;
+  if (hist) hist.hidden = !files;
+  _historySubTab = files ? 'files' : 'runs';
+  try { localStorage.setItem(HIST_SUBTAB_KEY, _historySubTab); } catch (e) {}
+  if (files) {
     // Уходим из таблицы — самый удобный момент дописать отметки в файлы.
     autoPersistReviewed();
     if (!filesLoaded) loadFilesPanel();
     else renderFiles();
   }
+}
+
+function initHistorySubTab() {
+  let name = 'runs';
+  try { if (localStorage.getItem(HIST_SUBTAB_KEY) === 'files') name = 'files'; } catch (e) {}
+  setHistorySubTab(name);
 }
 
 // ── City tabs ───────────────────────────────────────────────
@@ -1007,7 +1023,7 @@ async function persistReviewedMarks() {
   }
 }
 
-// ── File browser («История файлов») ─────────────────────────
+// ── File browser («История» → «Файлы») ───────────────────────
 function onFilesSearchInput() {
   clearTimeout(filesSearchTimer);
   filesSearchTimer = setTimeout(() => {
@@ -1042,8 +1058,8 @@ async function loadFilesPanel(force) {
 // Показать ошибку «файла нет», не превратив таблицу в автомата, и обновить список файлов.
 function showFileNotFound(view) {
   const body = document.getElementById('tbl-body');
-  if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Файл не найден в этой папке. Проверьте Историю файлов (Обновить) и откройте его снова.</td></tr>`;
-  showToast('Файл не найден в этой папке. Проверьте Историю файлов (Обновить) и откройте его снова.', 'warn');
+  if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Файл не найден в этой папке. Откройте «История» → «Файлы», нажмите «Обновить» и попробуйте снова.</td></tr>`;
+  showToast('Файл не найден в этой папке. Откройте «История» → «Файлы», нажмите «Обновить» и попробуйте снова.', 'warn');
   loadFilesPanel(true);
 }
 
@@ -1164,7 +1180,7 @@ async function bulkDeleteSelected() {
   }
 }
 
-// ── Сворачиваемые разделы «Истории файлов» ──────────────────
+// ── Сворачиваемые разделы «Истории» → «Файлы» ───────────────
 // Состояние разделов (raw/processed/archive) переживает перезагрузку.
 const HISTORY_SECTIONS_KEY = 'yp_files_sections_v1';
 let _historyCollapsed = (() => {
@@ -1235,7 +1251,9 @@ function renderFiles() {
 
 function openFileInTable(rel) {
   if (!rel) return;
-  setResultsSubTab('current');
+  // Вкладка уже может быть загружена: открываем конкретный файл, поэтому
+  // общий срез не запрашиваем (второй аргумент showTab — skipLoad).
+  showTab('table', true);
   const body = document.getElementById('tbl-body');
   if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Загрузка…</td></tr>`;
   const seq = ++_resultsReqSeq;      // перебивает незавершённую загрузку общего вида
@@ -1252,8 +1270,8 @@ function openFileInTable(rel) {
       const recs = d.records || [];
       if (!recs.length) {
         // Сервер вернул пустой список — нет данных этого поиска, либо запрос не тот.
-        body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Нет данных. Запустите сбор данных, затем откройте файл в Истории файлов.</td></tr>`;
-        showToast('Нет данных. Запустите сбор данных, затем откройте файл в Истории файлов.', 'info');
+        body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Нет данных. Запустите сбор данных, затем откройте файл в «История» → «Файлы».</td></tr>`;
+        showToast('Нет данных. Запустите сбор данных, затем откройте файл в «История» → «Файлы».', 'info');
         return;
       }
       activeCity = '';
@@ -1324,8 +1342,6 @@ async function fileAction(rel, action) {
 
 // ── Init of the results panel ───────────────────────────────
 function initResultsPanel() {
-  let sub = 'current';
-  try { if (localStorage.getItem(SUBTAB_KEY) === 'history') sub = 'history'; } catch (e) {}
   try { activeCity = localStorage.getItem(CITY_TAB_KEY) || ''; } catch (e) { activeCity = ''; }
   loadFavoriteCities();
   try { if (localStorage.getItem(SCOPE_KEY) === 'all') _resultsScope = 'all'; } catch (e) {}
@@ -1354,7 +1370,7 @@ function initResultsPanel() {
   });
 
   // File actions via delegation — paths are never interpolated into JS code.
-  const hist = document.getElementById('rs-history');
+  const hist = document.getElementById('hist-files');
   if (hist) hist.addEventListener('click', e => {
     const btn = e.target.closest('.file-btn');
     if (!btn) return;
@@ -1368,7 +1384,7 @@ function initResultsPanel() {
     else if (act === 'delete') deleteResultsFile(rel);
   });
 
-  setResultsSubTab(sub);
+  initHistorySubTab();
   updateBulkStats();
 }
 

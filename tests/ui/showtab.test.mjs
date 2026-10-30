@@ -57,11 +57,12 @@ globalThis.window = {};
 
 // Calls we spy on: showTab must touch these only through the branches we test.
 const calls = { setResultsView: [], updateBulkStats: 0, renderCityTabs: 0,
-  loadDailyDynamics: 0, loadHistory: 0 };
+  loadDailyDynamics: 0, loadHistory: 0, loadFilesPanel: 0 };
 globalThis.setResultsView = v => calls.setResultsView.push(v);
 globalThis.updateBulkStats = () => { calls.updateBulkStats++; };
 globalThis.renderCityTabs = () => { calls.renderCityTabs++; };
 globalThis.loadHistory = () => { calls.loadHistory++; };
+globalThis.loadFilesPanel = () => { calls.loadFilesPanel++; };
 globalThis.loadSeenStatus = () => {};
 globalThis.loadCityHistoryMeta = () => {};
 globalThis.loadTemplates = () => Promise.resolve();
@@ -80,6 +81,7 @@ globalThis._resultsView = 'raw';
 globalThis._resultsLoadedOnce = false;
 globalThis._runElapsed = () => '0:00';
 globalThis._lastSkippedCities = [];
+globalThis._historySubTab = 'runs';
 
 (0, eval)(grab('isRunActive') + '\n' + grab('showTab'));
 
@@ -143,7 +145,7 @@ test('the real loader marks the flag, so the guard is not just the stub', () => 
   assert.match(body, /_resultsLoadedOnce\s*=\s*true/);
   // …а showTab читает и флаг, и признак активного прогона.
   const tab = grab('showTab');
-  assert.match(tab, /if\s*\(!_resultsLoadedOnce\s*&&\s*!isRunActive\(\)\)\s*setResultsView\(_resultsView\)/);
+  assert.match(tab, /if\s*\(!skipLoad\s*&&\s*!_resultsLoadedOnce\s*&&\s*!isRunActive\(\)\)\s*setResultsView\(_resultsView\)/);
 });
 
 // ── 3. Соседние вкладки не задеты этой логикой ───────────────
@@ -166,9 +168,26 @@ test("opening «Статистика» first loads the results snapshot for its 
   assert.equal(calls.setResultsView.length, 0);
 });
 
-test("switching to «История» loads the file list", () => {
+test("switching to «История» loads the run list", () => {
   reset({ runActive: false });
   globalThis.showTab('history');
   assert.equal(calls.loadHistory, 1);
+  assert.equal(calls.loadFilesPanel, 0, 'вид «Поиски» не грузит файлы');
   assert.equal(calls.setResultsView.length, 0, 'история не трогает срез результатов');
+});
+
+test("«История» → «Файлы» loads the file list, not the runs again from scratch", () => {
+  reset({ runActive: false });
+  globalThis._historySubTab = 'files';
+  globalThis.showTab('history');
+  assert.equal(calls.loadFilesPanel, 1, 'открыт вид «Файлы» — список файлов нужен');
+  assert.equal(calls.setResultsView.length, 0);
+  globalThis._historySubTab = 'runs';
+});
+
+test("showTab('table', true) keeps the explicitly opened file", () => {
+  reset({ runActive: false });
+  globalThis.showTab('table', true);
+  assert.equal(calls.setResultsView.length, 0,
+    'открытие файла не должно подменять его общим срезом');
 });

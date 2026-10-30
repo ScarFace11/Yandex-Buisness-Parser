@@ -1149,15 +1149,6 @@
       <!-- ══ TABLE ══ -->
       <div class="tab-panel" id="p-table" role="tabpanel" aria-labelledby="t-table">
 
-        <div class="results-subtabs" id="results-subtabs">
-          <button class="subt-tab active" data-sub="current" onclick="setResultsSubTab('current')">
-            <svg class="ico" aria-hidden="true"><use href="#i-spreadsheet"/></svg>Текущий результат</button>
-          <button class="subt-tab" data-sub="history" onclick="setResultsSubTab('history')">
-            <svg class="ico" aria-hidden="true"><use href="#i-folder"/></svg>История файлов</button>
-          <span class="subt-spacer"></span>
-        </div>
-
-        <!-- Подвкладка 1: текущий результат -->
         <div id="rs-current">
 
           <div class="bulk-panel" id="bulk-panel">
@@ -1332,9 +1323,51 @@
             </div>
           </div>
         </div><!-- /rs-current -->
+      </div>
 
-        <!-- Подвкладка 2: история файлов -->
-        <div id="rs-history" hidden>
+      <!-- ══ MAP ══ -->
+      <div class="tab-panel" id="p-map" role="tabpanel" aria-labelledby="t-map">
+        <div id="map-container"></div>
+      </div>
+
+      <!-- ══ STATS ══ -->
+      <div class="tab-panel" id="p-stats" role="tabpanel" aria-labelledby="t-stats">
+        <div id="stats-daily"></div>
+        <div class="stats-body" id="stats-body">
+          <div class="no-data">Запустите поиск — здесь появится разбор: рейтинги, горячие лиды и полнота карточек.</div>
+        </div>
+      </div>
+
+      <!-- ══ HISTORY ══ -->
+      <div class="tab-panel" id="p-history" role="tabpanel" aria-labelledby="t-history">
+        <div class="results-subtabs" id="history-subtabs" role="group" aria-label="История: поиски и файлы">
+          <button type="button" class="subt-tab active" data-hsub="runs"
+                  aria-pressed="true" aria-controls="hist-runs" onclick="setHistorySubTab('runs')">
+            <svg class="ico" aria-hidden="true"><use href="#i-history"/></svg>Поиски</button>
+          <button type="button" class="subt-tab" data-hsub="files"
+                  aria-pressed="false" aria-controls="hist-files" onclick="setHistorySubTab('files')">
+            <svg class="ico" aria-hidden="true"><use href="#i-folder"/></svg>Файлы</button>
+          <span class="subt-spacer"></span>
+        </div>
+        <div class="history-body" id="hist-runs" aria-label="Исторические поиски">
+          <div class="history-toolbar">
+            <h3>История поисков</h3>
+            <div class="history-actions">
+              <button class="btn-sm" onclick="loadHistory()">
+                <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>Обновить</button>
+              <button class="btn-sm danger" onclick="clearAllHistory()" title="Удалить все записи истории поисков">
+                <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить историю</button>
+              <button class="btn-sm warn" onclick="clearSeenStore()" title="Сбросить кэш бизнесов — повторно обработать все города">
+                <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить кэш</button>
+            </div>
+          </div>
+          <div id="seen-status" class="seen-status" style="display:none"></div>
+          <div id="history-list">
+            <div class="no-data">Загрузка...</div>
+          </div>
+        </div>
+
+        <div id="hist-files" hidden aria-label="Файлы прошлых поисков">
           <div class="files-toolbar">
             <input type="text" id="files-search" placeholder="Поиск по имени файла…" oninput="onFilesSearchInput()"
                    aria-label="Поиск по имени файла">
@@ -1402,41 +1435,7 @@
               <div class="history-list" id="history-archive"><div class="no-data">Загрузка…</div></div>
             </div>
           </div>
-        </div><!-- /rs-history -->
-      </div>
-
-      <!-- ══ MAP ══ -->
-      <div class="tab-panel" id="p-map" role="tabpanel" aria-labelledby="t-map">
-        <div id="map-container"></div>
-      </div>
-
-      <!-- ══ STATS ══ -->
-      <div class="tab-panel" id="p-stats" role="tabpanel" aria-labelledby="t-stats">
-        <div id="stats-daily"></div>
-        <div class="stats-body" id="stats-body">
-          <div class="no-data">Запустите поиск — здесь появится разбор: рейтинги, горячие лиды и полнота карточек.</div>
-        </div>
-      </div>
-
-      <!-- ══ HISTORY ══ -->
-      <div class="tab-panel" id="p-history" role="tabpanel" aria-labelledby="t-history">
-        <div class="history-body">
-          <div class="history-toolbar">
-            <h3>История поисков</h3>
-            <div class="history-actions">
-              <button class="btn-sm" onclick="loadHistory()">
-                <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>Обновить</button>
-              <button class="btn-sm danger" onclick="clearAllHistory()" title="Удалить все записи истории поисков">
-                <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить историю</button>
-              <button class="btn-sm warn" onclick="clearSeenStore()" title="Сбросить кэш бизнесов — повторно обработать все города">
-                <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить кэш</button>
-            </div>
-          </div>
-          <div id="seen-status" class="seen-status" style="display:none"></div>
-          <div id="history-list">
-            <div class="no-data">Загрузка...</div>
-          </div>
-        </div>
+        </div><!-- /hist-files -->
       </div>
 
       <!-- ══ TEMPLATES ══ -->
