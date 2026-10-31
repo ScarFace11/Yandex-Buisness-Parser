@@ -105,6 +105,9 @@ def _stats_payload(records: list[dict]) -> dict:
                 cats[c2] += 1
     return {
         "total": len(records),
+        # Карточка печатается по одному городу — имя города должно быть в ней
+        # само, а не только в строке журнала выше.
+        "city": str(getattr(state, "CITY", "") or ""),
         "by_query": by_query,
         "by_social": by_social,
         "top_categories": [{"label": c, "count": n} for c, n in cats.most_common(5)],

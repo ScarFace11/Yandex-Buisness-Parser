@@ -115,7 +115,7 @@ class TestProgressStrip:
     def test_one_strip_shows_percent_city_and_counts(self):
         """Процент, полоска, город и счётчики — в одном месте, а не в трёх."""
         for needle in ('id="run-hero"', 'id="run-pct"', 'id="run-fill"',
-                       'id="run-city"', 'id="run-org"', 'id="run-cities"',
+                       'id="run-city"', 'id="run-city-pct"', 'id="run-org"', 'id="run-cities"',
                        'id="run-found"', 'id="run-stage"'):
             assert needle in TEMPLATE, needle
         assert "function setProgress(" in APP_JS
@@ -127,6 +127,17 @@ class TestProgressStrip:
         assert "updateTermProgress" not in APP_JS
         hero = STYLE[STYLE.index(".run-hero{"):]
         assert "background:var(--hdr)" in hero[:400]
+
+    def test_globe_spins_while_searching_and_freezes_on_pause(self):
+        """Вращение видно (шаг анимации = шагу полос), а на паузе шар замирает."""
+        assert "@keyframes globe-roll" in STYLE
+        assert ".run-globe-grid{" in STYLE
+        grid = STYLE[STYLE.index(".run-globe-grid{"):]
+        grid = grid[:grid.index("}")]
+        assert "animation:globe-roll" in grid
+        assert ".run-hero.is-paused .run-globe-grid{animation-play-state:paused}" in STYLE
+        assert "hero.classList.add('is-paused')" in APP_JS
+        assert "hero.classList.remove('is-paused')" in APP_JS
 
     def test_secondary_log_actions_live_in_one_menu(self):
         """Пять кнопок в полосе фильтров → одна кнопка с меню."""

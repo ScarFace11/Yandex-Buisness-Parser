@@ -231,13 +231,23 @@ header h1{
   overflow:hidden;
 }
 /* Меридианы едут по сфере: шаг анимации равен шагу полос, поэтому шов
-   не виден и глобус читается как вращающийся, а не как мигающий круг. */
+   не виден и глобус читается как вращающийся, а не как мигающий круг.
+   Раньше цикл был 7px за 6 с — смена кадра почти не читалась, и шар
+   выглядел статичным. Теперь шаг/время дают ≈4px в секунду: движение
+   заметно, но не отвлекает от процента. */
 .run-globe-grid{
-  position:absolute;inset:-8% -10%;border-radius:50%;
-  background-image:repeating-linear-gradient(90deg,transparent 0 6px,var(--hero-line) 6px 7px);
-  animation:globe-roll 6s linear infinite;
+  position:absolute;inset:-12% -14%;border-radius:50%;
+  /* Меридианы тёмные, а не белые: на светлом шаре белые полосы терялись,
+     и шар выглядел пустым. У края они пропадают в тени — так и должно быть
+     у освещённого глобуса. */
+  background-image:repeating-linear-gradient(90deg,transparent 0 8px,var(--hdr) 8px 9px);
+  opacity:.34;
+  animation:globe-roll 2.2s linear infinite;
+  will-change:background-position;
 }
-@keyframes globe-roll{from{background-position:0 0}to{background-position:7px 0}}
+@keyframes globe-roll{from{background-position:0 0}to{background-position:9px 0}}
+/* Пауза — не поиск: шар замирает вместе с прогрессом, а не крутится вхолостую. */
+.run-hero.is-paused .run-globe-grid{animation-play-state:paused}
 .run-globe-shine{
   position:absolute;inset:0;border-radius:50%;
   background-image:radial-gradient(circle at 30% 22%,var(--on-accent) 0%,transparent 52%);
@@ -249,16 +259,24 @@ header h1{
 .run-hero-sign{font-size:14px;font-weight:700;color:var(--hero-sub)}
 .run-hero-track{height:5px;margin-top:7px;border-radius:3px;background:var(--hero-line);overflow:hidden}
 #run-fill{height:100%;width:0;border-radius:3px;background:var(--on-accent);transition:width .35s ease}
+/* Город и его собственный процент — одна строка, найденная организация —
+   под ними. Так видно и «где мы сейчас», и «сколько сделано в этом городе»,
+   не смешивая это с общим процентом слева. */
 .run-hero-now{
-  display:flex;align-items:baseline;flex:1 1 200px;min-width:0;
+  display:flex;flex-direction:column;gap:3px;flex:1 1 200px;min-width:0;
   color:var(--hero-sub);font-size:12.5px;font-weight:600;
 }
-.run-hero-city{max-width:42%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.run-hero-cityline{display:flex;align-items:baseline;gap:8px;min-width:0}
+.run-hero-city{max-width:60%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.run-hero-city-pct{
+  flex:0 0 auto;font-size:12px;font-weight:700;color:var(--hero-sub);
+  opacity:.9;font-variant-numeric:tabular-nums;
+}
+.run-hero-city-pct b{font-weight:800;color:var(--on-accent)}
 .run-hero-org{
   min-width:0;font-weight:500;opacity:.86;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.run-hero-org:not(:empty)::before{content:'·';margin:0 7px;opacity:.7}
 .run-hero-meta{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto;
   color:var(--hero-sub);font-size:12px;font-variant-numeric:tabular-nums;

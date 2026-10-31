@@ -139,6 +139,13 @@ function setRunEntity(city, org) {
     if (o) o.textContent = org;
   }
 }
+// Готовность ТЕКУЩЕГО города — отдельно от крупного общего процента:
+// иначе на втором городе оба числа показывали одно и то же и общий путь
+// выглядел как «всё начинается заново».
+function setRunCityPct(pct) {
+  const el = document.getElementById('run-city-pct');
+  if (el) el.textContent = String(Math.max(0, Math.min(100, Math.round(pct || 0))));
+}
 function setRunEta(text) {
   const el = document.getElementById('run-eta');
   if (el) el.textContent = text || '';
@@ -726,7 +733,9 @@ function renderLogStats(payload) {
   const card = document.createElement('div');
   card.className = 'log-stats';
   card.innerHTML =
-    `<div class="log-stats-head">📊 Статистика <span>${d.total} ${pluralRecords(d.total)}</span></div>`
+    // Город прямо в заголовке: карточка печатается по городу, и без имени
+    // пришлось бы искать выше в журнале, к чему относятся эти 99 записей.
+    `<div class="log-stats-head">📊 Статистика${d.city ? ' — ' + escapeHtml(d.city) : ''} <span>${d.total} ${pluralRecords(d.total)}</span></div>`
     + section('По соцсетям', d.by_social, true)
     + section('По запросам', d.by_query, true)
     + section('Топ категорий', d.top_categories, false);
@@ -790,7 +799,6 @@ function handleProgress(raw) {
     const name  = parts.slice(3).join('/');
     const label = `🏙  Город ${idx}/${total}: ${name}`;
     appendLog('info', label);
-    setProgress(0);
     setRunEntity(name, 'ждём первую организацию');
     setRunEta('');
     _lastCompletedCityIdx = idx;
@@ -798,6 +806,11 @@ function handleProgress(raw) {
     if (total > 1) initCityProgress(total);
     _currentCityName = name;
     updateCityProgress(name, 0, 0, 'running');
+    setRunCityPct(0);
+    // Общий процент: уже пройденные города плюс ноль в текущем. Раньше здесь
+    // жёстко ставился 0, и на втором городе полоса обнулялась, хотя половина
+    // пути уже позади.
+    setProgress(Math.round(_runOverallFrac() * 100));
     return;
   }
   if (parts.length >= 2) {
@@ -806,15 +819,20 @@ function handleProgress(raw) {
     const found = parts.length >= 4 ? parseInt(parts[3]) : 0;
     const pct = tot > 0 ? Math.round(cur / tot * 100) : 0;
 
-    setProgress(pct, stage ? `«${stage}»` : '');
-    document.title = `${pct}% ⏳ (${found} найдено) — Парсер`;
+    // Два честных числа: крупное слева — сколько пройдено от всего прогона,
+    // мелкое у города — сколько сделано в нём самом. На одном городе они
+    // совпадают, на нескольких — расходятся и больше не путаются.
+    if (_currentCityName) {
+      updateCityProgress(_currentCityName, pct, found, 'running');
+    }
+    const overall = _totalCities > 1 ? Math.round(_runOverallFrac() * 100) : pct;
+    setProgress(overall, stage ? `«${stage}»` : '');
+    setRunCityPct(pct);
+    document.title = `${overall}% ⏳ (${found} найдено) — Парсер`;
     setRunFound(found);
 
     // Города — отдельный счётчик: доля запроса и число городов больше не
     // делят одно место и не читаются как один и тот же прогресс.
-    if (_currentCityName) {
-      updateCityProgress(_currentCityName, pct, found, 'running');
-    }
     setRunEntity(_currentCityName || '');
     setRunEta(_etaText(_totalCities > 1 ? _runOverallFrac() : pct / 100));
   }
@@ -908,6 +926,7 @@ function resetRunUI() {
   const heroFill = document.getElementById('run-fill');
   if (heroFill) heroFill.style.width = '0%';
   setRunEntity('', 'готовим поиск');
+  setRunCityPct(0);
   updateRunCities();
   updateStatsBadge();
 }
@@ -991,8 +1010,12 @@ function _startRunWithParams(params) {
   // Полоса хода поиска: показать и сбросить прошлые значения. Первый город
   // известен из параметров — ждать события city не нужно.
   const hero = document.getElementById('run-hero');
-  if (hero) hero.classList.remove('is-hidden');
+  if (hero) {
+    hero.classList.remove('is-hidden');
+    hero.classList.remove('is-paused');   // снятие с паузы — шар снова крутится
+  }
   setRunEntity((params.cities || [])[0] || '', 'ждём первую организацию');
+  setRunCityPct(0);
 
   showTab('log');
   saveSettings();
@@ -1106,13 +1129,18 @@ function handleCityDone(raw) {
     const name    = parts[3];
     const status  = parts[4]; // 'done' or 'skipped'
     const records = parseInt(parts[5]) || 0;
-    const icon    = status === 'skipped' ? '⏭' : '✅';
-    const label   = status === 'skipped'
-      ? `${icon} Город ${idx}/${total}: ${name} — пропущен (${records} записей)`
-      : `${icon} Город ${idx}/${total}: ${name} — завершён (${records} записей)`;
-    appendLog(status === 'skipped' ? 'ok' : 'info', label);
+    // «Город завершён» в журнал больше не пишется: город и его процент уже
+    // стоят в полосе поиска, а под ними идёт карточка статистики с названием
+    // города. Пропуск — действие самого пользователя, его оставляем.
+    if (status === 'skipped') {
+      appendLog('ok', `⏭ Город ${idx}/${total}: ${name} — пропущен (${records} записей)`);
+    }
     // Update city progress to completed
     updateCityProgress(name, 100, records, status);
+    setRunCityPct(100);
+    // Один город — без city_list _totalCities остаётся 0, и доля городов
+    // посчиталась бы как 0%. Для него завершение — это 100%.
+    setProgress(_totalCities > 1 ? Math.round(_runOverallFrac() * 100) : 100);
     // City finished — update the tab badge and render its stats right away
     // (finished cities only), so per-city numbers are exact while the next
     // city is still running.

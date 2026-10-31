@@ -103,6 +103,29 @@ class TestStatsLabels:
         assert "\n    other:" not in joined
 
 
+class TestStatsCardCity:
+    """Карточка «Статистика» печатается по одному городу — город в ней."""
+
+    def test_payload_carries_the_city(self, monkeypatch):
+        from yandex_maps_parser.stats import _stats_payload
+        monkeypatch.setattr(state, "CITY", "Душанбе", raising=False)
+        payload = _stats_payload([{"name": "Отель", "query": "отель",
+                                   "category": "Гостиница"}])
+        assert payload["city"] == "Душанбе"
+
+    def test_stats_event_sends_the_city_to_the_ui(self, monkeypatch):
+        import json
+        events = []
+        monkeypatch.setattr(state, "CITY", "Душанбе", raising=False)
+        monkeypatch.setattr(state, "_LOG_FN",
+                            lambda lvl, msg: events.append((lvl, msg)), raising=False)
+        monkeypatch.setattr(state, "syslog", lambda msg: None)
+        from yandex_maps_parser.stats import print_stats
+        print_stats([{"name": "Отель", "query": "отель", "category": "Гостиница"}])
+        stats = [json.loads(m) for lvl, m in events if lvl == "stats"]
+        assert stats and stats[0]["city"] == "Душанбе"
+
+
 # ── 4. Continuation catalog ───────────────────────────────────
 
 class TestCitiesAfter:

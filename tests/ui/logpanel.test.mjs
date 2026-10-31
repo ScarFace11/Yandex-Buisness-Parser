@@ -69,7 +69,7 @@ const els = {};
 for (const id of ['log-output', 'log-ph', 'onboarding-screen', 'log-skeleton',
   'city-progress-list', 'city-progress', 'btn-tech-details', 'term-log-lbl',
   't-stats', 'run-hero', 'run-pct', 'run-fill', 'run-track', 'run-found',
-  'run-city', 'run-org', 'run-cities', 'run-eta', 'run-stage',
+  'run-city', 'run-city-pct', 'run-org', 'run-cities', 'run-eta', 'run-stage',
   'log-more', 'btn-log-more', 'log-more-menu',
   'log-jump', 'log-jump-n', 'log-filter-empty', 'log-err-count',
   'log-autoscroll', 'tab-log-dot']) {
@@ -120,7 +120,7 @@ const fns = ['_trimLog', '_isDup', 'appendLog', 'toggleTechDetails', 'clearLog',
   'initCityProgress', 'updateCityProgress', 'renderCityProgress',
   'handleProgress', 'handleCityDone',
   'logStamp', '_elapsedStamp', '_logNorm', '_scrollLogIfFollowing', '_etaText',
-  'setProgress', 'hideProgress', 'setRunFound', 'setRunEntity', 'setRunEta',
+  'setProgress', 'hideProgress', 'setRunFound', 'setRunEntity', 'setRunCityPct', 'setRunEta',
   '_runOverallFrac', 'updateRunCities',
   'toggleLogMenu', 'closeLogMenu',
   'setRunIndicator', 'renderLogStats',
@@ -276,6 +276,10 @@ test('progress ping updates % and shows found count in parentheses', () => {
   const html = els['city-progress-list'].innerHTML;
   assert.match(html, /45%/);
   assert.match(html, /\(37 найд\.\)/);
+  // Большой процент — общий по прогону: 45% первого из двух городов = 23%,
+  // а собственный процент города стоит рядом с его названием.
+  assert.equal(els['run-pct'].textContent, '23', 'общий процент по всем городам');
+  assert.equal(els['run-city-pct'].textContent, '45', 'процент текущего города');
 });
 
 test('city_done marks ✓, 100% and updates the «обработано» counter', () => {
@@ -285,12 +289,26 @@ test('city_done marks ✓, 100% and updates the «обработано» counter
   assert.match(html, /100%/);
   assert.match(html, /\(45 найд\.\)/);
   assert.equal(els['run-cities'].textContent, '1 из 2 городов');
+  assert.equal(els['run-pct'].textContent, '50', 'один город из двух = половина пути');
+  assert.equal(els['run-city-pct'].textContent, '100');
+  // Строка «Город … — завершён» больше не засоряет журнал: город и процент
+  // уже видны в полосе поиска, а ниже идёт карточка статистики.
+  assert.ok(!logEl.children.some(el => /завершён/.test(String(el.innerHTML || ''))),
+    'журнал не повторяет «город завершён»');
 });
 
 test('queued city stays grey (cp-queued) while another is running', () => {
   const html = els['city-progress-list'].innerHTML;
   assert.match(html, /cp-queued/);        // Санкт-Петербург still queued
   assert.match(html, /Санкт-Петербург/);
+});
+
+test('a single-city run ends at 100%, not at zero', () => {
+  globalThis._cityProgressData = {};
+  globalThis._totalCities = 0;          // city_list приходит только при >1 города
+  globalThis._currentCityName = 'Уфа';
+  globalThis.handleProgress('city_done|1|1|Уфа|done|5');
+  assert.equal(els['run-pct'].textContent, '100');
 });
 
 test('single-city runs keep the panel hidden', () => {
@@ -391,6 +409,20 @@ test('renderLogStats draws rows with bars instead of ASCII art', () => {
   logEl.children = [];
   globalThis.renderLogStats('{not json');
   assert.equal(logEl.children.length, 0);
+});
+
+test('the stats card names the city it was built for', () => {
+  logEl.children = [];
+  globalThis.renderLogStats(JSON.stringify({
+    total: 99, city: 'Душанбе',
+    by_social: [], by_query: [], top_categories: [],
+  }));
+  assert.match(logEl.children[0].innerHTML, /📊 Статистика — Душанбе/);
+
+  // Без города заголовок остаётся прежним — никакого висящего тире.
+  logEl.children = [];
+  globalThis.renderLogStats(JSON.stringify({total: 2, by_social: [], by_query: [], top_categories: []}));
+  assert.match(logEl.children[0].innerHTML, /📊 Статистика <span>/);
 });
 
 // ── 9. Level colours ─────────────────────────────────────────
@@ -588,6 +620,9 @@ test('the hero shows the percent, the city and the last found organization', () 
   globalThis.setRunEntity('Санкт-Петербург', 'Кофейня «Ветер»');
   assert.equal(els['run-city'].textContent, 'Санкт-Петербург');
   assert.equal(els['run-org'].textContent, 'Кофейня «Ветер»');
+
+  globalThis.setRunCityPct(64);
+  assert.equal(els['run-city-pct'].textContent, '64', 'процент города — рядом с городом');
 
   globalThis.hideProgress();
   assert.equal(els['run-hero']._classes.has('is-hidden'), true, 'run over → strip hidden');

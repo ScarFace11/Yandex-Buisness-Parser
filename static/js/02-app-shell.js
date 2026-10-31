@@ -250,6 +250,9 @@ function enterPausedState(resume) {
   const txt = document.getElementById('btn-txt');
   if (txt) txt.textContent = 'Продолжить поиск';
   setRunIndicator(false);
+  // Глобус замирает: пауза — это не поиск, и вращение читалось бы как работа.
+  const hero = document.getElementById('run-hero');
+  if (hero) hero.classList.add('is-paused');
   setStatus('paused', 'Пауза');
   if (posTxt) {
     appendLog('info', '  📍 ' + posTxt);
