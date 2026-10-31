@@ -278,7 +278,7 @@ jobs:
 
       # CI/CD self-update chain (release tags only):
       #   1. Draft release created by release-draft (body from CHANGELOG)
-      #   2. exe attached here, macOS .zip/.dmg attached by build-macos.yml
+      #   2. exe attached here, macOS .dmg attached by build-macos.yml
       #   3. релиз публикует publish-release.yml, как только зелёными стали обе
       #      сборки, и тогда announce-release.yml пишет версию в version.json
       #   → только после этого шага установленные .exe видят «Доступна новая

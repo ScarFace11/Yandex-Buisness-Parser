@@ -233,15 +233,14 @@ class TestAnnounceWorkflow:
         triggers = wf.get("on", wf.get(True))
         assert triggers["release"]["types"] == ["published"]
 
-    def test_has_a_scheduled_fallback(self):
-        """Событие публикации может не дойти до workflow — версию дотягивает
-        расписание (идемпотентно)."""
+    def test_has_no_scheduled_runs(self):
+        """Фонового расписания нет: hourly-прогон трогал main без спроса.
+        Версию объявляет событие публикации, а ручной запуск идёт с тегом."""
         wf = self._wf()
         triggers = wf.get("on", wf.get(True))
-        assert "schedule" in triggers
-        assert triggers["schedule"][0]["cron"]
+        assert "schedule" not in triggers
         text = (ROOT / ".github" / "workflows" / "announce-release.yml").read_text(encoding="utf-8")
-        assert "gh release view --json tagName" in text   # последний опубликованный
+        assert "gh release view --json tagName" in text   # фолбэк на последний релиз
         assert "ANNOUNCED" in text                        # повтор не делает ничего
 
     def test_waits_for_the_windows_asset_before_announcing(self):

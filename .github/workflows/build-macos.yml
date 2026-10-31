@@ -1,7 +1,7 @@
 name: Build macOS .app
 
 # Сборка .app для macOS (Apple Silicon и Intel): пуш тега v* или запуск
-# вручную из Actions. `.zip` и `.dmg` прикрепляются к тому же GitHub Release,
+# вручную из Actions. `.dmg` прикрепляется к тому же GitHub Release,
 # что и Windows .exe (build-exe.yml создаёт релиз, мы ждём его и доливаем
 # файлы — так два workflow не дерутся за релиз).
 #

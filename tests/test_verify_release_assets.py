@@ -497,6 +497,10 @@ def test_the_required_list_covers_everything_the_builds_produce():
     assert "YandexBusinessParser-macos-arm64.dmg" in vra.REQUIRED_ASSETS
     assert "YandexBusinessParser-macos-x64.dmg" in vra.REQUIRED_ASSETS
     assert "CHANGELOG.md" in vra.REQUIRED_ASSETS
+    # macOS ставится из .dmg: архивы для него больше не собираются, и требовать
+    # их на релизе нельзя — иначе проверка обречена падать.
+    assert not [n for n in vra.REQUIRED_ASSETS
+                if "macos" in n and n.endswith(".zip")], vra.REQUIRED_ASSETS
 
 
 # ── Разводка workflow ──────────────────────────────────────────
@@ -521,12 +525,14 @@ class TestVerifyWorkflow:
             "не успеет разойтись по пользователям"
         )
 
-    def test_it_also_runs_on_a_schedule(self):
-        """Сборку могут перезалить и позже: ежедневная перепроверка ловит и это."""
+    def test_it_does_not_run_on_a_schedule(self):
+        """Фоновых прогонов нет: расписание перепроверяло давно выпущенные
+        релизы и падало на ассетах, которых новые сборки уже не делают
+        (macOS-архивы заменены на .dmg). Проверка идёт по событию или вручную."""
         yaml = pytest.importorskip("yaml", reason="workflow-файлы читает pyyaml")
         wf = yaml.safe_load(read_workflow("verify-release-assets.yml"))
         triggers = wf.get("on", wf.get(True))
-        assert triggers.get("schedule"), "нужен график перепроверки"
+        assert "schedule" not in triggers
 
     def test_it_calls_the_script(self):
         text = read_workflow("verify-release-assets.yml")

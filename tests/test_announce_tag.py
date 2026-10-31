@@ -143,7 +143,7 @@ class TestTagResolution:
         assert res.returncode == 0
         assert "TAG=v2.3.4" in out
 
-    def test_scheduled_run_uses_the_latest_published_release(self, tmp_path):
+    def test_run_without_a_tag_uses_the_latest_published_release(self, tmp_path):
         res, out = self._resolve(tmp_path, fake_tag="v2.3.4\n")
         assert res.returncode == 0
         assert "TAG=v2.3.4" in out
