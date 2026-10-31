@@ -18,7 +18,7 @@
 #define MyAppShortName "YandexBusinessParser"
 #define MyAppExeName "YandexBusinessParser.exe"
 #define MyAppPublisher "Yandex Business Parser"
-#define MyAppURL "https://github.com/ScarFace11/Yandex-Buisnes-Parser"
+#define MyAppURL "https://github.com/ScarFace11/Yandex-Buisness-Parser"
 #define BuildDir "..\dist\YandexBusinessParser"
 [Setup]
 AppId={{8B7F4C62-2D1E-4A7B-9E44-2B7D5B6C1A90}

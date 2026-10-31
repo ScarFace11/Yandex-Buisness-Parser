@@ -1,12 +1,14 @@
 """Lead Score — 0..100 «насколько это горячий клиент для продажи сайта».
 
-Базовые сигналы складываются ровно в 100: столько наберёт идеальный лид даже
-без ключа ВК. Активность сообщества — бонус сверху, который добирает баллы до
-100, но не растягивает шкалу: ВК проверяется только при заданном ключе, и
-делать 90 потолком «потому что нет токена» нечестно.
-"""
-from datetime import date, datetime, timedelta
+Шесть базовых сигналов дают 90: столько наберёт идеальный лид без ключа ВК.
+Активность сообщества — бонус, который добирает баллы до 100, но не
+растягивает шкалу: ВК проверяется только при заданном ключе, и делать 90
+потолком «потому что нет токена» нечестно.
 
+Критерия «недавно на Картах» здесь больше нет: дату добавления карточка не
+отдаёт (`added_at` никогда не заполняется), поэтому критерий не срабатывал
+ни разу, а в разборе постоянно висело «Дата добавления — нет данных».
+"""
 from .constants import EXPENSIVE_CATEGORY_KEYWORDS
 
 # Веса подобраны под вопрос «кому нужен сайт и кто за него заплатит».
@@ -16,15 +18,13 @@ REVIEWS_MANY = 15        # есть поток клиентов
 HAS_PHONE = 10           # до него можно дозвониться
 EXPENSIVE_CATEGORY = 10  # услуги дорогие — бюджет на сайт есть
 SOCIALS_PRESENT = 10     # уже ведёт маркетинг, просто не на своём сайте
-NEW_BUSINESS = 10        # недавно появился на Картах — сайт нужен сейчас
 
 VK_ACTIVE = 10           # бонус: сообщество живо
 VK_SEMI = 5              # бонус: сообщество ещё подаёт признаки жизни
 
 BASE_MAX = (NO_WEBSITE + RATING_GOOD + REVIEWS_MANY + HAS_PHONE
-            + EXPENSIVE_CATEGORY + SOCIALS_PRESENT + NEW_BUSINESS)
+            + EXPENSIVE_CATEGORY + SOCIALS_PRESENT)
 MAX_SCORE = 100
-NEW_BUSINESS_MONTHS = 12
 
 SOCIAL_FIELDS = ("vk", "telegram", "instagram", "whatsapp")
 
@@ -49,20 +49,6 @@ def _num(value, default=0.0) -> float:
 
 def _has_socials(record: dict) -> bool:
     return any(str(record.get(field) or "").strip() for field in SOCIAL_FIELDS)
-
-
-def is_new_business(record: dict, months: int = NEW_BUSINESS_MONTHS) -> bool:
-    """«Добавлено» на Картах недавно. Пустая или битая дата баллов не даёт —
-    в отличие от фильтра «Только новые», где неизвестная дата не отсеивает
-    запись, здесь неизвестное не должно превращаться в плюс."""
-    raw = str(record.get("added_at") or "").strip()
-    if len(raw) < 10:
-        return False
-    try:
-        added = datetime.strptime(raw[:10], "%Y-%m-%d").date()
-    except ValueError:
-        return False
-    return added >= (date.today() - timedelta(days=int(months) * 30))
 
 
 def is_expensive_category(category: str) -> bool:
@@ -103,10 +89,6 @@ def compute_score(record: dict) -> tuple[int, list[str]]:
     if _has_socials(record):
         score += SOCIALS_PRESENT
         reasons.append(f"есть соцсети +{SOCIALS_PRESENT}")
-
-    if is_new_business(record):
-        score += NEW_BUSINESS
-        reasons.append(f"недавно на Картах +{NEW_BUSINESS}")
 
     # ВК — бонус: без ключа vk_activity пуст, и вклад просто не появляется.
     activity = (record.get("vk_activity") or "").lower()

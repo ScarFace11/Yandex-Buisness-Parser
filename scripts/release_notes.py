@@ -30,7 +30,7 @@ def extract_section(text: str, version: str):
 
 def repo_slug() -> str:
     """owner/name — из CI, с тем же дефолтом, что и в остальных скриптах."""
-    return os.environ.get("GITHUB_REPOSITORY", "ScarFace11/Yandex-Buisnes-Parser")
+    return os.environ.get("GITHUB_REPOSITORY", "ScarFace11/Yandex-Buisness-Parser")
 
 
 def changelog_links(version: str, tag: str = "") -> str:

@@ -843,7 +843,7 @@ def _github_create_issue(title: str, labels: list, body: str,
         from routes.api import GITHUB_REPO
         repo = GITHUB_REPO
     except Exception:
-        repo = "ScarFace11/Yandex-Buisnes-Parser"
+        repo = "ScarFace11/Yandex-Buisness-Parser"
     payload: dict = {"title": title, "body": body}
     if labels:
         payload["labels"] = labels

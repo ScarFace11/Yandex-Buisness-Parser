@@ -594,7 +594,7 @@ def test_the_published_release_passes_the_check():
         pytest.skip("в version.json нет версии")
     res = subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "verify_release_assets.py"),
-         "--repo", "ScarFace11/Yandex-Buisnes-Parser",
+         "--repo", "ScarFace11/Yandex-Buisness-Parser",
          "--tag", f"v{version}", "--asset", "CHANGELOG.md"],
         capture_output=True, text=True, encoding="utf-8", timeout=300,
         env=dict(os.environ, PYTHONIOENCODING="utf-8"))

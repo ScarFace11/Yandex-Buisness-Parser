@@ -6,7 +6,6 @@ Run with: python -m pytest tests/test_lead_score.py -v
 import sys
 import os
 import re
-from datetime import date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -31,21 +30,17 @@ def _rec(**over):
         "rating": "",
         "reviews_count": "",
         "vk_activity": "",
-        "added_at": "",
     }
     base.update(over)
     return base
 
 
-def _recent() -> str:
-    return (date.today() - timedelta(days=30)).isoformat()
-
-
 class TestComputeScore:
     def test_maximum_is_one_hundred(self):
-        # Семь базовых сигналов дают ровно 100 — максимум достижим и без
-        # ключа ВК, поэтому «практический потолок 90» больше не нужен.
-        assert BASE_MAX == 100
+        # Шесть базовых сигналов дают 90; остаток до 100 добирает бонус ВК,
+        # когда ключ задан. Критерия «недавно на Картах» нет: дату карточка
+        # не отдаёт, и он не срабатывал ни разу.
+        assert BASE_MAX == 90
         assert MAX_SCORE == 100
 
     def test_hot_lead_scores_the_documented_breakdown(self):
@@ -56,21 +51,19 @@ class TestComputeScore:
             rating="4.8",
             reviews_count="120",
             category="Стоматология",
-            added_at=_recent(),
         ))
         assert score == 100
         assert any("нет сайта" in r for r in reasons)
         assert any("есть соцсети" in r for r in reasons)
-        assert any("недавно на Картах" in r for r in reasons)
         assert any("активный ВК" in r for r in reasons)
         assert any("дорогая категория" in r for r in reasons)
 
     def test_activity_bonus_never_breaks_the_scale(self):
-        """База уже 100 — бонус ВК не делает 110."""
+        """База 90 плюс бонус ВК — ровно 100, а не 110."""
         score, _ = compute_score(_rec(
             phone="+7 1", rating="5", reviews_count="100",
             category="Стоматология", telegram="https://t.me/x",
-            vk="https://vk.com/x", vk_activity="active", added_at=_recent(),
+            vk="https://vk.com/x", vk_activity="active",
         ))
         assert score == MAX_SCORE
 
@@ -116,14 +109,6 @@ class TestComputeScore:
         score, _ = compute_score(_rec(website="https://kafe.ru", rating="47"))
         assert score == lead_score.RATING_GOOD
 
-    def test_new_business_needs_a_recent_date(self):
-        recent, _ = compute_score(_rec(website="https://kafe.ru", added_at=_recent()))
-        assert recent == lead_score.NEW_BUSINESS
-        old, _ = compute_score(_rec(website="https://kafe.ru", added_at="2020-01-01"))
-        assert old == 0
-        unknown, _ = compute_score(_rec(website="https://kafe.ru"))
-        assert unknown == 0
-
     def test_broken_numbers_do_not_crash(self):
         score, _ = compute_score(_rec(website="https://kafe.ru", rating="н/д",
                                       reviews_count="много"))
@@ -146,7 +131,11 @@ class TestFrontendMirror:
     def test_maximum_matches(self):
         js = self._app_js()
         assert f"const SCORE_MAX = {MAX_SCORE};" in js
-        assert f"const SCORE_NEW_MONTHS = {lead_score.NEW_BUSINESS_MONTHS};" in js
+        # Критерия «недавно на Картах» в таблице правил тоже нет (комментарий
+        # рядом объясняет почему — его не трогаем).
+        table = js[js.index("const SCORE_RULES"):js.index("function scoreBreakdown")]
+        assert "added_at" not in table
+        assert "scoreNewBusiness" not in js
 
     def test_every_point_value_is_present_once(self):
         js = self._app_js()
@@ -155,7 +144,7 @@ class TestFrontendMirror:
         assert sorted(pts) == sorted([
             lead_score.NO_WEBSITE, lead_score.RATING_GOOD, lead_score.REVIEWS_MANY,
             lead_score.HAS_PHONE, lead_score.EXPENSIVE_CATEGORY,
-            lead_score.SOCIALS_PRESENT, lead_score.NEW_BUSINESS,
+            lead_score.SOCIALS_PRESENT,
             lead_score.VK_ACTIVE, lead_score.VK_SEMI,
         ])
 
@@ -177,7 +166,7 @@ class TestFrontendMirror:
     def test_vk_is_scored_only_when_checked(self):
         js = self._app_js()
         assert "function scoreVkChecked(r)" in js
-        body = js[js.index("function scoreBreakdown"):js.index("function scoreWhyText")]
+        body = js[js.index("function scoreBreakdown"):js.index("function scoreHTML")]
         assert "if (scoreVkChecked(r))" in body
         assert "ВК не проверялся" in body
 

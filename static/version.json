@@ -36,5 +36,5 @@
       "changelog": "Кнопка «Проверить обновления» в шапке, фоновая проверка каждые 30 минут, индикатор «доступно обновление», просмотрщик «Что нового», авто-обновление из exe в один клик"
     }
   ],
-  "download_url": "https://github.com/ScarFace11/Yandex-Buisnes-Parser/releases/download/v2.3.4.2/YandexBusinessParser-windows-x64.zip"
+  "download_url": "https://github.com/ScarFace11/Yandex-Buisness-Parser/releases/download/v2.3.4.2/YandexBusinessParser-windows-x64.zip"
 }

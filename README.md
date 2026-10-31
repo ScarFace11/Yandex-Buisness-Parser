@@ -1,10 +1,10 @@
 # 🔍 Yandex Business Parser
 
-[![CI](https://github.com/ScarFace11/Yandex-Buisnes-Parser/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ScarFace11/Yandex-Buisnes-Parser/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ScarFace11/Yandex-Buisnes-Parser?label=release)](https://github.com/ScarFace11/Yandex-Buisnes-Parser/releases/latest)
+[![CI](https://github.com/ScarFace11/Yandex-Buisness-Parser/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ScarFace11/Yandex-Buisness-Parser/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ScarFace11/Yandex-Buisness-Parser?label=release)](https://github.com/ScarFace11/Yandex-Buisness-Parser/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-1790%2B-brightgreen)](tests)
-[![License](https://img.shields.io/github/license/ScarFace11/Yandex-Buisnes-Parser)](LICENSE)
+[![License](https://img.shields.io/github/license/ScarFace11/Yandex-Buisness-Parser)](LICENSE)
 
 **Приложение для сбора и скоринга базы организаций с Яндекс.Карт.** Находит
 компании без сайта, собирает контакты и соцсети, считает оценку лида 0–100 и
@@ -153,8 +153,8 @@ graceful-пауза/стоп, чекпоинт-возобновление. Ра�
 ## 🚀 Быстрый старт
 
 ```bash
-git clone https://github.com/ScarFace11/Yandex-Buisnes-Parser.git
-cd Yandex-Buisnes-Parser && pip install -r requirements.txt
+git clone https://github.com/ScarFace11/Yandex-Buisness-Parser.git
+cd Yandex-Buisness-Parser && pip install -r requirements.txt
 python app.py
 ```
 
@@ -167,7 +167,7 @@ python app.py
 
 **Установщик (рекомендуется):** скачайте
 `YandexBusinessParser-windows-x64-setup.exe` со страницы
-[Releases](https://github.com/ScarFace11/Yandex-Buisnes-Parser/releases/latest)
+[Releases](https://github.com/ScarFace11/Yandex-Buisness-Parser/releases/latest)
 и запустите. Установка идёт без администратора, создаёт ярлыки в меню «Пуск» и
 на рабочем столе, а данные складывает в `%APPDATA%\YandexBusinessParser` — они
 переживают обновление и удаление программы. Удаление — через «Параметры →
@@ -186,7 +186,7 @@ python app.py
 ### macOS (.app)
 
 Скачайте `YandexBusinessParser-macos-*.dmg` из
-[Releases](https://github.com/ScarFace11/Yandex-Buisnes-Parser/releases/latest)
+[Releases](https://github.com/ScarFace11/Yandex-Buisness-Parser/releases/latest)
 (arm64 — Apple Silicon, x64 — Intel), перетащите `.app` в `/Applications` и
 запустите двойным кликом. Приложение само откроет браузер; данные живут в
 `~/Library/Application Support/YandexBusinessParser`.
@@ -321,7 +321,7 @@ YandexBusinessParser.exe --check                            # самопрове
 - [docs/build.md](docs/build.md) — сборка и запуск из исходников: локальные
   сборки `.exe`/`.app` и установщик Windows, подпись macOS, автоматизация в
   GitHub, тесты, порог минимальной версии.
-- [Issues](https://github.com/ScarFace11/Yandex-Buisnes-Parser/issues) — баги
+- [Issues](https://github.com/ScarFace11/Yandex-Buisness-Parser/issues) — баги
   и предложения.
 
 ## 📄 Лицензия

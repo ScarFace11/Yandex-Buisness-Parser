@@ -7,6 +7,17 @@
 /* Города живут внутри своей карточки статистики — в один столбец: сетка
    на всю ширину раньше растягивала блок и делала вкладку бесконечной. */
 .stat-city-grid{display:grid;grid-template-columns:1fr;gap:8px;margin:0}
+/* Два города в панели, остальные — внутренней прокруткой: с десятком
+   городов список растягивал строку сетки и уводил вниз остальные разборы.
+   Высоту в пикселях ставит renderStats по самим карточкам. */
+.stats-panel-cities .stat-city-grid.is-scroll{
+  overflow-y:auto;overscroll-behavior:contain;
+  padding-right:4px;scrollbar-width:thin;
+}
+.stats-panel-cities .stat-city-grid.is-scroll::-webkit-scrollbar{width:8px}
+.stats-panel-cities .stat-city-grid.is-scroll::-webkit-scrollbar-thumb{
+  background:var(--track);border-radius:999px;
+}
 .stat-city-card{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r-sm);padding:11px 12px}
 /* Кольцо «По соцсетям»: доли соцсетей читаются формой, точные значения —
    в подписи легенды рядом (внутри центрируется итог и подпись). */

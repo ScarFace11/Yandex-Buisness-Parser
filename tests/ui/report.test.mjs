@@ -80,7 +80,7 @@ function grabConst(name) {
 // Контрольное значение репозитория. В eval объявлен const — он лежит в
 // global-лексическом окружении, а не в globalThis, поэтому читать его отсюда
 // как свойства нельзя; строка держится здесь рядом с источником.
-const REPO = 'ScarFace11/Yandex-Buisnes-Parser';
+const REPO = 'ScarFace11/Yandex-Buisness-Parser';
 
 // ── composeReportBody ────────────────────────────────────────
 test('composeReportBody joins description and context parts', () => {

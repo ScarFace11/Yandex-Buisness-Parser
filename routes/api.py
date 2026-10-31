@@ -141,7 +141,7 @@ def _set_mark(rev: dict, key: str, marked: bool) -> bool:
     return rev.pop(key, None) is not None
 
 
-GITHUB_REPO = "ScarFace11/Yandex-Buisnes-Parser"
+GITHUB_REPO = "ScarFace11/Yandex-Buisness-Parser"
 GITHUB_RAW_URL = f"https://raw.githubusercontent.com/{GITHUB_REPO}/main/static/version.json"
 
 
@@ -219,7 +219,7 @@ def check_version():
                 "remote": remote_ver,
                 "newer": newer,
                 "changelog": remote.get("changelog", ""),
-                "download_url": "https://github.com/ScarFace11/Yandex-Buisnes-Parser/archive/refs/heads/main.zip",
+                "download_url": "https://github.com/ScarFace11/Yandex-Buisness-Parser/archive/refs/heads/main.zip",
             })
         return jsonify({"current": APP_VERSION, "newer": False, "error": f"HTTP {r.status_code}"})
     except Exception as exc:

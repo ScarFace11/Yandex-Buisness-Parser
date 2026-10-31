@@ -22,7 +22,7 @@ Excel/CSV. Оно работает **на вашем компьютере**, с�
 ### Вариант 1. Установщик (рекомендуется)
 
 1. Скачайте `YandexBusinessParser-windows-x64-setup.exe` со страницы
-   [Releases](https://github.com/ScarFace11/Yandex-Buisnes-Parser/releases).
+   [Releases](https://github.com/ScarFace11/Yandex-Buisness-Parser/releases).
 2. Запустите. Установка идёт **без администратора**, в
    `%LOCALAPPDATA%\Programs\YandexBusinessParser`.
 3. Оставьте галочку «Создать ярлык на рабочем столе» — ярлык появится также в
@@ -214,4 +214,4 @@ Windows: `YP_PORT=5001` в `.env` или переменной окружения
 
 - «Сообщить о проблеме» в шапке приложения — приложит версию, систему и
   последний лог.
-- [Issues](https://github.com/ScarFace11/Yandex-Buisnes-Parser/issues).
+- [Issues](https://github.com/ScarFace11/Yandex-Buisness-Parser/issues).

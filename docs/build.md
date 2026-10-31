@@ -9,8 +9,8 @@
 ## ▶️ Запуск из исходников
 
 ```bash
-git clone https://github.com/ScarFace11/Yandex-Buisnes-Parser.git
-cd Yandex-Buisnes-Parser
+git clone https://github.com/ScarFace11/Yandex-Buisness-Parser.git
+cd Yandex-Buisness-Parser
 python -m venv .venv
 .venv\Scripts\activate        # Windows (source .venv/bin/activate — Linux/macOS)
 pip install -r requirements.txt

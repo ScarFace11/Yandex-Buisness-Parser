@@ -111,13 +111,20 @@
 .score-badge:hover{filter:brightness(.96)}
 .score-badge:focus-visible{outline:2px solid var(--c);outline-offset:1px}
 
-/* Мини-окно «почему столько баллов» — открывается кликом по оценке. */
+/* Мини-окно «почему столько баллов» — открывается кликом по оценке.
+   Рамку держит цветная верхняя грань: окно не сливается с таблицей и сразу
+   говорит, чей разбор открыт — горячий, тёплый или холодный лид. */
 .score-pop{
   position:fixed;z-index:80;min-width:240px;max-width:330px;
-  padding:10px 12px;border:1px solid var(--bdr);border-radius:9px;
-  background:var(--card);color:var(--txt);box-shadow:0 8px 24px rgba(0,0,0,.18);
+  padding:10px 12px;border:1px solid var(--bdr-h);border-top:3px solid var(--c);
+  border-radius:9px;
+  background:var(--card);color:var(--txt);
+  box-shadow:0 1px 2px rgba(0,0,0,.06),0 10px 28px rgba(0,0,0,.20);
   font-size:12px;line-height:1.45;
 }
+.score-pop.hot{border-top-color:var(--ok-strong)}
+.score-pop.warm{border-top-color:var(--warn-bdr)}
+.score-pop.cold{border-top-color:var(--muted)}
 .score-pop:focus-visible{outline:2px solid var(--c);outline-offset:2px}
 .score-pop-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px}
 .score-pop-name{font-weight:700;font-size:12.5px;flex:1 1 auto;overflow-wrap:anywhere}

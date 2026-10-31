@@ -546,6 +546,18 @@ function renderStats(data, elapsed, skippedCities) {
       `<div class="stat-card"${c.tip ? ` title="${escapeHtml(c.tip)}"` : ''}><div class="num">${c.num}</div><div class="lbl">${c.lbl}</div></div>`
     ).join('')}</div>
     <div class="stats-grid">${panels}</div>`;
+  // «По городам»: в панели видно две карточки, остальные листаются внутри
+  // неё. Высоту берём по самим карточкам: у города с соцсетями строка чипов
+  // делает карточку выше, и фиксированное число обрезало бы её посередине.
+  const cityGrid = body.querySelector('.stats-panel-cities .stat-city-grid');
+  if (cityGrid && cityGrid.children.length > 2) {
+    cityGrid.classList.add('is-scroll');
+    const gap = parseFloat(getComputedStyle(cityGrid).rowGap) || 0;
+    const two = cityGrid.children[0].offsetHeight + cityGrid.children[1].offsetHeight + gap;
+    // 0 — панель ещё скрыта (вкладка не открыта): не загоняем список в ноль,
+    // при открытии вкладки renderStats пересчитает высоту уже на месте.
+    if (two > 0) cityGrid.style.maxHeight = two + 'px';
+  }
   // Свежие файлы и отметки могли появиться только что — обновляем динамику,
   // но не во время прогона: там renderStats зовётся каждые 1.5 с, а обход
   // папки с пересчётом строк дешевле не становится.

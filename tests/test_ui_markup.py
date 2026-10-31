@@ -1539,6 +1539,25 @@ class TestDailyDynamics:
         assert ".donut{" in STYLE
         assert ".donut-legend-row{" in STYLE
 
+    def test_cities_panel_scrolls_after_two_cards(self):
+        """С десятком городов панель тянула всю вкладку: видно две карточки,
+        остальные листаются внутри панели — высоту берём по самим карточкам."""
+        assert ".stats-panel-cities .stat-city-grid.is-scroll{" in STYLE
+        assert "overflow-y:auto" in STYLE
+        assert "'.stats-panel-cities .stat-city-grid'" in APP_JS
+        assert "cityGrid.children.length > 2" in APP_JS
+        assert "cityGrid.style.maxHeight = two + 'px'" in APP_JS
+
+    def test_score_badge_has_no_hover_tooltip(self):
+        """Разбор оценки открывается кликом: всплывающая подсказка дублировала
+        его и висела поверх таблицы. Окно разбора получает свою рамку."""
+        assert "function scoreWhyText(" not in APP_JS
+        # Всплывающий title в бейдже — только у рейтинга и отзывов, не у оценки.
+        badge = APP_JS[APP_JS.index("function scoreHTML("):APP_JS.index("let _scorePop")]
+        assert "title=" not in badge
+        assert "нажмите, чтобы увидеть разбор" in badge
+        assert ".score-pop.hot{border-top-color:var(--ok-strong)}" in STYLE
+
     def test_stats_tab_has_no_service_analytics(self):
         """RPS, задержки и кэш — служебные числа: в статистике их больше нет."""
         assert "${UI_ICONS.bolt}Аналитика" not in APP_JS

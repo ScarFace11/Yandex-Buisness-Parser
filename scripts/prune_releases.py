@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_REPO = "ScarFace11/Yandex-Buisnes-Parser"
+DEFAULT_REPO = "ScarFace11/Yandex-Buisness-Parser"
 DEFAULT_PATTERNS = ("*.zip", "*.dmg")
 DEFAULT_VERSION_JSON = ROOT / "static" / "version.json"
 API = "https://api.github.com"

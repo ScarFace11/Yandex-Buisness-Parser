@@ -336,4 +336,4 @@ Telegram и прочих теперь хватает места.
 
 </details>
 
-📄 [CHANGELOG.md](https://github.com/ScarFace11/Yandex-Buisnes-Parser/blob/v2.3.3/CHANGELOG.md) · 🔧 [CHANGES-DEV.md](https://github.com/ScarFace11/Yandex-Buisnes-Parser/blob/v2.3.3/CHANGES-DEV.md)
+📄 [CHANGELOG.md](https://github.com/ScarFace11/Yandex-Buisness-Parser/blob/v2.3.3/CHANGELOG.md) · 🔧 [CHANGES-DEV.md](https://github.com/ScarFace11/Yandex-Buisness-Parser/blob/v2.3.3/CHANGES-DEV.md)

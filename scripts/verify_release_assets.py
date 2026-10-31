@@ -68,7 +68,7 @@ def strip_tag(tag: str) -> str:
 
 def repo_slug() -> str:
     """owner/name репозитория из CI или значение по умолчанию."""
-    return os.environ.get("GITHUB_REPOSITORY", "ScarFace11/Yandex-Buisnes-Parser")
+    return os.environ.get("GITHUB_REPOSITORY", "ScarFace11/Yandex-Buisness-Parser")
 
 
 def pe_arch(head: bytes) -> str | None:

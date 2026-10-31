@@ -1205,7 +1205,7 @@ function checkForUpdates(silent) {
       _notifyFailedUpdate(data);
       if (data.newer) {
         showUpdateBanner(data.latest, data.changelog || '',
-          data.download_url || 'https://github.com/ScarFace11/Yandex-Buisnes-Parser/releases/latest',
+          data.download_url || 'https://github.com/ScarFace11/Yandex-Buisness-Parser/releases/latest',
           data.asset_name || '');
         setUpdateIndicator(true, data.latest);
         return { newer: true, version: data.latest };
@@ -1696,7 +1696,7 @@ function onboardingKeyword(key) {
 // GitHub приложение не умеет и не должно (для этого нужен ключ и токен
 // пользователя), поэтому скриншот перекладывается штатным путём: вставка
 // из буфера обмена — туда же, куда его кладёт Win+Shift+S.
-const REPORT_REPO = 'ScarFace11/Yandex-Buisnes-Parser';
+const REPORT_REPO = 'ScarFace11/Yandex-Buisness-Parser';
 // Метки — стандартный набор репозитория (проверено по GitHub API).
 // Цвета — как у меток на самом GitHub (примечательно: у каждой метки свой,
 // поэтому они читаются как привычные пилюли, а не как однообразные галочки).

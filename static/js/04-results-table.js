@@ -746,7 +746,6 @@ function socialsHTML(row, rowKey, rowIsRev) {
 // чтобы подсказка называла именно те критерии, что сработали у записи.
 // База складывается в 100; активность ВК — бонус, выше 100 шкала не растёт.
 const SCORE_MAX = 100;
-const SCORE_NEW_MONTHS = 12;
 const SCORE_AGGREGATORS = /taplink|linktree|linktr\.ee|becons\.ai|illions\.app/i;
 // Дорогие категории — копия EXPENSIVE_CATEGORY_KEYWORDS из constants.py.
 const SCORE_EXPENSIVE = [
@@ -782,14 +781,6 @@ function scoreHasSocials(r) {
     .some(p => !!String(r[p] || '').trim());
 }
 
-// «Добавлено» на Картах недавно. Пустая или битая дата баллов не даёт.
-function scoreNewBusiness(r) {
-  const raw = String(r.added_at || '').trim().slice(0, 10);
-  if (raw.length < 10) return false;
-  const t = Date.parse(raw);
-  return isFinite(t) && (Date.now() - t) <= SCORE_NEW_MONTHS * 30 * 86400000;
-}
-
 // ВК оцениваем только тогда, когда его проверяли: ключ задан в этой сессии
 // или активность уже лежит в записи (файл собран с ключом). Иначе «ВК не
 // активен» было бы выдумкой, а не сигналом.
@@ -816,11 +807,11 @@ const SCORE_RULES = [
     yes: () => 'Дорогая категория', no: () => 'Дорогая категория — нет' },
   { pts: 10, hit: r => scoreHasSocials(r),
     yes: () => 'Есть соцсети', no: () => 'Соцсетей нет' },
-  { pts: 10, hit: r => scoreNewBusiness(r),
-    yes: () => 'Недавно на Картах',
-    no: r => String(r.added_at || '').trim()
-      ? 'Добавлено больше года назад' : 'Дата добавления — нет данных' },
 ];
+// Критерия «недавно на Картах» больше нет: дату добавления карточка не
+// отдаёт, поле никто не заполнял — критерий не срабатывал ни разу, а
+// в разборе висело «Дата добавления — нет данных». Шесть базовых правил
+// дают 90, активность ВК добирает остаток до 100.
 
 // ВК — бонус: добирает баллы до 100, но не растягивает шкалу.
 const SCORE_VK_RULES = [
@@ -857,21 +848,17 @@ function scoreBreakdown(r) {
   return { sum, bonus, total: Math.min(SCORE_MAX, sum + bonus), lines };
 }
 
-// Подсказка отвечает на вопрос «почему именно столько»: только сработавшие
-// критерии, остальные — как промахи, внизу сумма.
-function scoreWhyText(r, v) {
-  const { total, lines } = scoreBreakdown(r);
-  const head = lines.length ? lines.join('\n') : 'Ни один критерий не сработал';
-  const tail = total === v
-    ? `Итого: ${v} (макс. ${SCORE_MAX})`
-    : `Итого: ${v} (макс. ${SCORE_MAX}) — оценка сохранена при поиске,\nпо текущим данным критерии дают ${total}`;
-  return head + '\n' + '─'.repeat(20) + '\n' + tail;
+// Хранимая оценка могла быть посчитана раньше: если она расходится с
+// пересчётом, окно честно называет цифру по текущим данным.
+function scoreDeltaNote(v, total) {
+  return total === v ? '' : ` · по текущим данным ${total}`;
 }
 
 // Lead score badge: green ≥ 70 (горячий), amber ≥ 45, grey below. «—» means
 // the score was never computed (file written before this feature).
-// Бейдж — кнопка: по клику открывается мини-окно с разбором балла
-// (те же критерии, что в подсказке, только читабельным списком).
+// Бейдж — кнопка: по клику открывается мини-окно с разбором балла.
+// Подсказки при наведении нет: она повторяла тот же разбор поверх таблицы,
+// и браузер держал её открытой дольше, чем нужно.
 function scoreHTML(r) {
   const raw = r.lead_score;
   if (raw == null || raw === '') return '<span class="score-na">—</span>';
@@ -881,12 +868,12 @@ function scoreHTML(r) {
   // Ключа нет (ни ссылки, ни названия с адресом) — искать запись по пустому
   // ключу нечем: окно показало бы разбор чужой строки. Тогда бейдж не кнопка.
   if (!key) {
-    return `<span class="score-badge ${cls}" title="${escapeHtml(scoreWhyText(r, v))}">${v}</span>`;
+    return `<span class="score-badge ${cls}" aria-label="Оценка ${v} из ${SCORE_MAX}">${v}</span>`;
   }
   return `<button type="button" class="score-badge ${cls}"`
     + ` data-review-url="${escapeHtml(key)}"`
     + ` aria-haspopup="dialog" aria-expanded="false"`
-    + ` title="${escapeHtml(scoreWhyText(r, v))}"`
+    + ` aria-label="Оценка ${v} из ${SCORE_MAX} — нажмите, чтобы увидеть разбор"`
     + ` onclick="toggleScorePopover(this)">${v}</button>`;
 }
 
@@ -952,8 +939,10 @@ function toggleScorePopover(btn) {
   if (!rec) return;
   const v = +rec.lead_score || 0;
   const cls = v >= 70 ? 'hot' : v >= 45 ? 'warm' : 'cold';
-  const { sum, lines } = scoreBreakdown(rec);
+  const { total, lines } = scoreBreakdown(rec);
   const pop = _scorePopEl();
+  // Цвет рамки окна — тот же, что у бейджа: сразу видно, чей разбор открыт.
+  pop.className = 'score-pop ' + cls;
   const name = escapeHtml(rec.name || rec.address || 'Организация');
   const items = lines.length
     ? lines.map(t => `<li class="${t.startsWith('✅') ? 'hit' : 'miss'}">${escapeHtml(t)}</li>`).join('')
@@ -964,7 +953,8 @@ function toggleScorePopover(btn) {
     + `<button type="button" class="score-pop-x" aria-label="Закрыть разбор оценки" onclick="closeScorePopover(true)">×</button>`
     + `</div>`
     + `<div class="score-pop-sum">Оценка: <span class="score-badge ${cls}">${v}</span>`
-    + `<span class="score-pop-max"> из ${SCORE_MAX} · по текущим данным ${sum}</span></div>`
+    + `<span class="score-pop-max"> из ${SCORE_MAX}`
+    + `${scoreDeltaNote(v, total)}</span></div>`
     + `<ul class="score-pop-list">${items}</ul>`;
   pop.hidden = false;
   _scorePopKey = btn.dataset.reviewUrl || '';
