@@ -1422,8 +1422,15 @@ function renderPage() {
   const total = filteredRows.length;
   const slice = filteredRows;
 
-  document.getElementById('tbl-count').textContent = total
-    ? `${total} записей${currentFileNote}${reviewedFilterNote()}${onlyNewNote()}` : '';
+  // Счётчик показывает ход работы, а не только объём: «44 записи» ничего не
+  // говорили о том, сколько уже пройдено. Считаем по текущей выборке — под
+  // фильтром «просмотрено 0 из 12» честнее, чем цифры по всему файлу.
+  const doneCount = slice.filter(r => isReviewed(r)).length;
+  const countEl = document.getElementById('tbl-count');
+  countEl.textContent = total
+    ? `Просмотрено ${doneCount} из ${total}${currentFileNote}${reviewedFilterNote()}${onlyNewNote()}` : '';
+  countEl.title = total
+    ? `Просмотрено ${doneCount} из ${total} · осталось ${total - doneCount}` : '';
   const exportWrap = document.getElementById('export-sel-wrap');
   if (exportWrap) exportWrap.style.display = total ? 'flex' : 'none';
   // Счётчики выборки: сколько строк уедет в Excel/CSV и сколько откроется

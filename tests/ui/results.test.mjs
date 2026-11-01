@@ -919,11 +919,11 @@ test('filterTable applies the city tab filter', () => {
   resetState();
   globalThis.filterTable();
   assert.equal(globalThis.filteredRows.length, 4);
-  assert.equal(els['tbl-count'].textContent, '4 записей');
+  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 4');
   globalThis.activeCity = 'Уфа';
   globalThis.filterTable();
   assert.equal(globalThis.filteredRows.length, 2);
-  assert.equal(els['tbl-count'].textContent, '2 записей');
+  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 2');
 });
 
 test('выбор соцсетей в настройках не сужает уже показанную таблицу', () => {
@@ -986,8 +986,19 @@ test('refreshReviewedUI re-applies the reviewed filter after a bulk run', () => 
   globalThis.reviewedState[globalThis.reviewKey(ROWS[1])] = true;
   globalThis.refreshReviewedUI();
   assert.equal(globalThis.filteredRows.length, 2, 'marked rows drop out at once');
-  assert.equal(els['tbl-count'].textContent, '2 записей · только непросмотренные');
+  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 2 · только непросмотренные');
   assert.equal(els['unviewed-count'].textContent, '2', 'bulk counter follows the marks');
+});
+
+test('счётчик показывает, сколько записей уже просмотрено', () => {
+  // «44 записи» говорили только объём: сколько пройдено, приходилось
+  // считать по отметкам вручную.
+  resetState();
+  globalThis.filterTable();
+  globalThis.reviewedState[globalThis.reviewKey(ROWS[0])] = true;
+  globalThis.renderPage();
+  assert.equal(els['tbl-count'].textContent, 'Просмотрено 1 из 4');
+  assert.match(els['tbl-count'].title, /осталось 3/);
 });
 
 // ── «Только новые» (сервер метит записи признаком `_is_new`) ──────
@@ -1000,13 +1011,13 @@ test('фильтр «Только новые» прячет организаци
   globalThis.toggleOnlyNewFilter();
   assert.equal(globalThis.onlyNewFilter, true);
   assert.equal(globalThis.filteredRows.length, 2, 'остались только новые');
-  assert.equal(els['tbl-count'].textContent, '2 записей · только новые');
+  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 2 · только новые');
   assert.equal(els['btn-only-new'].getAttribute('aria-pressed'), 'true',
     'aria-pressed обязан отражать состояние — aria-checked для button недопустим');
 
   globalThis.toggleOnlyNewFilter();
   assert.equal(globalThis.filteredRows.length, 4, 'фильтр снимается');
-  assert.equal(els['tbl-count'].textContent, '4 записей');
+  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 4');
   assert.equal(globalThis.onlyNewNote(), '');
   assert.equal(els['btn-only-new'].getAttribute('aria-pressed'), 'false');
 });
@@ -1185,7 +1196,7 @@ test('currentFileNote is appended to the table counter', () => {
   resetState();
   globalThis.currentFileNote = ' · файл: raw_a.xlsx';
   globalThis.filterTable();
-  assert.equal(els['tbl-count'].textContent, '4 записей · файл: raw_a.xlsx');
+  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 4 · файл: raw_a.xlsx');
 });
 
 // ── 6. Bulk opening (popup-blocker regression) ────────────────
