@@ -2569,3 +2569,83 @@ class TestSocialTiles:
         body = table[start:table.index("\n}", start)]
         assert "socialMode" not in body, "режим соцсетей не фильтрует готовую таблицу"
         assert "requiredSocials" not in body, "обязательные сети не фильтруют готовую таблицу"
+
+
+class TestMapPanel:
+    """Вкладка «На карте»: категории цветом, панель фильтров, читаемая метка.
+
+    Раньше карта была одним прямоугольником: все компании одним цветом, а
+    поиск и фильтры жили только в таблице. Теперь у вкладки есть панель слева,
+    и это проверяется по разметке, а не по картинке: без id-шников сломается
+    не отрисовка, а обработчики.
+    """
+
+    def _panel(self) -> str:
+        return TEMPLATE[TEMPLATE.index('id="p-map"'):TEMPLATE.index('id="p-stats"')]
+
+    def test_map_tab_has_a_side_panel_with_search(self):
+        panel = self._panel()
+        assert 'class="map-side"' in panel
+        assert 'id="map-search"' in panel
+        assert 'aria-label="Поиск по названию на карте"' in panel
+        assert 'oninput="mapOnSearchInput(this)"' in panel
+        assert 'id="map-shown"' in panel, "счётчик «показано из» нужен рядом с легендой"
+
+    def test_map_filters_cover_reviews_site_and_new(self):
+        panel = self._panel()
+        assert 'id="map-reviews"' in panel
+        assert 'id="map-site"' in panel
+        # «Только новые» повторяет логику таблицы: серверный признак _is_new.
+        assert 'id="map-only-new"' in panel
+        assert 'value="without"' in panel and 'value="with"' in panel
+        for step in ("5", "10", "50", "100"):
+            assert f'<option value="{step}">' in panel, step
+
+    def test_map_legend_is_a_list_of_toggle_buttons(self):
+        panel = self._panel()
+        assert 'id="map-cats"' in panel
+        assert 'role="group" aria-label="Категории на карте"' in panel
+        assert 'onclick="mapAllCats(true)"' in panel and 'onclick="mapAllCats(false)"' in panel
+        # Легенда строится из данных: жёсткого списка категорий в шаблоне быть
+        # не должно — категории приходят из файла.
+        assert "<option value=\"Кафе\"" not in panel
+
+    def test_category_toggle_is_a_pressed_button(self):
+        js = APP_JS
+        assert "function mapToggleCat(" in js
+        assert "aria-pressed=\"${off ? 'false' : 'true'}\"" in js
+        assert "mapToggleCat(this.dataset.cat)" in js, "цвет и подпись — из data-атрибутов"
+
+    def test_map_filters_run_over_the_same_pure_rule(self):
+        js = APP_JS
+        assert "function mapRowVisible(r, opts)" in js
+        assert "function mapVisibleRows(rows)" in js
+        # Точки без координат на карту не попадают: иначе легенда обещает
+        # больше, чем видно.
+        assert "if (!r || !r.lat || !r.lon) return false;" in js
+
+    def test_marker_and_legend_share_one_palette(self):
+        js = APP_JS
+        assert "const MAP_CAT_COLORS = [" in js
+        assert ".map-cat-dot" in STYLE and "background:var(--cat,var(--c))" in STYLE
+        assert "background:var(--pin,var(--c))" in STYLE, "метка красится тем же цветом"
+
+    def test_popup_values_are_not_faded(self):
+        # Раньше адрес и телефон были цветом --sub на белой подложке попапа и
+        # почти не читались. Бледными остались только подписи полей.
+        block = STYLE[STYLE.index(".map-pop-row{"):]
+        block = block[:block.index("}")]
+        assert "color:var(--txt)" in block
+        key = STYLE[STYLE.index(".map-pop-key{"):]
+        assert "color:var(--muted)" in key[:key.index("}")]
+
+    def test_panel_keeps_the_12px_floor(self):
+        block = STYLE[STYLE.index(".map-side{"):STYLE.index(".map-canvas{")]
+        sizes = [float(m) for m in re.findall(r"font-size:(\d+(?:\.\d+)?)px", block)]
+        assert sizes, "у панели есть текст"
+        assert min(sizes) >= 12, f"мельче 12px: {sorted(sizes)}"
+
+    def test_narrow_screen_moves_the_panel_below_the_map(self):
+        block = STYLE[STYLE.index("@media (max-width:860px){"):]
+        assert ".map-shell{flex-direction:column-reverse}" in block[:400]
+        assert "max-height:52%" in block[:400]

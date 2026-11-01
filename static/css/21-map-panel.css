@@ -1,0 +1,85 @@
+/* 21-map-panel.css · Панель вкладки «На карте»: поиск, фильтры, легенда
+   категорий и метки. Часть 22 из 22. Порядок подключения — это каскад:
+   см. static/css/README.md. */
+
+/* ── Карта: панель слева + полотно ────────────────────────────────────────
+   Раньше вкладка была одним прямоугольником: категории на карте не
+   различались цветом, а поиск и фильтры жили только в таблице. */
+.map-shell{display:flex;flex:1;min-height:0}
+.map-side{
+  width:258px;flex:0 0 258px;display:flex;flex-direction:column;gap:10px;
+  padding:14px;background:var(--card);border-right:1px solid var(--bdr);
+  overflow-y:auto;scrollbar-width:thin;
+}
+.map-side-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.map-side-head h3{margin:0;font-size:13px;font-weight:800;color:var(--txt)}
+.map-shown{font-size:12px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
+.map-input{
+  width:100%;box-sizing:border-box;padding:7px 10px;font-family:var(--font-ui);
+  font-size:12.5px;color:var(--txt);background:var(--panel);
+  border:1px solid var(--bdr);border-radius:var(--r-sm);
+}
+.map-input::placeholder{color:var(--muted)}
+.map-input:focus{outline:none;border-color:var(--c);box-shadow:0 0 0 2px var(--glow)}
+.map-filter-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.map-filter-row label{font-size:12px;font-weight:700;color:var(--sub)}
+.map-filter-row select{
+  flex:0 0 auto;padding:4px 6px;font-family:var(--font-ui);font-size:12px;
+  color:var(--txt);background:var(--cl);border:1px solid var(--bdr);border-radius:var(--r-sm);
+}
+.map-filter-row select:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+.map-check{font-size:12px}
+.map-cats-head{
+  display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;
+  font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+}
+.map-cats-head span{flex:1}
+.map-cats-btn{
+  padding:3px 8px;min-height:24px;font-family:var(--font-ui);font-size:12px;font-weight:700;
+  color:var(--sub);background:var(--cl);border:1px solid var(--bdr);
+  border-radius:var(--r-sm);cursor:pointer;
+}
+.map-cats-btn:hover{color:var(--c);border-color:var(--c)}
+.map-cats-btn:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+.map-cats{display:flex;flex-direction:column;gap:2px}
+.map-cat{
+  display:flex;align-items:center;gap:8px;width:100%;min-height:30px;padding:5px 8px;
+  font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--txt);
+  text-align:left;background:transparent;border:1px solid transparent;
+  border-radius:var(--r-sm);cursor:pointer;
+}
+.map-cat:hover{background:var(--row-hover);border-color:var(--bdr)}
+.map-cat:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+.map-cat-dot{
+  flex:0 0 auto;width:10px;height:10px;border-radius:50%;background:var(--cat,var(--c));
+}
+.map-cat-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.map-cat-count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* Скрытая категория — приглушённая и перечёркнутая: цвет остаётся виден,
+   иначе в списке нельзя понять, какую строку только что сняли. */
+.map-cat.off .map-cat-name{text-decoration:line-through;color:var(--muted)}
+.map-cat.off .map-cat-dot{background:var(--bdr-h)}
+.map-cat.off .map-cat-count{color:var(--muted)}
+.map-cats-empty{font-size:12px;color:var(--muted);line-height:1.4}
+.map-canvas{position:relative;flex:1;min-width:0;display:flex}
+#map-container{flex:1;min-height:420px}
+.map-empty{
+  position:absolute;left:12px;right:12px;bottom:12px;padding:10px 12px;
+  font-size:12px;color:var(--sub);background:var(--card);
+  border:1px solid var(--bdr);border-radius:var(--r-sm);box-shadow:var(--sh);
+}
+/* Метка: цветная точка вместо стандартной синей капли — цвет и есть
+   категория, он же повторяется в легенде. */
+.map-pin{background:none;border:0}
+.map-pin-dot{
+  display:block;width:18px;height:18px;border-radius:50%;
+  background:var(--pin,var(--c));border:2px solid var(--card);box-shadow:var(--sh);
+}
+/* На узком экране панель уходит вниз: 258px съедали половину полотна. */
+@media (max-width:860px){
+  .map-shell{flex-direction:column-reverse}
+  .map-side{
+    width:auto;flex:0 0 auto;max-height:52%;
+    border-right:0;border-top:1px solid var(--bdr);
+  }
+}

@@ -37,6 +37,9 @@ function showTab(name, skipLoad) {
   // Карту собираем и на пустом наборе: initMap сам объясняет, что точек нет,
   // а пустой прямоугольник с закрытой подсказкой выглядел поломкой.
   if (name === 'map' && !mapInited) ensureMapReady();
+  // Уже построенная карта тоже обновляет легенду: за время работы с таблицей
+  // набор или отметки могли измениться, а счётчики в панели — нет.
+  else if (name === 'map' && typeof renderMapPanel === 'function') renderMapPanel();
   if (name === 'map' && leafMap) setTimeout(() => leafMap.invalidateSize(), 50);
   // Results tab: refresh city tabs + bulk counters (cheap, data may be stale)
   if (name === 'table') {
@@ -983,8 +986,8 @@ function startRun() {
   // live as cities complete.
   renderDefaultStats();
   document.getElementById('dl-section').style.display = 'none';
-  mapInited = false; if (leafMap) { leafMap.remove(); leafMap = null; }
-  document.getElementById('map-container').innerHTML = '';
+  // Новый прогон — новый набор точек: прежняя карта и её метки не годятся.
+  if (typeof resetMapView === 'function') resetMapView();
 
   _startRunWithParams(params);
 }

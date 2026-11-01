@@ -111,54 +111,238 @@ function ensureMapReady() {
     });
 }
 
+// ── Состояние карты ──────────────────────────────────────────
+// Палитра категорий — это данные визуализации, как SOCIALS и CAT_COLORS ниже:
+// цвета различают категории, а не оформляют поверхность, поэтому токенами
+// темы их не выразить. Тона тёмные: и точка, и подпись в легенде читаются на
+// светлой подложке карты, а белый текст на бейдже даёт нужный контраст.
+const MAP_CAT_COLORS = ['#1d4ed8', '#b91c1c', '#047857', '#b45309', '#6d28d9',
+                        '#0e7490', '#be185d', '#4d7c0f', '#c2410c', '#4338ca',
+                        '#0f766e', '#a21caf'];
+// Порог отзывов задаётся списком, а не полем ввода: в таблице «горячим» уже
+// считается от 50 отзывов, и на карте полезны те же ступени.
+const MAP_REVIEW_STEPS = [0, 5, 10, 50, 100];
+
+let mapHiddenCats = new Set();     // категории, снятые галочкой в легенде
+let mapSearch = '';                // поиск по названию бизнеса
+let mapMinReviews = 0;
+let mapSiteMode = 'all';           // all | with | without
+let mapOnlyNew = false;
+let mapLayer = null;               // слой меток; пересобирается без пересоздания карты
+
+// Категория точки: пустая не должна сливаться с «Без категории» в фильтре.
+function mapCatKey(r) {
+  return String((r && r.category) || '').trim() || 'Без категории';
+}
+
+// Категории набора с числом точек: по частоте, затем по алфавиту — порядок
+// легенды не прыгает между перерисовками.
+function mapCategories(rows) {
+  const counts = new Map();
+  (rows || []).forEach(r => {
+    if (!r || !r.lat || !r.lon) return;      // без координат точки на карте нет
+    const k = mapCatKey(r);
+    counts.set(k, (counts.get(k) || 0) + 1);
+  });
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ru'));
+}
+
+// Цвет категории — по её месту в списке категорий набора. Одинаковый набор
+// даёт одинаковые цвета, а двух одинаковых цветов в легенде не бывает.
+function mapCatColor(name, cats) {
+  const i = Math.max(0, (cats || []).findIndex(c => c.name === name));
+  return MAP_CAT_COLORS[i % MAP_CAT_COLORS.length];
+}
+
+// Проходит ли запись через фильтры карты. Чистая функция — на ней держатся
+// и метки, и счётчик «показано из», и тесты.
+function mapRowVisible(r, opts) {
+  const o = opts || {};
+  if (!r || !r.lat || !r.lon) return false;
+  if (o.hidden && o.hidden.has(mapCatKey(r))) return false;
+  const q = String(o.search || '').trim().toLowerCase();
+  if (q && !String(r.name || '').toLowerCase().includes(q)) return false;
+  if (o.minReviews && (parseFloat(r.reviews_count) || 0) < o.minReviews) return false;
+  // «Сайт» — и своя страница, и визитка-таплинк: обе ведут клиента наружу.
+  const hasSite = !!(String(r.website || '').trim() || String(r.aggregator_url || '').trim());
+  if (o.siteMode === 'with' && !hasSite) return false;
+  if (o.siteMode === 'without' && hasSite) return false;
+  // «Только новые»: признак ставит сервер тем же сравнением, что и фильтр
+  // таблицы — организации не было в файлах прошлых поисков.
+  if (o.onlyNew && r._is_new !== true) return false;
+  return true;
+}
+
+function mapFilterState() {
+  return {
+    hidden: mapHiddenCats,
+    search: mapSearch,
+    minReviews: mapMinReviews,
+    siteMode: mapSiteMode,
+    onlyNew: mapOnlyNew,
+  };
+}
+
+function mapVisibleRows(rows) {
+  const opts = mapFilterState();
+  return (rows || []).filter(r => mapRowVisible(r, opts));
+}
+
+// Круглая цветная точка вместо стандартной синей капли: цвет — категория,
+// и он же повторяется в бейдже попапа.
+function mapPinIcon(color) {
+  return L.divIcon({
+    className: 'map-pin',
+    html: `<span class="map-pin-dot" style="--pin:${color}"></span>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -10],
+  });
+}
+
+// Подробности метки: то, по чему решают звонить, — категория, рейтинг с
+// числом отзывов, адрес, телефоны, страница и соцсети. Значения идут
+// основным тоном текста, бледным — только подписи: в прежнем попапе адрес и
+// телефон были светло-серыми и на белой подложке почти не читались.
+function mapPopupHtml(r, color) {
+  const rating = typeof scoreRating === 'function' ? scoreRating(r) : (parseFloat(r.rating) || 0);
+  const reviews = Math.round(parseFloat(r.reviews_count) || 0);
+  const meta = [];
+  if (rating > 0) meta.push(`Рейтинг ${rating}`);
+  if (reviews > 0) meta.push(`${reviews} ${pluralNum(reviews, 'отзыв', 'отзыва', 'отзывов')}`);
+  const score = r.lead_score;
+  const site = String(r.aggregator_url || r.website || '').trim();
+  const phones = String(r.phone || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 3);
+  const socials = typeof SOCIALS === 'object' && SOCIALS
+    ? Object.entries(SOCIALS)
+      .filter(([p]) => r[p])
+      .map(([p, c]) => `<a class="map-soc" style="--tile:${c}" href="${escapeHtml(safeUrl(r[p]))}"`
+        + ` target="_blank" rel="noopener noreferrer">${SLABELS[p]}</a>`)
+      .join('')
+    : '';
+  return `
+    <div class="map-pop" style="--pin:${color}">
+      <div class="map-pop-cat">${escapeHtml(mapCatKey(r))}</div>
+      <div class="map-pop-name">${escapeHtml(r.name || 'Без названия')}</div>
+      ${meta.length ? `<div class="map-pop-meta">${escapeHtml(meta.join(' · '))}</div>` : ''}
+      ${r.address ? `<div class="map-pop-row"><span class="map-pop-key">Адрес</span>${escapeHtml(r.address)}</div>` : ''}
+      ${phones.length ? `<div class="map-pop-row"><span class="map-pop-key">Телефон</span>${escapeHtml(phones.join(', '))}</div>` : ''}
+      ${site ? `<div class="map-pop-row"><span class="map-pop-key">Сайт</span>`
+        + `<a href="${escapeHtml(safeUrl(site))}" target="_blank" rel="noopener noreferrer">${escapeHtml(site)}</a></div>` : ''}
+      ${score !== '' && score != null ? `<div class="map-pop-row"><span class="map-pop-key">Оценка лида</span>${escapeHtml(String(score))} из 100</div>` : ''}
+      ${socials ? `<div class="map-pop-soc">${socials}</div>` : ''}
+      <div class="map-pop-links">
+        ${r.yandex_maps_url ? `<a href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">Открыть на Я.Картах ↗</a>` : ''}
+      </div>
+    </div>`;
+}
+
 function initMap() {
   const container = document.getElementById('map-container');
+  if (!container) return;
   const pts = allResults.filter(r => r.lat && r.lon);
   if (!pts.length) {
     // Два разных «пусто»: данных вовсе нет и данные есть, но файл собран без
-    // колонок Широта/Долгота (выгрузки до 2.3.5 их не писали — см.
-    // constants.CSV_FIELDS): без подсказки пустая карта выглядит как поломка.
+    // колонок Широта/Долгота — без подсказки пустая карта выглядит поломкой.
     const msg = allResults.length
       ? 'Координат в этом файле нет: колонки «Широта/Долгота» пишутся с версии 2.3.5. '
         + 'Запустите новый поиск — по нему карта покажет точки.'
       : 'Карта пуста: точек пока нет — они появятся после поиска.';
     container.innerHTML = `<div class="no-data" style="padding:60px">${msg}</div>`;
+    mapInited = false;
+    renderMapPanel();
     return;
   }
 
+  // Подсказка «Загружаю карту…» живёт в том же контейнере: Leaflet сносит
+  // содержимое только при повторном создании, поэтому очищаем сами.
+  container.innerHTML = '';
   leafMap = L.map(container).setView([parseFloat(pts[0].lat), parseFloat(pts[0].lon)], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     {attribution:'© OpenStreetMap contributors', maxZoom:19}).addTo(leafMap);
-
-  pts.forEach(r => {
-    const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
-    if (isNaN(lat) || isNaN(lon)) return;
-    // Попап — теми же классами, что и остальные всплывающие: инлайн-стили
-    // тянули за собой старую палитру (#888, тёмно-зелёный, красный) и
-    // не переключались вместе с темой.
-    const socials = Object.entries(SOCIALS)
-      .filter(([p]) => r[p])
-      .map(([p, c]) => `<a class="map-soc" style="--tile:${c}" href="${escapeHtml(safeUrl(r[p]))}"`
-        + ` target="_blank" rel="noopener noreferrer">${SLABELS[p]}</a>`)
-      .join('');
-    const popup = `
-      <div class="map-pop">
-        <div class="map-pop-name">${escapeHtml(r.name || '')}</div>
-        ${r.category ? `<div class="map-pop-cat">${escapeHtml(r.category)}</div>` : ''}
-        ${r.address ? `<div class="map-pop-row">${escapeHtml(r.address)}</div>` : ''}
-        ${r.phone ? `<div class="map-pop-row">${escapeHtml(r.phone)}</div>` : ''}
-        ${socials ? `<div class="map-pop-soc">${socials}</div>` : ''}
-        <div class="map-pop-links">
-          ${r.yandex_maps_url ? `<a href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">Открыть на Я.Картах ↗</a>` : ''}
-        </div>
-      </div>`;
-   L.marker([lat,lon]).addTo(leafMap).bindPopup(popup).bindTooltip(escapeHtml(r.name||''));
-  });
-
-  // Fit bounds
-  const latLngs = pts.map(r => [parseFloat(r.lat), parseFloat(r.lon)]);
-  leafMap.fitBounds(L.latLngBounds(latLngs).pad(0.1));
+  mapLayer = L.layerGroup().addTo(leafMap);
   mapInited = true;
+  renderMapMarkers();
+}
+
+// Метки пересобираются внутри уже созданной карты: смена фильтра не должна
+// пересоздавать тайлы и сбрасывать зум руками — вид подгоняется по видимым.
+function renderMapMarkers() {
+  const rows = mapVisibleRows(allResults);
+  const cats = mapCategories(allResults);
+  const latLngs = [];
+  if (leafMap && mapLayer) {
+    mapLayer.clearLayers();
+    rows.forEach(r => {
+      const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
+      if (isNaN(lat) || isNaN(lon)) return;
+      const color = mapCatColor(mapCatKey(r), cats);
+      L.marker([lat, lon], { icon: mapPinIcon(color), title: r.name || '' })
+        .addTo(mapLayer)
+        .bindPopup(mapPopupHtml(r, color))
+        .bindTooltip(escapeHtml(r.name || ''), { direction: 'top', offset: [0, -10] });
+      latLngs.push([lat, lon]);
+    });
+    if (latLngs.length) leafMap.fitBounds(L.latLngBounds(latLngs).pad(0.1));
+  }
+  const empty = document.getElementById('map-empty');
+  if (empty) empty.hidden = rows.length > 0;
+  renderMapPanel();
+}
+
+// Легенда и счётчик «показано из»: легенда — список кнопок, а не чекбоксов,
+// потому что это переключатели видимости, и aria-pressed говорит о ней прямо.
+function renderMapPanel() {
+  const cats = mapCategories(allResults);
+  const rows = mapVisibleRows(allResults);
+  const total = allResults.filter(r => r.lat && r.lon).length;
+  const shown = document.getElementById('map-shown');
+  if (shown) shown.textContent = `${rows.length} из ${total}`;
+  const box = document.getElementById('map-cats');
+  if (!box) return;
+  box.innerHTML = cats.map(c => {
+    const off = mapHiddenCats.has(c.name);
+    return `<button type="button" class="map-cat${off ? ' off' : ''}" data-cat="${escapeHtml(c.name)}"`
+      + ` style="--cat:${mapCatColor(c.name, cats)}"`
+      + ` aria-pressed="${off ? 'false' : 'true'}"`
+      + ` title="${off ? 'Показать на карте' : 'Скрыть с карты'}: ${escapeHtml(c.name)}"`
+      + ` onclick="mapToggleCat(this.dataset.cat)">`
+      + '<span class="map-cat-dot" aria-hidden="true"></span>'
+      + `<span class="map-cat-name">${escapeHtml(c.name)}</span>`
+      + `<span class="map-cat-count">${c.count}</span></button>`;
+  }).join('') || '<div class="map-cats-empty">Категорий пока нет — запустите поиск или откройте прошлый файл.</div>';
+}
+
+function mapToggleCat(name) {
+  if (!name) return;
+  if (mapHiddenCats.has(name)) mapHiddenCats.delete(name);
+  else mapHiddenCats.add(name);
+  renderMapMarkers();
+}
+
+function mapAllCats(show) {
+  if (show) mapHiddenCats.clear();
+  else mapCategories(allResults).forEach(c => mapHiddenCats.add(c.name));
+  renderMapMarkers();
+}
+
+function mapOnSearchInput(el) {
+  mapSearch = (el && el.value) || '';
+  renderMapMarkers();
+}
+
+// Фильтры читаются из полей целиком: так одно состояние (mapSiteMode и др.)
+// не расходится с тем, что видно в панели после перерисовки.
+function mapReadFilters() {
+  const rev = document.getElementById('map-reviews');
+  if (rev) mapMinReviews = parseInt(rev.value, 10) || 0;
+  const site = document.getElementById('map-site');
+  if (site) mapSiteMode = site.value || 'all';
+  const newest = document.getElementById('map-only-new');
+  if (newest) mapOnlyNew = !!newest.checked;
+  renderMapMarkers();
 }
 
 // Набор данных сменился — открыли файл из «Истории», переключили срез или
@@ -167,6 +351,7 @@ function initMap() {
 // точки другого поиска (или пусто, если карта один раз построилась раньше).
 function resetMapView() {
   mapInited = false;
+  mapLayer = null;
   if (leafMap) {
     try { leafMap.remove(); } catch (e) {}
     leafMap = null;
@@ -182,6 +367,10 @@ function syncMapWithResults() {
   const panel = document.getElementById('p-map');
   if (panel && panel.classList && panel.classList.contains('active') && allResults.length) {
     ensureMapReady();
+  } else if (typeof renderMapPanel === 'function') {
+    // Легенда живёт в той же панели: после смены набора она должна показать
+    // категории нового среза, даже если карта ещё ни разу не открыта.
+    renderMapPanel();
   }
 }
 
