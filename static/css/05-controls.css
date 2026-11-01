@@ -178,7 +178,12 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
   display:flex;align-items:center;gap:9px;
   box-shadow:0 8px 24px rgba(0,0,0,.22);
   transition:transform .3s cubic-bezier(.34,1.4,.64,1),opacity .3s;
-  pointer-events:auto;
+  /* Тост висит в правом верхнем углу — ровно над служебными кнопками шапки
+     («Логи», «Диагностика», «Проблема», «Что нового», «Обновления»). С
+     pointer-events:auto он съедал клики по ним все 3,5 секунды своей жизни,
+     кнопки выглядели мёртвыми. Уведомление — не элемент управления: оно
+     и так исчезает само, поэтому клики проходят сквозь него. */
+  pointer-events:none;
 }
 .toast.show{transform:translateX(0);opacity:1}
 .toast.success{background:var(--grn-btn)}

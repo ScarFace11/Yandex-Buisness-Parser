@@ -398,7 +398,8 @@ function showToast(message, type) {
     setTimeout(() => toast.remove(), 350);
   };
   toast._autoHide = setTimeout(hide, 3500);
-  toast.onclick = hide;
+  // Клик тост больше не ловит: он закрывается сам, а его перехват отнимал
+  // клики у кнопок шапки, над которыми он висит (см. .toast в 05-controls).
 }
 
 // ═══════════════════════════════════════════
