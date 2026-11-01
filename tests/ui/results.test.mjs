@@ -640,12 +640,18 @@ test('renderPage does not group rows inside a selected city tab', () => {
   assert.doesNotMatch(els['tbl-body'].innerHTML, /city-group/);
 });
 
-test('renderPage stays flat when every row is one city', () => {
+test('renderPage keeps the city band when every row is one city', () => {
+  // Раньше полосу города прятали, если город один, и тот же результат
+  // читался другой таблицей — без названия города и его числа.
   resetState();
   globalThis.filteredRows = [REC('А', 'Уфа'), REC('Б', 'Уфа')];
   globalThis.activeCity = '';
   globalThis.renderPage();
-  assert.doesNotMatch(els['tbl-body'].innerHTML, /city-group/);
+  const html = els['tbl-body'].innerHTML;
+  assert.match(html, /<tr class="city-group" data-city="Уфа">/);
+  assert.match(html, /<span class="city-group-count">2<\/span>/);
+  // Нумерация по-прежнему сквозная.
+  assert.match(html, /<td data-col="num">2<\/td>/);
 });
 
 test('renderCityTabs renders «Все» plus a tab per city with counts', () => {
