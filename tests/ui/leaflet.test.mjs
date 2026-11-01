@@ -73,6 +73,10 @@ globalThis.initMap = () => { inited++; };
   grabDecl('_leafletPromise'),
   grab('loadLeaflet'),
   grab('ensureMapReady'),
+  // Пересборка карты при смене набора данных: открыли прошлый файл,
+  // переключили срез или пришёл новый прогон.
+  grab('resetMapView'),
+  grab('syncMapWithResults'),
   // Состояние объявлено через let в области eval, поэтому сброс тоже должен
   // жить там: снаружи по имени его не видно (как __consts в notifications).
   'globalThis.__resetLeaflet = () => { _leafletPromise = null; };',
@@ -183,4 +187,56 @@ test('сообщение об ошибке экранируется', async () =
   await new Promise(r => setImmediate(r));
   assert.match(mapContainer.innerHTML, /Карта недоступна/);
   assert.doesNotMatch(mapContainer.innerHTML, /<script/);
+});
+
+// ── Пересборка при смене набора данных ────────────────────────
+
+test('resetMapView убирает прежнюю карту и её маркеры', () => {
+  reset();
+  let removed = 0;
+  globalThis.mapInited = true;
+  globalThis.leafMap = { remove: () => { removed += 1; } };
+  mapContainer.innerHTML = '<div class="leaflet-container"></div>';
+  resetMapView();
+  assert.equal(removed, 1, 'старая карта снята вместе с метками');
+  assert.equal(globalThis.leafMap, null);
+  assert.equal(globalThis.mapInited, false, 'следующее открытие вкладки построит заново');
+  assert.equal(mapContainer.innerHTML, '');
+});
+
+test('syncMapWithResults пересобирает открытую вкладку карты', async () => {
+  reset();
+  globalThis.mapInited = true;
+  globalThis.leafMap = { remove: () => {} };
+  globalThis.allResults = [{ name: 'Клиника', lat: '55.7', lon: '37.6' }];
+  const panel = { classList: { contains: c => c === 'active' } };
+  const realGet = globalThis.document.getElementById;
+  globalThis.document.getElementById = id => (id === 'p-map' ? panel : realGet(id));
+  try {
+    syncMapWithResults();
+    globalThis.L = {};
+    injected[1].fire('load');
+    await new Promise(r => setImmediate(r));
+    assert.equal(inited, 1, 'карта пересобрана по новым точкам');
+  } finally {
+    globalThis.document.getElementById = realGet;
+  }
+});
+
+test('без данных открытую вкладку не пересобираем', () => {
+  reset();
+  globalThis.mapInited = true;
+  globalThis.leafMap = { remove: () => {} };
+  globalThis.allResults = [];
+  const panel = { classList: { contains: c => c === 'active' } };
+  const realGet = globalThis.document.getElementById;
+  globalThis.document.getElementById = id => (id === 'p-map' ? panel : realGet(id));
+  try {
+    syncMapWithResults();
+    assert.equal(globalThis.mapInited, false, 'следующее открытие покажет подсказку');
+    assert.equal(inited, 0, 'без точек библиотеку не дёргаем');
+    assert.equal(injected.length, 0);
+  } finally {
+    globalThis.document.getElementById = realGet;
+  }
 });

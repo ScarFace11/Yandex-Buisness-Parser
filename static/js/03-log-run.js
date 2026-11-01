@@ -34,7 +34,9 @@ function showTab(name, skipLoad) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('t-' + name).classList.add('active');
   document.getElementById('p-' + name).classList.add('active');
-  if (name === 'map' && allResults.length && !mapInited) ensureMapReady();
+  // Карту собираем и на пустом наборе: initMap сам объясняет, что точек нет,
+  // а пустой прямоугольник с закрытой подсказкой выглядел поломкой.
+  if (name === 'map' && !mapInited) ensureMapReady();
   if (name === 'map' && leafMap) setTimeout(() => leafMap.invalidateSize(), 50);
   // Results tab: refresh city tabs + bulk counters (cheap, data may be stale)
   if (name === 'table') {

@@ -161,6 +161,30 @@ function initMap() {
   mapInited = true;
 }
 
+// Набор данных сменился — открыли файл из «Истории», переключили срез или
+// пришёл новый прогон. Маркеры принадлежат прежнему набору, поэтому карту
+// собираем заново: без этого при открытии прошлых файлов на карте висели
+// точки другого поиска (или пусто, если карта один раз построилась раньше).
+function resetMapView() {
+  mapInited = false;
+  if (leafMap) {
+    try { leafMap.remove(); } catch (e) {}
+    leafMap = null;
+  }
+  const container = document.getElementById('map-container');
+  if (container) container.innerHTML = '';
+}
+
+// Если карта открыта прямо сейчас — пересобираем сразу, иначе человек видел бы
+// пустой прямоугольник до следующего переключения вкладки.
+function syncMapWithResults() {
+  resetMapView();
+  const panel = document.getElementById('p-map');
+  if (panel && panel.classList && panel.classList.contains('active') && allResults.length) {
+    ensureMapReady();
+  }
+}
+
 // ═══════════════════════════════════════════
 //  Stats
 // ═══════════════════════════════════════════

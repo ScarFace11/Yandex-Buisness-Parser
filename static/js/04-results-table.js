@@ -169,6 +169,8 @@ function onRunDone(msg) {
 
   const finalize = (data) => {
     allResults = data;
+    // Новый прогон — новые точки: карта от прошлого набора больше не верна.
+    if (typeof syncMapWithResults === 'function') syncMapWithResults();
     _resetTableBadge();
     loadReviewed();
     // City dropdown "last searched" labels come from /history — refresh
@@ -375,6 +377,8 @@ function setResultsView(view) {
     .then(data => {
       if (seq !== _resultsReqSeq) return;   // устаревший ответ — вкладку уже переключили
       allResults = data.records || [];
+      // Срез сменился — карта должна показать точки этого среза.
+      if (typeof syncMapWithResults === 'function') syncMapWithResults();
       _lastCities = data.cities || [];
       _resetTableBadge();
       loadReviewed();
