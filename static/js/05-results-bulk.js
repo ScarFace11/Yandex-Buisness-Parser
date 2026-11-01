@@ -1288,8 +1288,11 @@ function openFileInTable(rel) {
       // renderTable() перечитывает данные через filterTable → источник
       // должен быть обновлён до вызова.
       allResults = recs;
-      // Открыли прошлый файл: метки на карте принадлежали другому набору.
+      // Открыли прошлый файл: метки на карте и карточки «Статистики»
+      // принадлежали другому набору — оба раздела должны считать этот файл.
       if (typeof syncMapWithResults === 'function') syncMapWithResults();
+      if (typeof refreshStatsFor === 'function') refreshStatsFor(recs);
+      if (typeof updateStatsBadge === 'function') updateStatsBadge();
       renderTable(recs);
       currentFileNote = ` · файл: ${basenameOf(rel)}`;
       renderPage();              // перерисовать счётчик с именем файла

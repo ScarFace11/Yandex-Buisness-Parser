@@ -2625,7 +2625,6 @@ class TestMapPanel:
         assert "function renderMapMarkers(fit)" in js
         assert "if (fit && latLngs.length) leafMap.fitBounds" in js
         assert "renderMapMarkers(true);" in js, "новая карта строится по точкам набора"
-        assert "mapToggleCat(this.dataset.cat)" in js
 
     def test_map_legend_is_a_list_of_toggle_buttons(self):
         panel = self._panel()
@@ -2640,7 +2639,7 @@ class TestMapPanel:
         js = APP_JS
         assert "function mapToggleCat(" in js
         assert "aria-pressed=\"${off ? 'false' : 'true'}\"" in js
-        assert "mapToggleCat(this.dataset.cat)" in js, "цвет и подпись — из data-атрибутов"
+        assert "mapToggleCat(this.dataset.city, this.dataset.cat)" in js, "город и категория — из data-атрибутов"
 
     def test_map_filters_run_over_the_same_pure_rule(self):
         js = APP_JS
@@ -2685,6 +2684,47 @@ class TestMapPanel:
         sizes = [float(m) for m in re.findall(r"font-size:(\d+(?:\.\d+)?)px", block)]
         assert sizes, "у панели есть текст"
         assert min(sizes) >= 12, f"мельче 12px: {sorted(sizes)}"
+
+    def test_legend_groups_categories_by_city(self):
+        # Одна и та же категория в двух городах — разные строки легенды, и
+        # скрывается только своя.
+        js = APP_JS
+        assert "function mapCityGroups(" in js
+        assert "function mapCatHideKey(" in js
+        assert "data-city=" in js and "data-cat=" in js
+        assert "mapToggleCat(this.dataset.city, this.dataset.cat)" in js
+        assert ".map-city{" in STYLE
+        assert ".map-city-group{" in STYLE
+        # Город без координат не участвует: точки нет — строки нет.
+        assert "if (!r || !r.lat || !r.lon) return;" in js
+
+
+class TestStatsFollowTheData:
+    """«Статистика» считает тот же набор, что таблица и карта.
+
+    Открыли прошлый файл — карточки должны стать его, а не прежнего поиска.
+    Пустой набор показывает нули: старые числа на пустом экране читаются как
+    «файл не открылся».
+    """
+
+    def test_one_place_repaints_stats_cards(self):
+        js = APP_JS
+        assert "function refreshStatsFor(rows)" in js
+        assert "renderDefaultStats();" in js, "пустой набор — нули, а не старые цифры"
+
+    def test_opening_a_file_repaints_stats(self):
+        bulk = (ROOT / "static" / "js" / "05-results-bulk.js").read_text(encoding="utf-8")
+        start = bulk.index("function openFileInTable(")
+        body = bulk[start:bulk.index("\n}\n", start)]
+        assert "refreshStatsFor(recs)" in body
+        assert "updateStatsBadge()" in body
+
+    def test_slice_and_new_run_use_the_same_path(self):
+        table = (ROOT / "static" / "js" / "04-results-table.js").read_text(encoding="utf-8")
+        assert "refreshStatsFor(allResults)" in table
+        log = (ROOT / "static" / "js" / "03-log-run.js").read_text(encoding="utf-8")
+        assert "refreshStatsFor(recs)" in log
+        assert "if (recs.length || !isRunActive())" in log, "пустой набор вне прогона — нули"
 
     def test_narrow_screen_moves_the_panel_below_the_map(self):
         block = STYLE[STYLE.index("@media (max-width:860px){"):]

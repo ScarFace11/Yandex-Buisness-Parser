@@ -64,7 +64,8 @@ globalThis.SLABELS = { vk: 'VK', telegram: 'TG' };
 (0, eval)([
   grabConst('MAP_CAT_COLORS'),
   grab('mapCatParts'), grab('mapCatKey'), grab('mapCatExtra'),
-  grab('mapCategories'), grab('mapCatColor'),
+  grab('mapCityKey'), grab('mapCatHideKey'), grab('mapHideKey'),
+  grab('mapCityGroups'), grab('mapCategories'), grab('mapCatColor'),
   grab('mapRowVisible'), grab('mapPopupHtml'),
 ].join('\n'));
 
@@ -144,10 +145,46 @@ test('поиск по названию не зависит от регистра
   assert.equal(mapRowVisible(row, { search: '' }), true);
 });
 
-test('скрытая категория пропадает с карты', () => {
-  const row = R('A', 'Москва', { category: 'Кафе' });
-  assert.equal(mapRowVisible(row, { hidden: new Set(['Кафе']) }), false);
-  assert.equal(mapRowVisible(row, { hidden: new Set(['Бар']) }), true);
+// Категория скрывается в пределах своего города: одна и та же «Кафе» в двух
+// городах — две строки легенды, и снятая строка не должна скрывать обе.
+test('скрытая категория пропадает только в своём городе', () => {
+  const msk = R('A', 'Москва', { category: 'Кафе' });
+  const yar = R('B', 'Ярославль', { category: 'Кафе' });
+  const hidden = new Set([mapHideKey(msk)]);
+  assert.equal(mapRowVisible(msk, { hidden }), false);
+  assert.equal(mapRowVisible(yar, { hidden }), true, 'другой город остаётся');
+  const noCity = mapHideKey({ category: 'Кафе' });
+  assert.equal(mapRowVisible(msk, { hidden: new Set([noCity]) }), true);
+});
+
+test('ключ скрытия — город плюс категория', () => {
+  assert.equal(mapHideKey(R('A', 'Москва', { category: 'Кафе, Кофейня' })), 'Москва\u001fКафе');
+  assert.equal(mapHideKey({ category: 'Кафе' }), 'Без города\u001fКафе');
+});
+
+test('легенда делится по городам: внутри — категории по частоте', () => {
+  const groups = mapCityGroups([
+    R('A', 'Ярославль', { category: 'Автомойка, Шиномонтаж' }),
+    R('B', 'Ярославль', { category: 'Автомойка' }),
+    R('C', 'Ярославль', { category: 'Кафе' }),
+    R('D', 'Москва', { category: 'Кафе' }),
+    R('E', 'Москва', { category: 'Кафе' }),
+    R('F', 'Москва', { category: 'Бар' }),
+  ]);
+  assert.deepEqual(groups.map(g => [g.city, g.total]), [['Москва', 3], ['Ярославль', 3]]);
+  assert.deepEqual(groups[0].cats, [{ name: 'Кафе', count: 2 }, { name: 'Бар', count: 1 }]);
+  assert.deepEqual(groups[1].cats,
+    [{ name: 'Автомойка', count: 2 }, { name: 'Кафе', count: 1 }]);
+});
+
+test('город без координат и без города сводятся в одну группу', () => {
+  const groups = mapCityGroups([
+    R('A', '', { category: 'Кафе' }),
+    R('B', '   ', { category: 'Кафе' }),
+    R('C', 'Москва', { category: 'Кафе' }),
+    { name: 'D', category: 'Кафе', city: 'Тверь' },     // без координат
+  ]);
+  assert.deepEqual(groups.map(g => [g.city, g.total]), [['Без города', 2], ['Москва', 1]]);
 });
 
 test('порог отзывов отсекает компании без потока клиентов', () => {

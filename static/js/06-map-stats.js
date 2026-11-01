@@ -97,12 +97,21 @@ function loadLeaflet() {
 
 // Вкладка карты: сначала библиотека, потом карта. Ошибку показываем на месте
 // карты — вместо пустого прямоугольника.
+// mapPending — загрузка Leaflet и создание карты идут асинхронно. Пока они не
+// закончились, повторный вызов (открыли файл и сразу переключили вкладку)
+// создавал вторую карту на том же контейнере и падал с «Map container is
+// already initialized» — вместо карты человек видел ошибку.
+let mapPending = false;
+
 function ensureMapReady() {
+  if (mapPending) return;
   const container = document.getElementById('map-container');
   if (container && !window.L) container.innerHTML = '<div class="no-data" style="padding:40px">Загружаю карту…</div>';
+  mapPending = true;
   loadLeaflet()
-    .then(() => initMap())
+    .then(() => { mapPending = false; initMap(); })
     .catch(err => {
+      mapPending = false;
       if (container) {
         container.innerHTML = '<div class="no-data" style="padding:40px">Карта недоступна: '
           + escapeHtml(err && err.message ? err.message : 'библиотека не загрузилась')
@@ -154,6 +163,46 @@ function mapCatExtra(r) {
   return mapCatParts(r).slice(1).join(', ');
 }
 
+// Город точки: в одном наборе бывает несколько городов, и одна и та же
+// категория в них — разные группы.
+function mapCityKey(r) {
+  return String((r && r.city) || '').trim() || 'Без города';
+}
+
+// Ключ скрытия — пара «город + категория»: без города одно нажатие в легенде
+// убирало бы кофейни сразу из всех городов. Разделитель — \u001f, его не
+// бывает в названиях, поэтому ключи не склеиваются.
+function mapCatHideKey(city, cat) {
+  return city + '\u001f' + cat;
+}
+
+function mapHideKey(r) {
+  return mapCatHideKey(mapCityKey(r), mapCatKey(r));
+}
+
+// Города и их категории для легенды: внутри города — по частоте и алфавиту,
+// сами города — по числу точек. Порядок не прыгает между перерисовками.
+function mapCityGroups(rows) {
+  const cities = new Map();
+  (rows || []).forEach(r => {
+    if (!r || !r.lat || !r.lon) return;
+    const city = mapCityKey(r), cat = mapCatKey(r);
+    let node = cities.get(city);
+    if (!node) { node = { city, total: 0, cats: new Map() }; cities.set(city, node); }
+    node.total += 1;
+    node.cats.set(cat, (node.cats.get(cat) || 0) + 1);
+  });
+  return [...cities.values()]
+    .map(node => ({
+      city: node.city,
+      total: node.total,
+      cats: [...node.cats.entries()]
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ru')),
+    }))
+    .sort((a, b) => b.total - a.total || a.city.localeCompare(b.city, 'ru'));
+}
+
 // Категории набора с числом точек: по частоте, затем по алфавиту — порядок
 // легенды не прыгает между перерисовками.
 function mapCategories(rows) {
@@ -180,7 +229,7 @@ function mapCatColor(name, cats) {
 function mapRowVisible(r, opts) {
   const o = opts || {};
   if (!r || !r.lat || !r.lon) return false;
-  if (o.hidden && o.hidden.has(mapCatKey(r))) return false;
+  if (o.hidden && o.hidden.has(mapHideKey(r))) return false;
   const q = String(o.search || '').trim().toLowerCase();
   if (q && !String(r.name || '').toLowerCase().includes(q)) return false;
   if (o.minReviews && (parseFloat(r.reviews_count) || 0) < o.minReviews) return false;
@@ -265,6 +314,12 @@ function mapPopupHtml(r, color) {
 function initMap() {
   const container = document.getElementById('map-container');
   if (!container) return;
+  // Страховка от двойного входа: прежнюю карту снимаем сами, иначе Leaflet
+  // откажется создавать новую на том же контейнере.
+  if (leafMap) {
+    try { leafMap.remove(); } catch (e) {}
+    leafMap = null;
+  }
   const pts = allResults.filter(r => r.lat && r.lon);
   if (!pts.length) {
     // Два разных «пусто»: данных вовсе нет и данные есть, но файл собран без
@@ -326,29 +381,48 @@ function renderMapPanel() {
   if (shown) shown.textContent = `${rows.length} из ${total}`;
   const box = document.getElementById('map-cats');
   if (!box) return;
-  box.innerHTML = cats.map(c => {
-    const off = mapHiddenCats.has(c.name);
-    return `<button type="button" class="map-cat${off ? ' off' : ''}" data-cat="${escapeHtml(c.name)}"`
-      + ` style="--cat:${mapCatColor(c.name, cats)}"`
-      + ` aria-pressed="${off ? 'false' : 'true'}"`
-      + ` title="${off ? 'Показать на карте' : 'Скрыть с карты'}: ${escapeHtml(c.name)}"`
-      + ` onclick="mapToggleCat(this.dataset.cat)">`
-      + '<span class="map-cat-dot" aria-hidden="true"></span>'
-      + `<span class="map-cat-name">${escapeHtml(c.name)}</span>`
-      + `<span class="map-cat-count">${c.count}</span></button>`;
+  // Несколько городов — легенда делится по городам: «Кафе» в Ярославле и в
+  // Москве — разные строки, и скрыть их можно по отдельности. Один город
+  // (или его нет) — обычный список без лишнего заголовка.
+  const groups = mapCityGroups(allResults);
+  const withCities = groups.length > 1;
+  box.innerHTML = groups.map(g => {
+    const items = g.cats.map(c => {
+      const off = mapHiddenCats.has(mapCatHideKey(g.city, c.name));
+      return `<button type="button" class="map-cat${off ? ' off' : ''}"`
+        + ` data-city="${escapeHtml(g.city)}" data-cat="${escapeHtml(c.name)}"`
+        + ` style="--cat:${mapCatColor(c.name, cats)}"`
+        + ` aria-pressed="${off ? 'false' : 'true'}"`
+        + ` title="${off ? 'Показать на карте' : 'Скрыть с карты'}: ${escapeHtml(c.name)}`
+        + `${withCities ? ' · ' + escapeHtml(g.city) : ''}"`
+        + ` onclick="mapToggleCat(this.dataset.city, this.dataset.cat)">`
+        + '<span class="map-cat-dot" aria-hidden="true"></span>'
+        + `<span class="map-cat-name">${escapeHtml(c.name)}</span>`
+        + `<span class="map-cat-count">${c.count}</span></button>`;
+    }).join('');
+    const head = withCities
+      ? `<div class="map-city"><span class="map-city-name">${escapeHtml(g.city)}</span>`
+        + `<span class="map-city-count">${g.total}</span></div>`
+      : '';
+    return `<div class="map-city-group">${head}${items}</div>`;
   }).join('') || '<div class="map-cats-empty">Категорий пока нет — запустите поиск или откройте прошлый файл.</div>';
 }
 
-function mapToggleCat(name) {
-  if (!name) return;
-  if (mapHiddenCats.has(name)) mapHiddenCats.delete(name);
-  else mapHiddenCats.add(name);
+// Город и категория обязательны вместе: так одна и та же категория в разных
+// городах скрывается отдельно.
+function mapToggleCat(city, cat) {
+  if (!cat) return;
+  const key = mapCatHideKey(city || 'Без города', cat);
+  if (mapHiddenCats.has(key)) mapHiddenCats.delete(key);
+  else mapHiddenCats.add(key);
   renderMapMarkers();
 }
 
 function mapAllCats(show) {
   if (show) mapHiddenCats.clear();
-  else mapCategories(allResults).forEach(c => mapHiddenCats.add(c.name));
+  else mapCityGroups(allResults).forEach(g => g.cats.forEach(c => {
+    mapHiddenCats.add(mapCatHideKey(g.city, c.name));
+  }));
   renderMapMarkers();
 }
 
@@ -677,6 +751,21 @@ function statsEmptyArtHTML() {
     + `<path d="M84 46l9-11 6 6 11-17" class="sta-line"/>`
     + `<circle cx="110" cy="24" r="3" class="sta-dot"/>`
     + `</svg>`;
+}
+
+// Одна точка обновления вкладки «Статистика». Набор данных сменился — новый
+// прогон, другой срез или открытый из истории файл — карточки должны считать
+// его, а не прошлый поиск. Без записей возвращаем нули: старые цифры на
+// пустом наборе читаются как «файл не открылся».
+function refreshStatsFor(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) {
+    if (typeof renderDefaultStats === 'function') renderDefaultStats();
+    return;
+  }
+  renderStats(list,
+    typeof _runElapsed === 'function' ? _runElapsed() : null,
+    typeof _lastSkippedCities !== 'undefined' ? _lastSkippedCities : []);
 }
 
 function renderStats(data, elapsed, skippedCities) {

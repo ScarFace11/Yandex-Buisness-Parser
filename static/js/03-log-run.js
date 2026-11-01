@@ -75,12 +75,16 @@ function showTab(name, skipLoad) {
     // нули, хотя файлы на диске есть.
     if (!allResults.length && !_resultsLoadedOnce && !isRunActive()) setResultsView(_resultsView);
   }
-  // Re-render stats when switching to the stats tab. During an active run
-  // only finished cities are shown (stable numbers); after the run ends the
-  // full result set is rendered.
-  if (name === 'stats' && allResults.length) {
+  // Вкладку «Статистика» считаем заново на каждом входе: пока её не было на
+  // экране, набор мог смениться — открыли прошлый файл или другой срез.
+  // Во время прогона показываем только завершённые города (цифры не дёргаются),
+  // после него — весь набор; пустой набор даёт нули, а не прежние числа.
+  if (name === 'stats') {
     const recs = isRunActive() ? completedCityRecords() : allResults;
-    if (recs.length) renderStats(recs, _runElapsed(), _lastSkippedCities);
+    if (recs.length || !isRunActive()) {
+      if (typeof refreshStatsFor === 'function') refreshStatsFor(recs);
+      else if (recs.length) renderStats(recs, _runElapsed(), _lastSkippedCities);
+    }
   }
 }
 

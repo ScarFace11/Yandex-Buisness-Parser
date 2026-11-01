@@ -51,7 +51,16 @@
 }
 .map-cats-btn:hover{color:var(--c);border-color:var(--c)}
 .map-cats-btn:focus-visible{outline:2px solid var(--c);outline-offset:1px}
-.map-cats{display:flex;flex-direction:column;gap:2px}
+.map-cats{display:flex;flex-direction:column;gap:10px}
+/* Группа города: в наборе из нескольких городов одна и та же категория
+   повторяется в каждом, и без заголовка непонятно, чьи это кофейни. */
+.map-city-group{display:flex;flex-direction:column;gap:2px}
+.map-city{
+  display:flex;align-items:baseline;gap:6px;padding:0 8px 2px;font-size:12px;
+  color:var(--sub);border-bottom:1px solid var(--bdr);
+}
+.map-city-name{flex:1;font-weight:800;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.map-city-count{font-size:12px;font-variant-numeric:tabular-nums}
 .map-cat{
   display:flex;align-items:center;gap:8px;width:100%;min-height:30px;padding:5px 8px;
   font-family:var(--font-ui);font-size:12px;font-weight:600;color:var(--txt);

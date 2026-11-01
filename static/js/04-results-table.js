@@ -385,7 +385,8 @@ function setResultsView(view) {
       renderTable(allResults);
       // Статистика живёт на том же срезе: открыв её первой, пользователь
       // должен увидеть цифры, а не нули при непустых файлах.
-      if (allResults.length) renderStats(allResults, _runElapsed(), _lastSkippedCities);
+      if (typeof refreshStatsFor === 'function') refreshStatsFor(allResults);
+      else if (allResults.length) renderStats(allResults, _runElapsed(), _lastSkippedCities);
       if (!allResults.length) {
         let msg = 'Результатов пока нет — запустите поиск. Если поиск уже был, '
           + 'проверьте фильтры или откройте сырые файлы в «История» → «Файлы».';

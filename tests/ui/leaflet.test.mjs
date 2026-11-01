@@ -72,6 +72,9 @@ globalThis.initMap = () => { inited++; };
 (0, eval)([
   grabDecl('_leafletPromise'),
   grab('loadLeaflet'),
+  // Флаг незавершённой инициализации — объявлен через let рядом с mapInited;
+  // без него ensureMapReady() не соберётся в тесте.
+  'let mapPending = false;',
   grab('ensureMapReady'),
   // Пересборка карты при смене набора данных: открыли прошлый файл,
   // переключили срез или пришёл новый прогон.
@@ -79,7 +82,7 @@ globalThis.initMap = () => { inited++; };
   grab('syncMapWithResults'),
   // Состояние объявлено через let в области eval, поэтому сброс тоже должен
   // жить там: снаружи по имени его не видно (как __consts в notifications).
-  'globalThis.__resetLeaflet = () => { _leafletPromise = null; };',
+  'globalThis.__resetLeaflet = () => { _leafletPromise = null; mapPending = false; };',
 ].join('\n'));
 
 function reset() {
@@ -168,6 +171,33 @@ test('ensureMapReady инициализирует карту после загр
   injected[1].fire('load');
   await new Promise(r => setImmediate(r));
   assert.equal(inited, 1);
+});
+
+// Открыли файл и сразу переключили вкладку: загрузка идёт асинхронно, и второй
+// вызов не должен создавать вторую карту на том же контейнере — Leaflet в этом
+// случае падает с «Map container is already initialized».
+test('повторный ensureMapReady не строит карту дважды', async () => {
+  reset();
+  ensureMapReady();
+  ensureMapReady();
+  ensureMapReady();
+  globalThis.L = {};
+  injected[1].fire('load');
+  await new Promise(r => setImmediate(r));
+  assert.equal(inited, 1, 'карта строится один раз');
+  assert.equal(injected.length, 2, 'библиотека тоже грузится один раз');
+});
+
+test('после неудачной загрузки следующая попытка разрешена', async () => {
+  reset();
+  ensureMapReady();
+  injected[1].fire('error');
+  await new Promise(r => setImmediate(r));
+  ensureMapReady();
+  globalThis.L = {};
+  injected[3].fire('load');
+  await new Promise(r => setImmediate(r));
+  assert.equal(inited, 1, 'флаг занятости снят в ошибке');
 });
 
 test('ошибка загрузки видна на месте карты, а не в консоли', async () => {
