@@ -1,5 +1,5 @@
 /* 06-map-stats.css · Карта и графики статистики
-   Часть 7 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+   Часть 7 из 22. Порядок подключения — это каскад: см. static/css/README.md. */
 
 /* ════════════════════════════════
    MAP & STATS
@@ -18,15 +18,18 @@
   background:var(--pin,var(--c));color:var(--on-accent);
   font-size:12px;font-weight:700;letter-spacing:.01em;
 }
-.map-pop-name{font-size:14px;font-weight:800;line-height:1.25;margin-top:6px}
+.map-pop-name{font-size:14px;font-weight:800;line-height:1.25;margin-top:6px;color:var(--txt)}
+/* Второстепенные категории строкой: в легенде их нет, но при выборе точки
+   понятно, чем ещё занимается компания. */
+.map-pop-extra{font-size:12px;color:var(--sub);margin-top:3px;line-height:1.35}
 .map-pop-meta{font-size:12px;color:var(--sub);margin-top:3px;font-variant-numeric:tabular-nums}
 /* Значения — основным тоном: прежний бледно-серый адрес на белой подложке
    попапа не читался. Бледными остались только подписи полей. */
 .map-pop-row{
   display:flex;gap:6px;margin-top:5px;line-height:1.35;
-  color:var(--txt);font-variant-numeric:tabular-nums;
+  color:var(--txt);font-weight:500;font-variant-numeric:tabular-nums;
 }
-.map-pop-key{flex:0 0 66px;font-size:12px;color:var(--muted);font-weight:600}
+.map-pop-key{flex:0 0 66px;font-size:12px;color:var(--sub);font-weight:700}
 .map-pop-row a{color:var(--c);font-weight:600;text-decoration:none;word-break:break-all}
 .map-pop-row a:hover{text-decoration:underline}
 .map-pop-soc{margin-top:6px}
@@ -42,7 +45,7 @@
 .leaflet-container{font-family:var(--font-ui);background:var(--panel)}
 .leaflet-popup-content-wrapper{border:1px solid var(--bdr);border-radius:var(--r-md);box-shadow:var(--sh-lg)}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--card);color:var(--txt)}
-.leaflet-popup-content{margin:10px 12px;line-height:1.4}
+.leaflet-popup-content{margin:10px 12px;line-height:1.4;color:var(--txt)}
 .leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
 .leaflet-container a.leaflet-popup-close-button:hover{color:var(--txt)}
 .stats-body{flex:1;overflow-y:auto;padding:20px}

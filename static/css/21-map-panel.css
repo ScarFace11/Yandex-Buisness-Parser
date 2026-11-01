@@ -21,14 +21,24 @@
 }
 .map-input::placeholder{color:var(--muted)}
 .map-input:focus{outline:none;border-color:var(--c);box-shadow:0 0 0 2px var(--glow)}
-.map-filter-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.map-filter-row label{font-size:12px;font-weight:700;color:var(--sub)}
-.map-filter-row select{
-  flex:0 0 auto;padding:4px 6px;font-family:var(--font-ui);font-size:12px;
-  color:var(--txt);background:var(--cl);border:1px solid var(--bdr);border-radius:var(--r-sm);
+/* Поля фильтров в одну колонку: подпись сверху, контрол во всю ширину.
+   Раньше подпись и узкий select стояли в строке и правые края не совпадали
+   ни между собой, ни с полем поиска — панель выглядела собранной на глаз. */
+.map-filters{display:flex;flex-direction:column;gap:9px}
+.map-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.map-field label{font-size:12px;font-weight:700;color:var(--sub)}
+.map-field select{
+  width:100%;box-sizing:border-box;padding:6px 8px;min-height:30px;
+  font-family:var(--font-ui);font-size:12px;color:var(--txt);
+  background:var(--cl);border:1px solid var(--bdr);border-radius:var(--r-sm);
 }
-.map-filter-row select:focus-visible{outline:2px solid var(--c);outline-offset:1px}
-.map-check{font-size:12px}
+.map-field select:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+/* Галочка — такой же блок, как поля: те же ширина и высота, без скачка
+   вправо после двух select-ов. */
+.map-check{
+  width:100%;box-sizing:border-box;justify-content:flex-start;
+  min-height:32px;padding:6px 8px;font-size:12px;
+}
 .map-cats-head{
   display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;
   font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);

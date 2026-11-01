@@ -63,7 +63,8 @@ globalThis.SLABELS = { vk: 'VK', telegram: 'TG' };
 
 (0, eval)([
   grabConst('MAP_CAT_COLORS'),
-  grab('mapCatKey'), grab('mapCategories'), grab('mapCatColor'),
+  grab('mapCatParts'), grab('mapCatKey'), grab('mapCatExtra'),
+  grab('mapCategories'), grab('mapCatColor'),
   grab('mapRowVisible'), grab('mapPopupHtml'),
 ].join('\n'));
 
@@ -98,6 +99,27 @@ test('пустая категория не смешивается с реаль�
   assert.equal(mapCatKey({ category: '  ' }), 'Без категории');
   assert.equal(mapCatKey({}), 'Без категории');
   assert.equal(mapCatKey({ category: ' Кафе ' }), 'Кафе');
+});
+
+// Карточка приходит со списком категорий: «Автомойка, Шиномонтаж, Автоэлектрик».
+// В легенде такая строка рождала десятки строк по одной записи, поэтому
+// группой считается первая категория, а остальные уходят в карточку метки.
+test('категория точки — первая из списка', () => {
+  assert.equal(mapCatKey({ category: 'Автомойка, Шиномонтаж' }), 'Автомойка');
+  assert.equal(mapCatKey({ category: ' Автомойка ,Шиномонтаж ,' }), 'Автомойка');
+  assert.equal(mapCatExtra({ category: 'Автомойка, Шиномонтаж, Автоэлектрик' }),
+    'Шиномонтаж, Автоэлектрик');
+  assert.equal(mapCatExtra({ category: 'Автомойка' }), '');
+  assert.equal(mapCatExtra({}), '');
+});
+
+test('список категорий через запятую даёт одну строку легенды', () => {
+  const cats = mapCategories([
+    R('A', 'Ярославль', { category: 'Автомойка, Шиномонтаж' }),
+    R('B', 'Ярославль', { category: 'Автомойка, Автоэлектрик' }),
+    R('C', 'Ярославль', { category: 'Кафе, Кофейня' }),
+  ]);
+  assert.deepEqual(cats, [{ name: 'Автомойка', count: 2 }, { name: 'Кафе', count: 1 }]);
 });
 
 test('у каждой категории свой цвет, и он не меняется между перерисовками', () => {
@@ -160,6 +182,17 @@ test('«только новые» берёт серверный признак, 
   assert.equal(mapRowVisible(old, { onlyNew: false }), true);
 });
 
+test('фильтр по оценке отсекает слабые лиды', () => {
+  const hot = R('A', 'Москва', { lead_score: 72 });
+  const cold = R('B', 'Москва', { lead_score: 30 });
+  const none = R('C', 'Москва');
+  assert.equal(mapRowVisible(hot, { minScore: 65 }), true);
+  assert.equal(mapRowVisible(cold, { minScore: 65 }), false);
+  assert.equal(mapRowVisible(cold, { minScore: 0 }), true);
+  // Без оценки запись не проходит порог: сравнивать нечего.
+  assert.equal(mapRowVisible(none, { minScore: 35 }), false);
+});
+
 test('фильтры складываются, а не перекрывают друг друга', () => {
   const row = R('Кофейня', 'Москва', { reviews_count: '120', vk: 'https://vk.com/x' });
   const ok = { search: 'коф', minReviews: 100, siteMode: 'without', onlyNew: true };
@@ -183,6 +216,16 @@ test('попап показывает категорию, рейтинг, кон
   assert.match(html, /https:\/\/klinika\.ru/);
   assert.match(html, /Открыть на Я\.Картах/);
   assert.match(html, /85 из 100/);
+});
+
+test('попап показывает и остальные категории компании', () => {
+  const html = mapPopupHtml(R('Мойка', 'Москва', {
+    category: 'Автомойка, Шиномонтаж, Полировка',
+  }), MAP_CAT_COLORS[2]);
+  assert.match(html, /<div class="map-pop-cat">Автомойка<\/div>/);
+  assert.match(html, /Ещё: Шиномонтаж, Полировка/);
+  // Одна категория — без пустой строки «Ещё:».
+  assert.ok(!/Ещё:/.test(mapPopupHtml(R('Мойка', 'Москва', { category: 'Автомойка' }), MAP_CAT_COLORS[2])));
 });
 
 test('попап не выводит пустые поля и экранирует данные', () => {

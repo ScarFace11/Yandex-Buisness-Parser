@@ -122,17 +122,36 @@ const MAP_CAT_COLORS = ['#1d4ed8', '#b91c1c', '#047857', '#b45309', '#6d28d9',
 // Порог отзывов задаётся списком, а не полем ввода: в таблице «горячим» уже
 // считается от 50 отзывов, и на карте полезны те же ступени.
 const MAP_REVIEW_STEPS = [0, 5, 10, 50, 100];
+// Ступени оценки лида те же, что у пресетов таблицы: на карте нужен не
+// произвольный порог, а тот же отбор «горячих» клиентов.
+const MAP_SCORE_STEPS = [0, 35, 50, 65];
 
 let mapHiddenCats = new Set();     // категории, снятые галочкой в легенде
 let mapSearch = '';                // поиск по названию бизнеса
 let mapMinReviews = 0;
+let mapMinScore = 0;
 let mapSiteMode = 'all';           // all | with | without
 let mapOnlyNew = false;
 let mapLayer = null;               // слой меток; пересобирается без пересоздания карты
 
+// Категории из карточки: их приходит целая строка через запятую
+// («Автомойка, Шиномонтаж, Автоэлектрик»). В легенду идёт только первая:
+// иначе один и тот же вид бизнеса распадался на десятки строк по одной
+// записи. Остальные категории показывает карточка метки.
+function mapCatParts(r) {
+  return String((r && r.category) || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+}
+
 // Категория точки: пустая не должна сливаться с «Без категории» в фильтре.
 function mapCatKey(r) {
-  return String((r && r.category) || '').trim() || 'Без категории';
+  return mapCatParts(r)[0] || 'Без категории';
+}
+
+// Второстепенные категории строкой — для карточки метки: подробности нужны
+// при выборе точки, но в легенде они только мешают.
+function mapCatExtra(r) {
+  return mapCatParts(r).slice(1).join(', ');
 }
 
 // Категории набора с числом точек: по частоте, затем по алфавиту — порядок
@@ -165,6 +184,7 @@ function mapRowVisible(r, opts) {
   const q = String(o.search || '').trim().toLowerCase();
   if (q && !String(r.name || '').toLowerCase().includes(q)) return false;
   if (o.minReviews && (parseFloat(r.reviews_count) || 0) < o.minReviews) return false;
+  if (o.minScore && (parseFloat(r.lead_score) || 0) < o.minScore) return false;
   // «Сайт» — и своя страница, и визитка-таплинк: обе ведут клиента наружу.
   const hasSite = !!(String(r.website || '').trim() || String(r.aggregator_url || '').trim());
   if (o.siteMode === 'with' && !hasSite) return false;
@@ -180,6 +200,7 @@ function mapFilterState() {
     hidden: mapHiddenCats,
     search: mapSearch,
     minReviews: mapMinReviews,
+    minScore: mapMinScore,
     siteMode: mapSiteMode,
     onlyNew: mapOnlyNew,
   };
@@ -215,6 +236,7 @@ function mapPopupHtml(r, color) {
   const score = r.lead_score;
   const site = String(r.aggregator_url || r.website || '').trim();
   const phones = String(r.phone || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 3);
+  const extra = mapCatExtra(r);
   const socials = typeof SOCIALS === 'object' && SOCIALS
     ? Object.entries(SOCIALS)
       .filter(([p]) => r[p])
@@ -226,6 +248,7 @@ function mapPopupHtml(r, color) {
     <div class="map-pop" style="--pin:${color}">
       <div class="map-pop-cat">${escapeHtml(mapCatKey(r))}</div>
       <div class="map-pop-name">${escapeHtml(r.name || 'Без названия')}</div>
+      ${extra ? `<div class="map-pop-extra">Ещё: ${escapeHtml(extra)}</div>` : ''}
       ${meta.length ? `<div class="map-pop-meta">${escapeHtml(meta.join(' · '))}</div>` : ''}
       ${r.address ? `<div class="map-pop-row"><span class="map-pop-key">Адрес</span>${escapeHtml(r.address)}</div>` : ''}
       ${phones.length ? `<div class="map-pop-row"><span class="map-pop-key">Телефон</span>${escapeHtml(phones.join(', '))}</div>` : ''}
@@ -264,12 +287,13 @@ function initMap() {
     {attribution:'© OpenStreetMap contributors', maxZoom:19}).addTo(leafMap);
   mapLayer = L.layerGroup().addTo(leafMap);
   mapInited = true;
-  renderMapMarkers();
+  renderMapMarkers(true);
 }
 
-// Метки пересобираются внутри уже созданной карты: смена фильтра не должна
-// пересоздавать тайлы и сбрасывать зум руками — вид подгоняется по видимым.
-function renderMapMarkers() {
+// Метки пересобираются внутри уже созданной карты. Подгонка вида (fit) — только
+// когда сменился набор данных: при выборе категории или отзывов карта не имеет
+// права прыгать, человек уже выбрал место и масштаб, а нажал лишь фильтр.
+function renderMapMarkers(fit) {
   const rows = mapVisibleRows(allResults);
   const cats = mapCategories(allResults);
   const latLngs = [];
@@ -285,7 +309,7 @@ function renderMapMarkers() {
         .bindTooltip(escapeHtml(r.name || ''), { direction: 'top', offset: [0, -10] });
       latLngs.push([lat, lon]);
     });
-    if (latLngs.length) leafMap.fitBounds(L.latLngBounds(latLngs).pad(0.1));
+    if (fit && latLngs.length) leafMap.fitBounds(L.latLngBounds(latLngs).pad(0.1));
   }
   const empty = document.getElementById('map-empty');
   if (empty) empty.hidden = rows.length > 0;
@@ -340,6 +364,8 @@ function mapReadFilters() {
   if (rev) mapMinReviews = parseInt(rev.value, 10) || 0;
   const site = document.getElementById('map-site');
   if (site) mapSiteMode = site.value || 'all';
+  const score = document.getElementById('map-score');
+  if (score) mapMinScore = parseInt(score.value, 10) || 0;
   const newest = document.getElementById('map-only-new');
   if (newest) mapOnlyNew = !!newest.checked;
   renderMapMarkers();
@@ -350,6 +376,23 @@ function mapReadFilters() {
 // собираем заново: без этого при открытии прошлых файлов на карте висели
 // точки другого поиска (или пусто, если карта один раз построилась раньше).
 function resetMapView() {
+  mapHiddenCats = new Set();
+  mapSearch = '';
+  mapMinReviews = 0;
+  mapMinScore = 0;
+  mapSiteMode = 'all';
+  mapOnlyNew = false;
+  // Поля возвращаются к значениям по умолчанию, а не к пустой строке: пустой
+  // select выглядел бы сломанным (нет выбранного пункта вообще).
+  const search = document.getElementById('map-search');
+  if (search) search.value = '';
+  const defaults = { 'map-reviews': '0', 'map-site': 'all', 'map-score': '0' };
+  Object.keys(defaults).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = defaults[id];
+  });
+  const newest = document.getElementById('map-only-new');
+  if (newest) newest.checked = false;
   mapInited = false;
   mapLayer = null;
   if (leafMap) {

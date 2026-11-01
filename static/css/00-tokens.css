@@ -1,5 +1,5 @@
 /* 00-tokens.css · Шрифт, токены темы, иконки
-   Часть 1 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+   Часть 1 из 22. Порядок подключения — это каскад: см. static/css/README.md. */
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 

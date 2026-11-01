@@ -2594,12 +2594,38 @@ class TestMapPanel:
     def test_map_filters_cover_reviews_site_and_new(self):
         panel = self._panel()
         assert 'id="map-reviews"' in panel
+        assert 'id="map-score"' in panel, "фильтр по оценке лида"
         assert 'id="map-site"' in panel
         # «Только новые» повторяет логику таблицы: серверный признак _is_new.
         assert 'id="map-only-new"' in panel
         assert 'value="without"' in panel and 'value="with"' in panel
         for step in ("5", "10", "50", "100"):
             assert f'<option value="{step}">' in panel, step
+        for step in ("35", "50", "65"):
+            assert f'<option value="{step}">' in panel, step
+
+    def test_filter_controls_share_one_grid(self):
+        # Подпись сверху, контрол во всю ширину: иначе узкие select-ы и
+        # галочка стояли каждый по-своему и правые края не совпадали.
+        panel = self._panel()
+        assert panel.count('class="map-field"') == 3
+        assert "class=\"map-filter-row\"" not in panel
+        field = STYLE[STYLE.index(".map-field{"):]
+        field = field[:field.index("}")]
+        assert "flex-direction:column" in field
+        select = STYLE[STYLE.index(".map-field select{"):]
+        assert "width:100%" in select[:select.index("}")]
+        check = STYLE[STYLE.index(".map-check{"):]
+        assert "width:100%" in check[:check.index("}")]
+
+    def test_zoom_is_not_refit_on_every_filter(self):
+        # Выбор категории не должен уводить карту из выбранного места: вид
+        # подгоняется только при смене набора данных.
+        js = APP_JS
+        assert "function renderMapMarkers(fit)" in js
+        assert "if (fit && latLngs.length) leafMap.fitBounds" in js
+        assert "renderMapMarkers(true);" in js, "новая карта строится по точкам набора"
+        assert "mapToggleCat(this.dataset.cat)" in js
 
     def test_map_legend_is_a_list_of_toggle_buttons(self):
         panel = self._panel()
@@ -2630,14 +2656,29 @@ class TestMapPanel:
         assert ".map-cat-dot" in STYLE and "background:var(--cat,var(--c))" in STYLE
         assert "background:var(--pin,var(--c))" in STYLE, "метка красится тем же цветом"
 
-    def test_popup_values_are_not_faded(self):
-        # Раньше адрес и телефон были цветом --sub на белой подложке попапа и
-        # почти не читались. Бледными остались только подписи полей.
+    def test_popup_values_are_black(self):
+        # Раньше адрес, телефон и оценка были цветом --sub на белой подложке
+        # попапа и почти не читались. Теперь значения — основным (почти
+        # чёрным) тоном, светлее — только подписи полей.
         block = STYLE[STYLE.index(".map-pop-row{"):]
         block = block[:block.index("}")]
         assert "color:var(--txt)" in block
+        name = STYLE[STYLE.index(".map-pop-name{"):]
+        assert "color:var(--txt)" in name[:name.index("}")]
+        content = STYLE[STYLE.index(".leaflet-popup-content{"):]
+        assert "color:var(--txt)" in content[:content.index("}")]
+        # Подписи темнее прежнего --muted, но всё ещё не чёрные.
         key = STYLE[STYLE.index(".map-pop-key{"):]
-        assert "color:var(--muted)" in key[:key.index("}")]
+        assert "color:var(--sub)" in key[:key.index("}")]
+        assert "font-weight:500" in block, "значения не выглядят светлее обычного текста"
+
+    def test_extra_categories_live_in_the_card_not_the_legend(self):
+        # Карточка приходит со списком категорий: в легенду идёт первая,
+        # остальные видны при выборе метки.
+        js = APP_JS
+        assert "function mapCatParts(" in js and "function mapCatExtra(" in js
+        assert ".map-pop-extra{" in STYLE
+        assert "Ещё: " in js
 
     def test_panel_keeps_the_12px_floor(self):
         block = STYLE[STYLE.index(".map-side{"):STYLE.index(".map-canvas{")]

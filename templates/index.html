@@ -41,7 +41,9 @@
      "15-results-tabs.css", "16-templates.css",   "17-run-log.css",
      "18-html-classes.css", "19-polish.css",      "20-terms-grid.css",
      "21-map-panel.css"] %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/' ~ sheet) }}">
+<!-- ?v= — версия сборки: без неё браузер после обновления держит старые
+     стили в кеше и правки внешне «не появляются». -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/' ~ sheet) }}?v={{ APP_VERSION }}">
 {% endfor %}
 </head>
 <body>
@@ -1337,27 +1339,38 @@
             <input type="search" id="map-search" class="map-input"
                    placeholder="Найти по названию" aria-label="Поиск по названию на карте"
                    oninput="mapOnSearchInput(this)">
-            <div class="map-filter-row">
-              <label for="map-reviews">Отзывы</label>
-              <select id="map-reviews" onchange="mapReadFilters()">
-                <option value="0">любые</option>
-                <option value="5">от 5</option>
-                <option value="10">от 10</option>
-                <option value="50">от 50</option>
-                <option value="100">от 100</option>
-              </select>
+            <div class="map-filters">
+              <div class="map-field">
+                <label for="map-reviews">Отзывы</label>
+                <select id="map-reviews" onchange="mapReadFilters()">
+                  <option value="0">любые</option>
+                  <option value="5">от 5</option>
+                  <option value="10">от 10</option>
+                  <option value="50">от 50</option>
+                  <option value="100">от 100</option>
+                </select>
+              </div>
+              <div class="map-field">
+                <label for="map-score">Оценка лида</label>
+                <select id="map-score" onchange="mapReadFilters()">
+                  <option value="0">любая</option>
+                  <option value="35">от 35</option>
+                  <option value="50">от 50</option>
+                  <option value="65">от 65</option>
+                </select>
+              </div>
+              <div class="map-field">
+                <label for="map-site">Сайт</label>
+                <select id="map-site" onchange="mapReadFilters()">
+                  <option value="all">все</option>
+                  <option value="without">без сайта</option>
+                  <option value="with">с сайтом</option>
+                </select>
+              </div>
+              <label class="chk map-check">
+                <input type="checkbox" id="map-only-new" onchange="mapReadFilters()"> Только новые
+              </label>
             </div>
-            <div class="map-filter-row">
-              <label for="map-site">Сайт</label>
-              <select id="map-site" onchange="mapReadFilters()">
-                <option value="all">все</option>
-                <option value="without">без сайта</option>
-                <option value="with">с сайтом</option>
-              </select>
-            </div>
-            <label class="chk map-check">
-              <input type="checkbox" id="map-only-new" onchange="mapReadFilters()"> Только новые
-            </label>
             <div class="map-cats-head">
               <span>Категории</span>
               <button type="button" class="map-cats-btn" onclick="mapAllCats(true)">Все</button>
@@ -1736,19 +1749,19 @@
 
 <!-- app.js разделён на последовательные модули: порядок обязан совпадать
      с JS_MODULES в tests/_appjs.py и tests/ui/_src.mjs (склейка = байт-в-байт) -->
-<script src="{{ url_for('static', filename='js/01-core-state.js') }}"></script>
-<script src="{{ url_for('static', filename='js/02-app-shell.js') }}"></script>
-<script src="{{ url_for('static', filename='js/03-log-run.js') }}"></script>
-<script src="{{ url_for('static', filename='js/04-results-table.js') }}"></script>
-<script src="{{ url_for('static', filename='js/05-results-bulk.js') }}"></script>
-<script src="{{ url_for('static', filename='js/06-map-stats.js') }}"></script>
-<script src="{{ url_for('static', filename='js/07-stats-daily.js') }}"></script>
-<script src="{{ url_for('static', filename='js/08-presets-notify.js') }}"></script>
-<script src="{{ url_for('static', filename='js/09-ui-extras.js') }}"></script>
-<script src="{{ url_for('static', filename='js/10-templates.js') }}"></script>
-<script src="{{ url_for('static', filename='js/11-app-init.js') }}"></script>
-<script src="{{ url_for('static', filename='js/12-setup-summary.js') }}"></script>
-<script src="{{ url_for('static', filename='js/13-spheres.js') }}"></script>
+<script src="{{ url_for('static', filename='js/01-core-state.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/02-app-shell.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/03-log-run.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/04-results-table.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/05-results-bulk.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/06-map-stats.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/07-stats-daily.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/08-presets-notify.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/09-ui-extras.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/10-templates.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/11-app-init.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/12-setup-summary.js') }}"?v={{ APP_VERSION }}></script>
+<script src="{{ url_for('static', filename='js/13-spheres.js') }}"?v={{ APP_VERSION }}></script>
 <!-- Пользовательское соглашение: показывается при первом входе (и после
      обновления версии условий). Пока не принято — интерфейс заблокирован. -->
 <div class="ui-modal-overlay" id="terms-overlay" hidden>

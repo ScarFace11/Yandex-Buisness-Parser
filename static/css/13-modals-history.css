@@ -1,5 +1,5 @@
 /* 13-modals-history.css · Модалки, диагностика, отчёт о проблеме, история
-   Часть 14 из 21. Порядок подключения — это каскад: см. static/css/README.md. */
+   Часть 14 из 22. Порядок подключения — это каскад: см. static/css/README.md. */
 
 /* ── Modern confirm dialog (replaces window.confirm) ── */
 .ui-modal-overlay{
