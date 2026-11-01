@@ -43,6 +43,7 @@ function mkEl(id) {
     _classes: classes,
     setAttribute(k, v) { this._attrs[k] = String(v); },
     getAttribute(k) { return this._attrs[k]; },
+    removeAttribute(k) { delete this._attrs[k]; },
     appendChild(c) { this.children.push(c); return c; },
     remove() { this._removed = true; if (this.id) delete els[this.id]; },
     querySelector: () => null,

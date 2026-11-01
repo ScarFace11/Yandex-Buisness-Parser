@@ -871,6 +871,10 @@ function initTermsGate() {
   // Снимок инструкции до первой строки лога: кнопка «Как это работает»
   // показывает её заново во время и после поиска.
   cacheOnboardingHtml();
+  // Состояние кнопки «Как это работает» выставляется сразу: в шаблоне оно
+  // не может быть верным для всех — карточка первого входа бывает уже
+  // закрыта, и тогда aria-expanded/aria-controls врали бы с первой секунды.
+  syncOnboardingButton();
   // Три точки в полосе журнала: закрытие по Esc и клику вне меню.
   initLogMenu();
   // Set initial social mode active state + social net checkboxes

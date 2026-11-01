@@ -2006,9 +2006,19 @@ class TestOnboardingCanBeReopened:
     def test_log_toolbar_has_the_button(self):
         assert 'id="btn-log-howto"' in TEMPLATE
         assert 'onclick="toggleOnboardingHelp()"' in TEMPLATE
-        assert 'aria-controls="onboarding-screen onboarding-help"' in TEMPLATE
-        assert 'aria-expanded="true"' in TEMPLATE
+        # Статичный aria-controls называл два id сразу и после закрытия
+        # инструкции указывал на удалённый узел — связку «кнопка — панель»
+        # теперь ведёт syncOnboardingButton() по факту наличия региона.
+        assert 'aria-controls="onboarding' not in TEMPLATE
+        assert 'aria-expanded="false"' in TEMPLATE
         assert "#i-book" in TEMPLATE
+
+    def test_help_button_controls_attribute_follows_the_open_panel(self):
+        sync = self._fn("syncOnboardingButton", 900)
+        assert "removeAttribute('aria-controls')" in sync, (
+            "кнопка обязана забывать aria-controls, когда панели нет")
+        assert "setAttribute('aria-controls', target)" in sync
+        assert "syncOnboardingButton();" in self._fn("closeOnboardingHelp", 300)
 
     def test_instruction_is_cached_before_the_first_log_line(self):
         assert "cacheOnboardingHtml();" in APP_JS

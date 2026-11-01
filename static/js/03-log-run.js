@@ -365,7 +365,15 @@ function onboardingIsOpen() {
 function syncOnboardingButton() {
   const btn = document.getElementById('btn-log-howto');
   if (!btn) return;
-  btn.setAttribute('aria-expanded', onboardingIsOpen() ? 'true' : 'false');
+  const help = document.getElementById('onboarding-help');
+  const screen = document.getElementById('onboarding-screen');
+  btn.setAttribute('aria-expanded', (help || screen) ? 'true' : 'false');
+  // aria-controls обязан называть существующий узел: статичный список из двух
+  // id после закрытия инструкции указывал на удалённый регион, и связь
+  // «кнопка — панель» молча рвалась (находил аудит доступности).
+  const target = help ? 'onboarding-help' : (screen ? 'onboarding-screen' : '');
+  if (target) btn.setAttribute('aria-controls', target);
+  else btn.removeAttribute('aria-controls');
 }
 
 function closeOnboardingHelp() {
