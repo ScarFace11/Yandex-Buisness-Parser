@@ -203,3 +203,63 @@ def test_header_buttons_are_clickable(browser_cdp, live_app_url):
     finally:
         tab.close()
 
+def test_toast_has_background_and_close_button(browser_cdp, live_app_url):
+    """Уведомление всегда видно и его можно закрыть крестиком.
+
+    Дважды подводило: тип без своего правила краски («info», «warn», «ok»)
+    давал прозрачную подложку, и белая надпись пропадала на светлой
+    странице; а закрыть уведомление можно было только ожиданием таймера.
+    """
+    tab = new_tab(browser_cdp)
+    try:
+        tab.open(live_app_url, "typeof showToast === 'function'")
+        # Оба оформления: в тёмной теме ошибка раньше красилась токеном
+        # рамки (полупрозрачным), и проверка одной темы это пропускала.
+        rows = []
+        for scheme in ('light', 'dark'):
+            tab.evaluate("document.documentElement.dataset.theme = '%s'" % scheme)
+            rows += json.loads(tab.evaluate("""(() => {
+          document.querySelectorAll('#toast-container .toast').forEach(t => t.remove());
+          const out = [];
+          const theme = document.documentElement.dataset.theme;
+          for (const kind of ['info', 'warn', 'warning', 'ok', 'success', 'error', 'неизвестный']) {
+            showToast('Проверка уведомления: ' + kind, kind);
+            const el = [...document.querySelectorAll('#toast-container .toast')].pop();
+            const cs = getComputedStyle(el);
+            out.push({
+              kind,
+              bg: cs.backgroundColor,
+              alpha: cs.opacity,
+              hasClose: !!el.querySelector('.toast-x'),
+              translucent: /rgba\([^)]*,\s*0(\.\d+)?\)$/.test(cs.backgroundColor),
+              closeBox: el.querySelector('.toast-x')
+                ? (r => [Math.round(r.width), Math.round(r.height)])(el.querySelector('.toast-x').getBoundingClientRect())
+                : null,
+            });
+            el.remove();
+          }
+          document.documentElement.dataset.theme = theme;
+          return JSON.stringify(out);
+        })()"""))
+        assert len(rows) == 14, rows
+        for row in rows:
+            assert not row["translucent"], f"{row['kind']}: фон прозрачный — {row['bg']}"
+            assert row["bg"] != "rgba(0, 0, 0, 0)", f"{row['kind']}: фон отсутствует"
+            assert row["hasClose"], f"{row['kind']}: нет крестика"
+            w, h = row["closeBox"]
+            assert w >= 24 and h >= 24, f"{row['kind']}: крестик {w}×{h} меньше 24×24"
+
+        # Крестик закрывает тост сразу, не дожидаясь таймера.
+        tab.evaluate("showToast('Закрой меня', 'info'); true")
+        assert tab.click("#toast-container .toast .toast-x"), "крестик не нажимается"
+        gone = None
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            if not tab.evaluate("!!document.querySelector('#toast-container .toast')"):
+                gone = True
+                break
+            time.sleep(0.1)
+        assert gone, "крестик не закрыл уведомление"
+    finally:
+        tab.close()
+

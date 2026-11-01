@@ -394,12 +394,22 @@ function showToast(message, type) {
   cont.appendChild(toast);
   requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
   const hide = () => {
+    clearTimeout(toast._autoHide);
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 350);
   };
+  // Крестик: уведомление можно убрать руками, не дожидаясь таймера. Мышь
+  // ловит только он (pointer-events в .toast-x), сам тост остаётся
+  // прозрачным для кликов и не отнимает нажатия у интерфейса под ним.
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'toast-x';
+  close.textContent = '✕';
+  close.title = 'Закрыть';
+  close.setAttribute('aria-label', 'Закрыть уведомление');
+  close.addEventListener('click', hide);
+  toast.appendChild(close);
   toast._autoHide = setTimeout(hide, 3500);
-  // Клик тост больше не ловит: он закрывается сам, а его перехват отнимал
-  // клики у кнопок шапки, над которыми он висит (см. .toast в 05-controls).
 }
 
 // ═══════════════════════════════════════════
