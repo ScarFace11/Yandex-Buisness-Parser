@@ -1244,6 +1244,19 @@ class TestResultsTableDesign:
         assert '#results-table td[data-col="score"],#results-table td[data-col="socials"]' in STYLE
         assert '#results-table td[data-col="phone"]{white-space:nowrap}' in STYLE
 
+    def test_site_column_is_a_link_without_stretching_the_row(self):
+        """«Сайт» — витрина ссылки: домен в ячейке, полный адрес — в подсказке.
+
+        Без ограничения ширины длинный taplink-адрес тянул колонку вширь и
+        уводил остальные за край экрана (так уже было с телефонами).
+        """
+        assert 'data-col="website"' in TEMPLATE
+        assert "Сайт" in TEMPLATE
+        rule = self._rule('#results-table th[data-col="website"],#results-table td[data-col="website"]')
+        assert "max-width:170px" in rule
+        assert ".site-link{display:block;max-width:170px" in STYLE
+        assert ".site-na{color:var(--muted)}" in STYLE
+
     def test_one_scrim_for_every_modal(self):
         """Четыре модалки — одно затемнение: раньше у каждой был свой rgba."""
         for overlay in (".skip-modal-overlay{", ".logs-modal-overlay{",

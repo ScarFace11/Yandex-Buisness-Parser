@@ -1285,6 +1285,8 @@
                   <th data-col="name" onclick="sortTableByKey('name')">Название</th>
                   <th data-col="category" onclick="sortTableByKey('category')">Категория</th>
                   <th data-col="address" onclick="sortTableByKey('address')">Адрес</th>
+                  <th class="nosort" data-col="website"
+                      title="Страница клиента из карточки: свой сайт или страница-визитка">Сайт</th>
                   <th class="nosort" data-col="phone"
                       title="Телефон не сортируется: в ячейке несколько номеров и порядок им не задаётся">Телефон</th>
                   <th data-col="score" onclick="sortTableByKey('score')"
@@ -1296,7 +1298,7 @@
                 </tr>
               </thead>
               <tbody id="tbl-body">
-                <tr><td colspan="9" class="no-data">Здесь появятся компании после поиска — заполните запрос и город слева</td></tr>
+                <tr><td colspan="10" class="no-data">Здесь появятся компании после поиска — заполните запрос и город слева</td></tr>
               </tbody>
             </table>
           </div>

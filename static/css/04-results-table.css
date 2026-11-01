@@ -77,6 +77,11 @@
 /* Один длинный номер обрезался без эллипсиса — теперь он усекается «…»,
    а полное значение остаётся в title. */
 .tbl-phone span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Сайт: в ячейке домен, а полный адрес — в подсказке. Без ограничения
+   длинный taplink-адрес тянул колонку вширь и ломал сетку строки. */
+#results-table th[data-col="website"],#results-table td[data-col="website"]{max-width:170px}
+.site-link{display:block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-na{color:var(--muted)}
 /* Соцсети наоборот: бейджи собираются в колонку, и места им всегда
    не хватало — колонке задаём минимум, а не максимум. */
 #results-table th[data-col="socials"],#results-table td[data-col="socials"]{min-width:120px;width:120px}

@@ -273,7 +273,7 @@ globalThis.clearTimeout = () => {};
 const fns = [
   'pluralNum', 'pluralRecords', 'pluralProfiles', 'pluralFiles', 'fmtBytes', 'basenameOf',
   'clampInt', 'safeSocialUrl', 'cityOf', 'reviewKey', 'isReviewed', 'escapeHtml', 'safeUrl',
-  'socialsHTML', 'phoneHTML', 'ratingHTML', 'renderPage', 'filterTable', 'refreshReviewedUI',
+  'socialsHTML', 'phoneHTML', 'ratingHTML', 'siteHTML', 'renderPage', 'filterTable', 'refreshReviewedUI',
   // Живая перерисовка делит с filterTable общие фильтры и порядок
   '_applyRowFilters', '_orderFilteredRows', 'collapseChainsClient',
   'bulkScopeRows', 'bulkScopeStats', 'bulkOpenable', 'bulkWillOpen', 'renderCityTabs', 'setCityTab',
@@ -624,7 +624,7 @@ test('renderPage shows a full-width city row in «Все» mode', () => {
   globalThis.renderPage();
   const html = els['tbl-body'].innerHTML;
   assert.match(html, /<tr class="city-group" data-city="Уфа">/);
-  assert.match(html, /<td colspan="9">/);
+  assert.match(html, /<td colspan="10">/);
   assert.match(html, /<span class="city-group-name">Уфа<\/span>/);
   assert.match(html, /<span class="city-group-count">2<\/span>/);
   // Нумерация столбца «#» — сквозная по таблице, а не внутри группы.
@@ -1527,8 +1527,15 @@ test('exportFiltered saves the marks before building the file', async () => {
   fetchCalls = [];
   globalThis.filteredRows = [REC('А', 'Уфа')];
   globalThis.reviewedDirty = true;
+  // Подмена URL нужна только этой проверке; без восстановления она ломала
+  // последующие тесты: `new URL(...)` в safeUrl переставал работать.
+  const realUrl = globalThis.URL;
   globalThis.URL = { createObjectURL: () => 'blob:1', revokeObjectURL: () => {} };
-  await globalThis.exportFiltered('csv');
+  try {
+    await globalThis.exportFiltered('csv');
+  } finally {
+    globalThis.URL = realUrl;
+  }
   const urls = fetchCalls.map(c => c.url);
   assert.ok(urls.indexOf('/reviewed/persist') >= 0, 'отметки сохраняются');
   assert.ok(urls.indexOf('/export-filtered') > urls.indexOf('/reviewed/persist'),
@@ -1910,4 +1917,31 @@ test('refiltering without raw files fails honestly', async () => {
     globalThis.fetch = realFetch;
   }
   assert.ok(logLines.some(l => l.lvl === 'warn' && /Нет сырых данных/.test(l.msg)));
+});
+
+// ── 12. Колонка «Сайт» ───────────────────────────────────────
+// В файле ссылка живёт в поле «Сайт / Таплинк» (туда же при записи попадает
+// своя страница организации), поэтому таблица не придумывает второе поле.
+test('siteHTML links the page from «Сайт / Таплинк» by its domain', () => {
+  const html = globalThis.siteHTML({ aggregator_url: 'https://www.taplink.cc/klinika/' });
+  assert.match(html, /href="https:\/\/www\.taplink\.cc\/klinika\/"/);
+  assert.match(html, />taplink\.cc</, 'в ячейке домен без www, а не весь адрес');
+  assert.match(html, /title="https:\/\/www\.taplink\.cc\/klinika\/"/,
+    'полный адрес остаётся в подсказке');
+});
+
+test('siteHTML falls back to the own website and shows a dash without a page', () => {
+  assert.match(globalThis.siteHTML({ website: 'https://kafe.ru' }), />kafe\.ru</);
+  assert.match(globalThis.siteHTML({}), /—/);
+  // Не-https ссылку в рабочую не превращаем: прочерк честнее битой ссылки.
+  assert.ok(!globalThis.siteHTML({ aggregator_url: 'http://kafe.ru' }).includes('<a'));
+});
+
+test('renderPage puts the site into its own column', () => {
+  resetState([REC('Клиника', 'Уфа', { aggregator_url: 'https://klinika.ru' })]);
+  globalThis.filteredRows = globalThis.allResults.slice();
+  globalThis.renderPage();
+  const html = els['tbl-body'].innerHTML;
+  assert.match(html, /<td data-col="website"><a class="tbl-link site-link"/);
+  assert.match(html, />klinika\.ru</);
 });

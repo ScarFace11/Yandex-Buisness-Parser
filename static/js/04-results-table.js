@@ -727,6 +727,23 @@ function socialsCount(row) {
   return n;
 }
 
+// Ячейка «Сайт»: ссылка на страницу клиента живёт в поле «Сайт / Таплинк»
+// (при записи туда же попадает и своя страница организации). Показываем
+// домен, полный адрес — в подсказке: длинные utm-хвосты растягивали колонку
+// и уводили остальные за край экрана.
+function siteHTML(row) {
+  const raw = String(row.aggregator_url || row.website || '').trim();
+  if (!raw) return '<span class="site-na">—</span>';
+  const href = safeUrl(raw);
+  if (href === '#') return '<span class="site-na">—</span>';
+  let label = raw;
+  try {
+    label = new URL(raw).hostname.replace(/^www\./, '') || raw;
+  } catch (e) {}
+  return `<a class="tbl-link site-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
+    + ` title="${escapeHtml(raw)}">${escapeHtml(label)}</a>`;
+}
+
 function socialsHTML(row, rowKey, rowIsRev) {
   let h = '';
   const key = escapeHtml(reviewKey(row));
@@ -1319,7 +1336,7 @@ function _tableColspan() {
     const ths = document.querySelectorAll('#results-table thead th');
     if (ths && ths.length) return ths.length;
   } catch (e) {}
-  return 9;
+  return 10;
 }
 
 // Полоса-заголовок группы города в таблице «Все». Со звёздочкой: город можно
@@ -1391,6 +1408,7 @@ function _resultRowHtml(r, n) {
       <td data-col="name"><a class="tbl-link" href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.name || '—')}</a>${newTagHTML(r)}</td>
       <td data-col="category" class="tbl-cat">${escapeHtml(r.category || '—')}</td>
       <td data-col="address">${escapeHtml(r.address || '—')}</td>
+      <td data-col="website">${siteHTML(r)}</td>
       <td data-col="phone">${phoneHTML(r)}</td>
       <td data-col="score">${scoreHTML(r)}</td>
       <td data-col="socials">${socialsHTML(r, rowKey, rowIsRev)}</td>

@@ -91,7 +91,7 @@ class El {
   remove() { if (this._parent) this._parent.children = this._parent.children.filter(c => c !== this); }
 }
 
-const COL_KEYS = ['rev', 'num', 'name', 'category', 'address', 'phone', 'score', 'rating', 'socials'];
+const COL_KEYS = ['rev', 'num', 'name', 'category', 'address', 'website', 'phone', 'score', 'rating', 'socials'];
 const headerRow = new El('tr');
 const bodyRows = [new El('tr'), new El('tr')];
 for (const key of COL_KEYS) {                       // разметка «как в шаблоне»
@@ -100,7 +100,7 @@ for (const key of COL_KEYS) {                       // разметка «как
 }
 const placeholder = new El('tr');                    // «Ничего не найдено»
 const placeholderCell = new El('td');
-placeholderCell.attrs = { colspan: '9' };
+placeholderCell.attrs = { colspan: '10' };
 placeholder.appendChild(placeholderCell);
 
 const els = {
@@ -192,7 +192,7 @@ function resetOrder() {
 // ── 1. Порядок ────────────────────────────────────────────────
 test('the default order keeps «Рейтинг» next to «Оценка», соцсети — последними', () => {
   assert.deepEqual(globalThis.COL_ORDER_DEFAULT,
-    ['rev', 'num', 'name', 'category', 'address', 'phone', 'score', 'rating', 'socials']);
+    ['rev', 'num', 'name', 'category', 'address', 'website', 'phone', 'score', 'rating', 'socials']);
   assert.notEqual(globalThis.COL_ORDER_DEFAULT.at(-1), 'rating',
     'раньше рейтинг стоял в самом конце — за краем экрана');
 });
@@ -201,7 +201,7 @@ test('a saved order is normalised: чужие ключи прочь, забыт�
   const norm = globalThis.normalizeColOrder;
   assert.deepEqual(norm(null), globalThis.COL_ORDER_DEFAULT);
   assert.deepEqual(norm(['name', 'name', 'ghost']),
-    ['name', 'rev', 'num', 'category', 'address', 'phone', 'score', 'rating', 'socials']);
+    ['name', 'rev', 'num', 'category', 'address', 'website', 'phone', 'score', 'rating', 'socials']);
   // Порядок из будущей версии не теряет колонок.
   assert.deepEqual([...norm(['socials', 'name'])].sort(),
     [...globalThis.COL_ORDER_DEFAULT].sort());
@@ -209,8 +209,8 @@ test('a saved order is normalised: чужие ключи прочь, забыт�
 
 test('applyColOrder moves header and body cells into the saved order', () => {
   resetOrder();
-  globalThis.colOrder = ['name', 'rev', 'num', 'category', 'address', 'phone',
-                         'score', 'rating', 'socials'];
+  globalThis.colOrder = ['name', 'rev', 'num', 'category', 'address', 'website',
+                         'phone', 'score', 'rating', 'socials'];
   globalThis.applyColOrder();
   assert.deepEqual(colsOf(headerRow), globalThis.colOrder);
   for (const row of bodyRows) assert.deepEqual(colsOf(row), globalThis.colOrder);
@@ -221,7 +221,8 @@ test('applyColOrder moves header and body cells into the saved order', () => {
 test('moveCol swaps two neighbours, saves and persists', () => {
   resetOrder();
   globalThis.moveCol('rating', -1);           // рейтинг ещё левее
-  assert.deepEqual(globalThis.colOrder.slice(6, 8), ['rating', 'score']);
+  assert.ok(globalThis.colOrder.indexOf('rating') < globalThis.colOrder.indexOf('score'),
+    'рейтинг встал левее оценки');
   assert.deepEqual(JSON.parse(store[globalThis.COL_ORDER_KEY]),
     globalThis.colOrder);
 
@@ -271,6 +272,9 @@ test('sorting maps the column key to the legacy numeric index', () => {
   assert.deepEqual(globalThis.COL_SORT_INDEX,
     { rev: null, num: null, name: 2, category: 3, address: 4, phone: null,
       score: 6, socials: 9, rating: 7 });
+  // «Сайт» — витрина ссылки: сортировать по домену никто не просил, и в
+  // контракте сервера такого индекса нет.
+  assert.equal(globalThis.COL_SORT_INDEX.website, undefined, 'колонка «Сайт» не сортируется');
   // «Соцсети» сортируются числом сетей (индекс 9); «Просмотрено» — нет;
   // телефон убран из сортировки: в ячейке несколько номеров и порядок им
   // не задаётся.
@@ -391,8 +395,8 @@ test('a stale template without data-col still gets ordered and hidden', () => {
   }
   const rows = [legacyHeader, legacyRow, legacyPlaceholder];
   const cells = [...legacyHeader.children, ...legacyRow.children];
-  const expected = ['name', 'rev', 'num', 'category', 'address', 'phone',
-                    'score', 'rating', 'socials'];
+  const expected = ['name', 'rev', 'num', 'category', 'address', 'website',
+                    'phone', 'score', 'rating', 'socials'];
   const realQSA = globalThis.document.querySelectorAll;
   globalThis.document.querySelectorAll = sel => {
     if (sel === '#results-table tr') return rows;
@@ -410,8 +414,11 @@ test('a stale template without data-col still gets ordered and hidden', () => {
   }
   assert.deepEqual(colsOf(legacyHeader), expected, 'ячейки без data-col всё равно переставились');
   assert.deepEqual(colsOf(legacyRow), expected);
-  assert.equal(legacyRow.children[7].dataset.col, 'rating');
-  assert.equal(legacyRow.children[7]._classes.has('col-hidden'), true,
+  // Позицию берём из заявленного порядка: добавление колонки не должно
+  // требовать правки числового индекса в тесте.
+  const ratingAt = expected.indexOf('rating');
+  assert.equal(legacyRow.children[ratingAt].dataset.col, 'rating');
+  assert.equal(legacyRow.children[ratingAt]._classes.has('col-hidden'), true,
     'скрытие нашло колонку после проставления ключей по позиции');
   assert.equal(legacyPlaceholder.children[0].dataset.col, undefined,
     'плейсхолдер «Ничего не найдено» не считается столбцом');

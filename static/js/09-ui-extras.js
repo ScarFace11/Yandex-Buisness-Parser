@@ -43,6 +43,7 @@ const COLS = [
   { idx: 3, key: 'name',     label: 'Название' },
   { idx: 4, key: 'category', label: 'Категория' },
   { idx: 5, key: 'address',  label: 'Адрес' },
+  { idx: 10, key: 'website', label: 'Сайт' },
   { idx: 6, key: 'phone',    label: 'Телефон' },
   { idx: 7, key: 'score',    label: 'Оценка' },
   { idx: 8, key: 'socials',  label: 'Соцсети' },
@@ -56,8 +57,8 @@ const COL_LABELS = Object.fromEntries(COLS.map(c => [c.key, c.label]));
 // Теперь качественные числа (оценка лида и рейтинг) стоят рядом, а самая
 // широкая колонка (соцсети) — последней.
 const COL_ORDER_KEY = 'yp_cols_order_v1';
-const COL_ORDER_DEFAULT = ['rev', 'num', 'name', 'category', 'address', 'phone',
-                           'score', 'rating', 'socials'];
+const COL_ORDER_DEFAULT = ['rev', 'num', 'name', 'category', 'address', 'website',
+                           'phone', 'score', 'rating', 'socials'];
 let colOrder = COL_ORDER_DEFAULT.slice();
 
 // Полный набор ключей в сохранённом порядке: чужие ключи (старая версия
@@ -101,8 +102,8 @@ function resetColOrder() {
 // сервера со старым index.html в Jinja-кэше: ячейкам без data-col ключ
 // проставляется по позиции. После перезапуска приложения разметка приходит
 // с data-col и это не используется.
-const COL_ID_BY_POS = ['rev', 'num', 'name', 'category', 'address', 'phone',
-                       'score', 'socials', 'rating'];
+const COL_ID_BY_POS = ['rev', 'num', 'name', 'category', 'address', 'website',
+                       'phone', 'score', 'socials', 'rating'];
 
 function _stampMissingColIds(row) {
   const cells = Array.from(row.children || []);
