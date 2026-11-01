@@ -36,12 +36,10 @@ def _rec(**over):
 
 
 class TestComputeScore:
-    def test_maximum_is_one_hundred(self):
-        # Шесть базовых сигналов дают 90; остаток до 100 добирает бонус ВК,
-        # когда ключ задан. Критерия «недавно на Картах» нет: дату карточка
-        # не отдаёт, и он не срабатывал ни разу.
-        assert BASE_MAX == 90
-        assert MAX_SCORE == 100
+    def test_maximum_is_one_hundred_without_vk(self):
+        # Шкала набирается базовыми сигналами: ключ ВК для 100 не нужен.
+        # Критерия «недавно на Картах» нет: дату карточка не отдаёт.
+        assert BASE_MAX == MAX_SCORE == 100
 
     def test_hot_lead_scores_the_documented_breakdown(self):
         score, reasons = compute_score(_rec(
@@ -51,21 +49,34 @@ class TestComputeScore:
             rating="4.8",
             reviews_count="120",
             category="Стоматология",
+            address="ул. Ленина, 1",
+            telegram="https://t.me/kafe",
         ))
         assert score == 100
         assert any("нет сайта" in r for r in reasons)
         assert any("есть соцсети" in r for r in reasons)
-        assert any("активный ВК" in r for r in reasons)
+        assert any("есть мессенджер" in r for r in reasons)
         assert any("дорогая категория" in r for r in reasons)
 
-    def test_activity_bonus_never_breaks_the_scale(self):
-        """База 90 плюс бонус ВК — ровно 100, а не 110."""
-        score, _ = compute_score(_rec(
-            phone="+7 1", rating="5", reviews_count="100",
-            category="Стоматология", telegram="https://t.me/x",
-            vk="https://vk.com/x", vk_activity="active",
+    def test_a_perfect_lead_reaches_one_hundred_without_vk(self):
+        """Проверки ВК нет совсем — лид всё равно добирает всю шкалу."""
+        score, reasons = compute_score(_rec(
+            phone="+7 900 000-00-00", rating="4.7", reviews_count="80",
+            category="Стоматология", address="ул. Ленина, 1",
+            vk="https://vk.com/club1", whatsapp="https://wa.me/7900",
         ))
-        assert score == MAX_SCORE
+        assert score == MAX_SCORE, reasons
+        assert not any("на оценку не влияет" in r for r in reasons)
+
+    def test_vk_activity_does_not_add_points(self):
+        """Активность сообщества — справочная строка, а не баллы."""
+        base = dict(phone="+7 1", rating="5", reviews_count="100",
+                    category="Стоматология", telegram="https://t.me/x")
+        with_vk, reasons = compute_score(_rec(vk="https://vk.com/x",
+                                              vk_activity="active", **base))
+        without_vk, _ = compute_score(_rec(vk="https://vk.com/x", **base))
+        assert with_vk == without_vk
+        assert any("на оценку не влияет" in r for r in reasons)
 
     def test_own_website_costs_the_thirty_points(self):
         with_site, _ = compute_score(_rec(website="https://kafe.ru"))
@@ -84,9 +95,23 @@ class TestComputeScore:
         assert reasons == []
 
     def test_socials_without_website_add_ten(self):
-        score, reasons = compute_score(_rec(telegram="https://t.me/kafe"))
+        score, reasons = compute_score(_rec(vk="https://vk.com/kafe"))
         assert score == lead_score.NO_WEBSITE + lead_score.SOCIALS_PRESENT
         assert any("есть соцсети" in r for r in reasons)
+
+    def test_messenger_adds_points(self):
+        """Telegram/WhatsApp — канал, куда можно написать уже сегодня."""
+        score, reasons = compute_score(_rec(whatsapp="https://wa.me/7900"))
+        # WhatsApp — и соцсеть, и мессенджер: считаются оба сигнала.
+        assert score == (lead_score.NO_WEBSITE + lead_score.SOCIALS_PRESENT
+                         + lead_score.MESSENGER)
+        assert any("есть мессенджер" in r for r in reasons)
+
+    def test_complete_card_adds_points(self):
+        score, reasons = compute_score(_rec(address="ул. Ленина, 1",
+                                            website="https://kafe.ru"))
+        assert score == lead_score.CARD_COMPLETE
+        assert any("адрес и категория" in r for r in reasons)
 
     def test_vk_activity_is_not_invented_without_the_api(self):
         """Ссылка на ВК есть, активности нет (ключа не было) — только соцсети,
@@ -96,10 +121,11 @@ class TestComputeScore:
         assert score == lead_score.SOCIALS_PRESENT
         assert not any("ВК" in r for r in reasons)
 
-    def test_semi_active_vk_is_a_five_point_bonus(self):
-        score, _ = compute_score(_rec(website="https://kafe.ru", vk_activity="semi",
-                                      vk="https://vk.com/club1"))
-        assert score == lead_score.SOCIALS_PRESENT + lead_score.VK_SEMI
+    def test_semi_active_vk_scores_like_any_social(self):
+        score, reasons = compute_score(_rec(website="https://kafe.ru", vk_activity="semi",
+                                            vk="https://vk.com/club1"))
+        assert score == lead_score.SOCIALS_PRESENT
+        assert any("полуактивен" in r for r in reasons)
 
     def test_rating_below_threshold_adds_nothing(self):
         score, _ = compute_score(_rec(website="https://kafe.ru", rating="4.4"))
@@ -144,9 +170,11 @@ class TestFrontendMirror:
         assert sorted(pts) == sorted([
             lead_score.NO_WEBSITE, lead_score.RATING_GOOD, lead_score.REVIEWS_MANY,
             lead_score.HAS_PHONE, lead_score.EXPENSIVE_CATEGORY,
-            lead_score.SOCIALS_PRESENT,
-            lead_score.VK_ACTIVE, lead_score.VK_SEMI,
+            lead_score.SOCIALS_PRESENT, lead_score.MESSENGER,
+            lead_score.CARD_COMPLETE,
         ])
+        # Таблица правил в интерфейсе тоже должна набирать ровно 100 без ВК.
+        assert sum(pts) == MAX_SCORE
 
     def test_thresholds_match(self):
         table = self._app_js()
@@ -163,12 +191,15 @@ class TestFrontendMirror:
     def test_aggregator_list_matches(self):
         assert "linktree" in self._app_js()[self._app_js().index("SCORE_AGGREGATORS"):].split("\n")[0]
 
-    def test_vk_is_scored_only_when_checked(self):
+    def test_vk_is_a_note_and_never_a_bonus(self):
         js = self._app_js()
-        assert "function scoreVkChecked(r)" in js
         body = js[js.index("function scoreBreakdown"):js.index("function scoreHTML")]
         assert "if (scoreVkChecked(r))" in body
         assert "ВК не проверялся" in body
+        # Баллы за ВК больше не начисляются: ни отдельного списка правил,
+        # ни прибавки к сумме быть не должно.
+        assert "SCORE_VK_RULES" not in js
+        assert "+ bonus" not in body and "sum + bonus" not in body
 
 
 class TestAnnotateRecords:

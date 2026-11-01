@@ -807,19 +807,17 @@ const SCORE_RULES = [
     yes: () => 'Дорогая категория', no: () => 'Дорогая категория — нет' },
   { pts: 10, hit: r => scoreHasSocials(r),
     yes: () => 'Есть соцсети', no: () => 'Соцсетей нет' },
+  { pts: 5, hit: r => ['telegram', 'whatsapp'].some(f => !!String(r[f] || '').trim()),
+    yes: () => 'Есть мессенджер', no: () => 'Мессенджера нет' },
+  { pts: 5, hit: r => !!String(r.address || '').trim() && !!String(r.category || '').trim(),
+    yes: () => 'Адрес и категория заполнены', no: () => 'Адрес или категория — нет данных' },
 ];
 // Критерия «недавно на Картах» больше нет: дату добавления карточка не
 // отдаёт, поле никто не заполнял — критерий не срабатывал ни разу, а
-// в разборе висело «Дата добавления — нет данных». Шесть базовых правил
-// дают 90, активность ВК добирает остаток до 100.
+// в разборе висело «Дата добавления — нет данных». Сумма правил = 100:
+// идеальный лид набирает шкалу без ключа ВК.
 
-// ВК — бонус: добирает баллы до 100, но не растягивает шкалу.
-const SCORE_VK_RULES = [
-  { pts: 10, hit: a => a === 'active', yes: 'Активный ВК (бонус)' },
-  { pts: 5, hit: a => a === 'semi', yes: 'Полуактивный ВК (бонус)' },
-];
-
-// { sum, bonus, total, lines } — база, ВК-бонус, итог со шкалой 100 и строки.
+// { sum, total, lines } — сумма баллов (не больше 100) и строки разбора.
 function scoreBreakdown(r) {
   const lines = [];
   let sum = 0;
@@ -832,20 +830,14 @@ function scoreBreakdown(r) {
       if (miss) lines.push(`❌ ${miss}`);
     }
   }
-  let bonus = 0;
   if (scoreVkChecked(r)) {
     const activity = String(r.vk_activity || '').toLowerCase();
-    const vk = SCORE_VK_RULES.find(rule => rule.hit(activity));
-    if (vk) {
-      bonus += vk.pts;
-      lines.push(`✅ ${vk.yes} +${vk.pts}`);
-    } else {
-      lines.push('❌ ВК не активен');
-    }
+    const vk = activity === 'active' ? 'активен' : activity === 'semi' ? 'полуактивен' : 'не активен';
+    lines.push(`ℹ️ ВК ${vk} — на оценку не влияет`);
   } else {
-    lines.push('ℹ️ ВК не проверялся — ключ не задан, на оценку не влияет');
+    lines.push('ℹ️ ВК не проверялся — на оценку не влияет');
   }
-  return { sum, bonus, total: Math.min(SCORE_MAX, sum + bonus), lines };
+  return { sum, total: Math.min(SCORE_MAX, sum), lines };
 }
 
 // Хранимая оценка могла быть посчитана раньше: если она расходится с

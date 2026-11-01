@@ -1,9 +1,11 @@
 """Lead Score — 0..100 «насколько это горячий клиент для продажи сайта».
 
-Шесть базовых сигналов дают 90: столько наберёт идеальный лид без ключа ВК.
-Активность сообщества — бонус, который добирает баллы до 100, но не
-растягивает шкалу: ВК проверяется только при заданном ключе, и делать 90
-потолком «потому что нет токена» нечестно.
+Шкала набирается ровно базовыми сигналами, без ВК: раньше шесть правил
+давали 90 и последние 10 добирала активность сообщества, но её проверка
+требует ключ. Без ключа идеальный лид упирался в 90 и выглядел хуже, чем
+есть; с ключом тот же лид получал 100 — то есть цифра зависела от
+настроек, а не от клиента. ВК оставлен в разборе справочно: на балл он
+больше не влияет.
 
 Критерия «недавно на Картах» здесь больше нет: дату добавления карточка не
 отдаёт (`added_at` никогда не заполняется), поэтому критерий не срабатывал
@@ -18,15 +20,16 @@ REVIEWS_MANY = 15        # есть поток клиентов
 HAS_PHONE = 10           # до него можно дозвониться
 EXPENSIVE_CATEGORY = 10  # услуги дорогие — бюджет на сайт есть
 SOCIALS_PRESENT = 10     # уже ведёт маркетинг, просто не на своём сайте
+MESSENGER = 5            # есть WhatsApp/Telegram: писать можно уже сегодня
+CARD_COMPLETE = 5        # адрес и категория заполнены — бизнес можно проверить
 
-VK_ACTIVE = 10           # бонус: сообщество живо
-VK_SEMI = 5              # бонус: сообщество ещё подаёт признаки жизни
-
+# Сумма базовых сигналов = 100: идеальный лид добирает шкалу без ВК.
 BASE_MAX = (NO_WEBSITE + RATING_GOOD + REVIEWS_MANY + HAS_PHONE
-            + EXPENSIVE_CATEGORY + SOCIALS_PRESENT)
+            + EXPENSIVE_CATEGORY + SOCIALS_PRESENT + MESSENGER + CARD_COMPLETE)
 MAX_SCORE = 100
 
 SOCIAL_FIELDS = ("vk", "telegram", "instagram", "whatsapp")
+MESSENGER_FIELDS = ("telegram", "whatsapp")
 
 _AGGREGATORS = r"taplink|linktree|linktr\.ee|becons\.ai|illions\.app"
 
@@ -49,6 +52,17 @@ def _num(value, default=0.0) -> float:
 
 def _has_socials(record: dict) -> bool:
     return any(str(record.get(field) or "").strip() for field in SOCIAL_FIELDS)
+
+
+def _has_messenger(record: dict) -> bool:
+    """Мессенджер — канал, куда можно написать сейчас, без почты и сайта."""
+    return any(str(record.get(field) or "").strip() for field in MESSENGER_FIELDS)
+
+
+def _card_is_complete(record: dict) -> bool:
+    """Адрес и категория — минимум, по которому бизнес можно проверить."""
+    return bool(str(record.get("address") or "").strip()
+                and str(record.get("category") or "").strip())
 
 
 def is_expensive_category(category: str) -> bool:
@@ -90,14 +104,21 @@ def compute_score(record: dict) -> tuple[int, list[str]]:
         score += SOCIALS_PRESENT
         reasons.append(f"есть соцсети +{SOCIALS_PRESENT}")
 
-    # ВК — бонус: без ключа vk_activity пуст, и вклад просто не появляется.
+    if _has_messenger(record):
+        score += MESSENGER
+        reasons.append(f"есть мессенджер +{MESSENGER}")
+
+    if _card_is_complete(record):
+        score += CARD_COMPLETE
+        reasons.append(f"адрес и категория заполнены +{CARD_COMPLETE}")
+
+    # ВК баллы больше не добавляет: шкала набирается без него. Строка в
+    # разборе остаётся справочной, чтобы видеть, проверяли сообщество или нет.
     activity = (record.get("vk_activity") or "").lower()
     if activity == "active":
-        score += VK_ACTIVE
-        reasons.append(f"активный ВК +{VK_ACTIVE} (бонус)")
+        reasons.append("ВК активен (на оценку не влияет)")
     elif activity == "semi":
-        score += VK_SEMI
-        reasons.append(f"полуактивный ВК +{VK_SEMI} (бонус)")
+        reasons.append("ВК полуактивен (на оценку не влияет)")
 
     return min(MAX_SCORE, score), reasons
 

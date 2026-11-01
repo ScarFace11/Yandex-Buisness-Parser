@@ -263,7 +263,7 @@ globalThis.setTimeout = (cb, ms) => { scheduled.push({ cb, ms }); return 0; };
 globalThis.clearTimeout = () => {};
 
 // Score tables and limits live at module scope — load them verbatim.
-(0, eval)(['SCORE_MAX', 'SCORE_VK_RULES', 'SCORE_AGGREGATORS', 'SCORE_EXPENSIVE', 'SCORE_RULES',
+(0, eval)(['SCORE_MAX', 'SCORE_AGGREGATORS', 'SCORE_EXPENSIVE', 'SCORE_RULES',
   'REVIEWED_AUTOSAVE_MS', 'FILE_ACT_ICONS', 'UI_ICONS', 'REFILTER_LABEL',
   // Показ по отметке «Просмотрено» — цикл заголовка колонки «✓».
   'REVIEWED_FILTER_CYCLE',
@@ -1567,13 +1567,15 @@ test('score breakdown lists only the criteria that fired', () => {
   const r = {
     name: 'Клиника', lead_score: 100, phone: '+7 900 000-00-00', website: '',
     rating: '4.7', reviews_count: '128', vk_activity: 'active', category: 'Стоматология',
-    telegram: 'https://t.me/clinic',
+    telegram: 'https://t.me/clinic', address: 'Ленина, 1',
   };
   const { total, lines } = globalThis.scoreBreakdown(r);
-  assert.equal(total, 100, 'база 90 + активный ВК 10');
+  assert.equal(total, 100, 'все базовые сигналы вместе = 100, ВК не нужен');
   for (const line of [
-    '✅ Нет сайта +30', '✅ Активный ВК (бонус) +10', '✅ Рейтинг 4.7 +15',
+    '✅ Нет сайта +30', '✅ Рейтинг 4.7 +15',
     '✅ Отзывов 128 +15', '✅ Есть телефон +10', '✅ Дорогая категория +10',
+    '✅ Есть соцсети +10', '✅ Есть мессенджер +5',
+    '✅ Адрес и категория заполнены +5',
   ]) {
     assert.ok(lines.includes(line), line);
   }
@@ -1607,7 +1609,7 @@ test('score breakdown counts socials and ignores the removed date criterion', ()
   const { total } = globalThis.scoreBreakdown({
     website: 'https://x.ru', telegram: 'https://t.me/x',
   });
-  assert.equal(total, 10, 'только соцсети: соцсети 10');
+  assert.equal(total, 15, 'соцсети 10 + мессенджер 5');
   // Дата добавления не собирается — что бы ни лежало в записи, баллы она
   // больше не двигает.
   assert.equal(globalThis.scoreBreakdown(
@@ -1628,23 +1630,28 @@ test('score breakdown normalises a 0..50 rating', () => {
   assert.equal(sum, 15, '47 → 4.7 → рейтинг засчитан');
 });
 
-test('score breakdown hides the losing VK variant', () => {
+test('score breakdown names the VK state without adding points', () => {
+  // ВК — справочная строка: шкала набирается без него, поэтому «+10» за
+  // активное сообщество здесь больше нет.
   const why = rec => globalThis.scoreBreakdown(rec).lines.join('\n');
-  const active = why({ website: 'https://x.ru', vk_activity: 'active', lead_score: 10 });
-  assert.match(active, /✅ Активный ВК \(бонус\) \+10/);
-  assert.ok(!/Полуактивный/.test(active), 'полуактивный не поминается, когда ВК активен');
-  const semi = why({ website: 'https://x.ru', vk_activity: 'semi', lead_score: 5 });
-  assert.match(semi, /✅ Полуактивный ВК \(бонус\) \+5/);
-  assert.ok(!/ВК не активен/.test(semi), 'активный не поминается, когда ВК полуактивен');
-  const none = why({ website: 'https://x.ru', vk_activity: 'inactive', lead_score: 0 });
-  assert.match(none, /❌ ВК не активен/);
+  const base = { website: 'https://x.ru', lead_score: 0 };
+  const active = why({ ...base, vk_activity: 'active' });
+  assert.match(active, /ВК активен — на оценку не влияет/);
+  assert.ok(!/\+10/.test(active), 'баллов за ВК больше не начисляют');
+  const semi = why({ ...base, vk_activity: 'semi' });
+  assert.match(semi, /ВК полуактивен — на оценку не влияет/);
+  const none = why({ ...base, vk_activity: 'inactive' });
+  assert.match(none, /ВК не активен — на оценку не влияет/);
+  // Оценка от состояния сообщества не зависит ни в какую сторону.
+  assert.equal(globalThis.scoreBreakdown({ ...base, vk_activity: 'active' }).total,
+               globalThis.scoreBreakdown({ ...base, vk_activity: 'semi' }).total);
 });
 
 test('VK is not scored when the API key was never set', () => {
   // vk_activity пуст, а ключа в этой сессии нет — значит ВК не проверяли.
   // «Не активен» здесь было бы выдумкой, и баллы за это не снимаются.
   const why = globalThis.scoreBreakdown({ website: 'https://x.ru', lead_score: 0 }).lines.join('\n');
-  assert.match(why, /ВК не проверялся — ключ не задан/);
+  assert.match(why, /ВК не проверялся — на оценку не влияет/);
   assert.ok(!/ВК не активен/.test(why), 'без ключа активность не выдумывается');
   assert.ok(!/Активный ВК/.test(why));
 });
