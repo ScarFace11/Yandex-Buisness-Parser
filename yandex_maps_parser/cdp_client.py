@@ -247,6 +247,20 @@ def available_browsers() -> list[dict]:
     return out
 
 
+def _extra_chrome_flags() -> list[str]:
+    """Дополнительные флаги запуска из YP_CHROME_FLAGS (через пробел).
+
+    Зачем: в жёстко ограниченном окружении (корпоративный профиль, песочница
+    вокруг процесса приложения) Chrome не может создать собственную песочницу
+    и выходит сразу после старта с 0x80000003 — тогда ни поиск, ни сквозные
+    проверки интерфейса не запускаются. Такому окружению нужен --no-sandbox,
+    но включать его по умолчанию нельзя: это ослабление защиты для всех.
+    Пустая переменная — ровно прежнее поведение.
+    """
+    raw = os.environ.get("YP_CHROME_FLAGS", "")
+    return [f for f in raw.split() if f]
+
+
 def _find_chrome() -> str | None:
     """Выбранный браузер, иначе первый подходящий, иначе None."""
     chosen = selected_browser()
@@ -988,6 +1002,7 @@ def init_browser(pool_size: int = 8, visible: bool = False) -> bool:
                         "--disable-breakpad",
                         "--disable-domain-reliability",
                         "--mute-audio",
+                        *_extra_chrome_flags(),
                     ]
                     if _pool_profile_dir:
                         _cmd.append(f"--user-data-dir={_pool_profile_dir}")
