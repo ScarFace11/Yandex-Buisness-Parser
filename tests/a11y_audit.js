@@ -28,13 +28,8 @@
 
   // ── Подготовка состояния ────────────────────────────────────
   // Тему фиксируем и в хранилище, не только атрибутом: переключатель темы
-  // читает localStorage, а в режиме «как в системе» (по умолчанию) слушатель
-  // ОС (onSystemTheme) может перебить data-theme по сигналу смены
-  // prefers-color-scheme — на головном Chromium CI-раннера такой сигнал
-  // прилетает во время осаждения кадра, и тёмная тема откатывается в
-  // светлую прямо перед замером контраста. Сохранённый режим делает выбор
-  // авторитетным: слушатель ОС не срабатывает (режим не «system»), и любой
-  // повторный applyTheme ставит уже измеряемую тему.
+  // читает localStorage, поэтому сохранённый выбор делает измеряемую тему
+  // авторитетной и переживает повторную инициализацию страницы.
   if (st.theme) {
     try { localStorage.setItem('yp_theme_v1', st.theme); } catch (e) { /* приватный режим */ }
     document.documentElement.setAttribute('data-theme', st.theme);
@@ -236,17 +231,13 @@
   // читал цвет ПРОШЛОЙ темы — «надпись светлой темы на тёмном фоне». Поэтому
   // снимаем плавность, ставим атрибут заново (это инвалидирует все
   // унаследованные переменные), вынуждаем пересчёт через чтение layout и
-  // ждём два кадра. Затем проверяем, что тема действительно наша: слушатель
-  // ОС (режим «как в системе») мог вернуть свою — тогда один повтор.
+  // ждём два кадра.
   if (st.theme) {
     const root = document.documentElement;
     root.classList.remove('theme-anim');
-    for (let attempt = 0; attempt < 2; attempt++) {
-      root.setAttribute('data-theme', st.theme);
-      void document.body.offsetHeight;
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-      if (root.getAttribute('data-theme') === st.theme) break;
-    }
+    root.setAttribute('data-theme', st.theme);
+    void document.body.offsetHeight;
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   }
 
   // ── 1. Контраст текста ──────────────────────────────────────

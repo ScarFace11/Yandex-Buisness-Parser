@@ -153,11 +153,18 @@ class TestFound:
         assert by_day[_day(2)]["files"] == 1
 
     def test_processed_subfolders_are_not_summed(self, client):
-        """json и excel — два экспорта одних записей: берётся больший."""
+        """json и excel — два экспорта одних записей: считается один файл.
+
+        Один результат этап 2 пишет сразу в несколько форматов, поэтому
+        записи в них одинаковые, а чтение обоих дало бы 2×. Числа здесь
+        тоже одинаковые — иначе проверка ловила бы не «не суммируем», а
+        «какой формат победил» (_view_files предпочитает json).
+        """
         _proc_file(client, "excel", "кафе", 9, day=_day(2))
-        _proc_file(client, "json", "кафе", 4, day=_day(2))
+        _proc_file(client, "json", "кафе", 9, day=_day(2))
         _, by_day = _series(client, 7)
         assert by_day[_day(2)]["found"] == 9
+        assert by_day[_day(2)]["files"] == 1, "два формата одного экспорта — один файл"
 
     def test_file_without_date_in_name_uses_mtime(self, client):
         """Имя без даты (например обработанная выгрузка) датируется mtime."""

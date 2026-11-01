@@ -821,21 +821,16 @@ function saveApiKeys() {
 //  Dark theme
 // ═══════════════════════════════════════════
 const THEME_KEY = 'yp_theme_v1';
-const THEME_ORDER = ['light', 'dark', 'system'];   // цикл кнопки «Сменить тему»
-const THEME_RU = { light: 'светлая', dark: 'тёмная', system: 'как в системе' };
+const THEME_ORDER = ['light', 'dark'];   // цикл кнопки «Сменить тему»
+const THEME_RU = { light: 'светлая', dark: 'тёмная' };
 let themeAnimTimer = null;
 
-// Выбранный режим: 'light' | 'dark' | 'system'. 'system' — по умолчанию:
-// цвета берутся из настройки ОС и следуют за ней, как «Авто» в системных
-// настройках macOS/Windows.
+// Выбранный режим: 'light' | 'dark'. Если в localStorage ничего нет —
+// по умолчанию светлая, чтобы при первой загрузке тема была предсказуемой.
 function themePref() {
   let v = null;
   try { v = localStorage.getItem(THEME_KEY); } catch (e) { /* приватный режим */ }
-  return THEME_ORDER.indexOf(v) >= 0 ? v : 'system';
-}
-
-function systemPrefersDark() {
-  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  return THEME_ORDER.indexOf(v) >= 0 ? v : 'light';
 }
 
 // animate=true только при ручном переключении: короткая плавная смена цветов
@@ -851,32 +846,22 @@ function applyTheme(dark, animate) {
   root.setAttribute('data-theme', dark ? 'dark' : 'light');
   const themeBtn = document.getElementById('btn-theme');
   if (themeBtn) {
-    const pref = themePref();
-    themeBtn.innerHTML = pref === 'system' ? UI_ICONS.auto
-      : (dark ? UI_ICONS.sun : UI_ICONS.moon);
-    themeBtn.title = 'Тема: ' + THEME_RU[pref] + ' — нажмите для следующей';
+    themeBtn.innerHTML = dark ? UI_ICONS.sun : UI_ICONS.moon;
+    themeBtn.title = 'Тема: ' + (dark ? THEME_RU.dark : THEME_RU.light) + ' — нажмите для следующей';
     themeBtn.setAttribute('aria-label', themeBtn.title);
   }
 }
 
-// Применить сохранённый режим с учётом системной темы для 'system'.
+// Применить сохранённую тему.
 function applyThemePref(animate) {
-  const pref = themePref();
-  applyTheme(pref === 'system' ? systemPrefersDark() : pref === 'dark', animate);
+  applyTheme(themePref() === 'dark', animate);
 }
 
 function toggleTheme() {
-  const next = THEME_ORDER[(THEME_ORDER.indexOf(themePref()) + 1) % THEME_ORDER.length];
+  const pref = themePref();
+  const next = pref === 'dark' ? 'light' : 'dark';
   try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* приватный режим */ }
   applyThemePref(true);
-}
-
-// В режиме «system» тема меняется вместе с ОС уже после загрузки страницы.
-if (window.matchMedia) {
-  const mqTheme = window.matchMedia('(prefers-color-scheme: dark)');
-  const onSystemTheme = () => { if (themePref() === 'system') applyTheme(mqTheme.matches, false); };
-  if (mqTheme.addEventListener) mqTheme.addEventListener('change', onSystemTheme);
-  else if (mqTheme.addListener) mqTheme.addListener(onSystemTheme);   // старый Safari
 }
 
 // City data is defined above as CITIES_DATA with population info.
