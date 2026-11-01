@@ -12,6 +12,14 @@
 
 `summary` — короткая строка (видна в баннере и списке версий),
 `items` — полный текст, который открывается по нажатию на версию.
+
+Новый формат полного текста — `sections` (разделы с пунктами, как в
+релизе на GitHub):
+
+    "sections": [{"title": "Оценка лида", "points": ["Пункт.", "Ещё пункт."]}]
+
+Если `sections` есть, окно показывает их; старые заметки с `items`
+продолжают читаться.
 Подписи интерфейса — в `ui.json`, рядом.
 
 Всё это уезжает в `static/version.json` при штамповке версии (см.
@@ -47,6 +55,24 @@ def _read(path: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+def _sections(raw: dict) -> list:
+    """Разделы полного текста: заголовок и пункты списка, как в релизе.
+
+    Зачем отдельно от `items`: релиз на GitHub читается сверху вниз
+    заголовками («Оценка лида», «Надёжность данных») с пунктами под ними,
+    и окно «Что нового» должно повторять этот порядок, а не показывать
+    один длинный список пар «заголовок — абзац».
+    """
+    out = []
+    for sec in raw.get("sections") or []:
+        if not isinstance(sec, dict):
+            continue
+        points = [str(p).strip() for p in (sec.get("points") or []) if str(p or "").strip()]
+        if points:
+            out.append({"title": str(sec.get("title") or ""), "points": points})
+    return out
+
+
 def _entry(raw: dict, version: str) -> dict:
     items = []
     for item in raw.get("items") or []:
@@ -65,6 +91,7 @@ def _entry(raw: dict, version: str) -> dict:
         "title": str(raw.get("title") or ""),
         "summary": str(raw.get("summary") or ""),
         "items": [i for i in items if i["text"]],
+        "sections": _sections(raw),
     }
 
 

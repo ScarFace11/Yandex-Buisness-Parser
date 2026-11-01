@@ -55,20 +55,42 @@ def test_changelog_list_shows_summary_and_opens_full_text(browser_cdp, live_app_
         # 2. Нажатие на версию открывает полный текст.
         assert tab.click("#changelog-overlay .cl-entry")
         assert _wait(tab, "!!document.querySelector('#changelog-overlay .cl-detail')"), "полный текст не открылся"
+        # Заголовок — как у релиза на GitHub: «v2.3.5 — Установщик Windows, …»,
+        # а текст разбит на разделы с пунктами, а не идёт одной простынёй.
         detail = json.loads(tab.evaluate("""(() => {
-          const items = [...document.querySelectorAll('#changelog-overlay .cl-item-x')];
+          const secs = [...document.querySelectorAll('#changelog-overlay .cl-sec')];
+          const points = [...document.querySelectorAll('#changelog-overlay .cl-points li')];
           return JSON.stringify({
-            items: items.length,
-            first: items.length ? items[0].textContent.trim() : '',
-            head: document.querySelector('#changelog-overlay .cl-ver').textContent.trim(),
+            sections: secs.length,
+            headTitles: secs.map(s => (s.querySelector('.cl-sec-t') || {}).textContent || ''),
+            points: points.length,
+            first: points.length ? points[0].textContent.trim() : '',
+            head: document.querySelector('#changelog-overlay .cl-dtitle').textContent.trim(),
             list: !!document.querySelector('#changelog-overlay .cl-entry'),
             buttons: [...document.querySelectorAll('#changelog-overlay button')].map(b => b.textContent.trim()),
           });
         })()"""))
-        assert detail["items"] >= 1, detail
+        assert detail["sections"] >= 3, detail
+        assert all(t.strip() for t in detail["headTitles"]), detail
+        assert detail["points"] >= 10, detail
         assert len(detail["first"]) > 40, detail
+        assert detail["head"].startswith("v"), detail
+        assert " — " in detail["head"], f"в заголовке нет названия версии: {detail['head']}"
         assert detail["list"] is False, "в подробном виде список должен уступать место тексту"
         assert any("Назад" in b for b in detail["buttons"]), detail
+
+        # 2б. Старая версия без разделов показывается пунктами — формат не потерян.
+        assert tab.click("#changelog-overlay .cl-foot .m-cancel")
+        assert _wait(tab, "!!document.querySelector('#changelog-overlay .cl-entry')")
+        old_rows = tab.evaluate("""(() => [...document.querySelectorAll('#changelog-overlay .cl-entry')]
+            .map(r => r.querySelector('.cl-ver').textContent.trim()))()""")
+        older = [v.lstrip("v") for v in old_rows if not v.endswith("2.3.5")]
+        assert older, old_rows
+        # Открываем напрямую: клик по списку перерисовывает окно, и второй
+        # клик пришёлся бы на уже удалённую кнопку.
+        tab.evaluate("openChangelogVersion('%s')" % older[0])
+        assert _wait(tab, "!!document.querySelector('#changelog-overlay .cl-item-x')"),             "старые версии должны открываться пунктами"
+        assert tab.evaluate("!document.querySelector('#changelog-overlay .cl-sec')"),             "у старой версии разделов нет"
 
         # 3. «Назад» возвращает к списку версий.
         assert tab.click("#changelog-overlay .cl-foot .m-cancel")

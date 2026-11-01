@@ -1409,14 +1409,42 @@ function _clVersions(meta) {
   return list.map(h => {
     const row = h || {};
     const items = Array.isArray(row.items) ? row.items : [];
+    const sections = (Array.isArray(row.sections) ? row.sections : [])
+      .map(s => ({
+        title: String((s && s.title) || ''),
+        points: (Array.isArray(s && s.points) ? s.points : [])
+          .map(p => String(p || '')).filter(Boolean),
+      }))
+      .filter(s => s.points.length);
     return {
       version: String(row.version || ''),
       date: String(row.date || ''),
       title: String(row.title || ''),
       summary: String(row.summary || row.changelog || ''),
       items: items.filter(i => i && i.text),
+      sections,
     };
   }).filter(e => e.version);
+}
+
+// Мягкое форматирование внутри текста: релиз на GitHub держит код в
+// обратных кавычках, а главное — в **звёздочках**. Экранируем ВСЁ, потом
+// включаем разметку: пользовательский текст не может протащить тег.
+function _clInline(text) {
+  return escapeHtml(String(text || ''))
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+// Полный текст версии разделами, как в релизе: заголовок с чертой
+// и пункты списком под ним.
+function _clSections(entry) {
+  return (entry.sections || []).map(sec => `
+    <section class="cl-sec">
+      ${sec.title ? `<h5 class="cl-sec-t">${escapeHtml(sec.title)}</h5>` : ''}
+      <ul class="cl-points">${sec.points.map(p => `<li>${_clInline(p)}</li>`).join('')}</ul>
+    </section>`).join('');
 }
 
 function _renderChangelog(meta, err) {
@@ -1431,21 +1459,27 @@ function _renderChangelog(meta, err) {
 
   let body;
   if (open) {
-    const items = open.items.length
+    // Заголовок как у релиза на GitHub: версия, тире, человеческое название.
+    const heading = `v${escapeHtml(open.version)}` + (open.title ? ' — ' + escapeHtml(open.title) : '');
+    // Разделы — новый формат; заметки старых версий приходят пунктами.
+    const sections = open.sections.length ? _clSections(open) : '';
+    const items = !sections && open.items.length
       ? open.items.map(i => `
           <div class="cl-item">
             ${i.title ? `<div class="cl-item-t">${escapeHtml(i.title)}</div>` : ''}
-            <p class="cl-item-x">${escapeHtml(i.text).replace(/\n/g, '<br>')}</p>
+            <p class="cl-item-x">${_clInline(i.text)}</p>
           </div>`).join('')
-      : `<p class="cl-text">${escapeHtml(open.summary || '—').replace(/\n/g, '<br>')}</p>`;
+      : '';
+    const fallback = (sections || items)
+      ? ''
+      : `<p class="cl-text">${_clInline(open.summary || '—')}</p>`;
     body = `
       <div class="cl-detail">
-        <div class="cl-head">
-          <span class="cl-ver">v${escapeHtml(open.version)}</span>
+        <div class="cl-dhead">
+          <h4 class="cl-dtitle">${heading}</h4>
           ${open.date ? `<time class="cl-date" datetime="${escapeHtml(open.date)}">${escapeHtml(open.date)}</time>` : ''}
         </div>
-        ${open.title ? `<h4 class="cl-dtitle">${escapeHtml(open.title)}</h4>` : ''}
-        ${items}
+        ${sections}${items}${fallback}
       </div>`;
   } else {
     const rows = entries.map(e => {
@@ -1474,7 +1508,7 @@ function _renderChangelog(meta, err) {
   overlay.id = 'changelog-overlay';
   overlay.className = 'ui-modal-overlay';
   overlay.innerHTML = `
-    <div class="ui-modal changelog-modal" role="dialog" aria-modal="true" aria-labelledby="cl-title">
+    <div class="ui-modal changelog-modal${open ? ' cl-wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="cl-title">
       <h3 id="cl-title">${UI_ICONS.file}${escapeHtml(t.title)}</h3>
       <p class="cl-sub">${escapeHtml(t.subtitle)}${cur ? ' Вы на <b>v' + escapeHtml(cur) + '</b>.' : ''}</p>
       ${meta && meta.offline ? `<p class="cl-offline">${escapeHtml(t.offline)}</p>` : ''}

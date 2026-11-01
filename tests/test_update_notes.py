@@ -39,9 +39,34 @@ class TestNotesData:
             assert str(data.get("summary") or "").strip(), f"{path.name}: нет краткого описания"
             assert str(data.get("title") or "").strip(), f"{path.name}: нет заголовка"
             items = data.get("items") or []
-            assert items, f"{path.name}: нет полного текста (items)"
+            sections = data.get("sections") or []
+            assert items or sections, f"{path.name}: нет полного текста (ни items, ни sections)"
             for item in items:
                 assert str(item.get("text") or "").strip(), f"{path.name}: пустой пункт"
+            for sec in sections:
+                assert str(sec.get("title") or "").strip(), f"{path.name}: раздел без заголовка"
+                points = sec.get("points") or []
+                assert points, f"{path.name}: раздел без пунктов"
+                for point in points:
+                    assert str(point or "").strip(), f"{path.name}: пустой пункт в разделе"
+
+    def test_the_newest_note_is_split_into_release_sections(self):
+        """Полный текст новой версии читается как релиз: разделы с пунктами."""
+        note = update_notes.latest()
+        sections = note.get("sections") or []
+        assert len(sections) >= 3, "полный текст должен быть разбит на разделы"
+        assert not note.get("items"), "дублировать тот же текст в items не нужно"
+        titles = [s["title"] for s in sections]
+        assert len(titles) == len(set(titles)), f"разделы повторяются: {titles}"
+        points = sum(len(s["points"]) for s in sections)
+        assert points >= 10, f"пунктов слишком мало для полного текста: {points}"
+
+    def test_sections_survive_the_endpoint(self, monkeypatch):
+        """Разделы доезжают до окна, а не теряются по дороге."""
+        data = _client(monkeypatch, RuntimeError("нет сети")).get("/update/changelog").get_json()
+        top = data["history"][0]
+        assert top["sections"], "у верхней версии нет разделов"
+        assert top["sections"][0]["points"], "раздел приехал без пунктов"
 
     def test_the_current_build_has_its_own_note(self):
         from config import APP_VERSION
@@ -84,7 +109,8 @@ class TestChangelogEndpoint:
         data = _client(monkeypatch, remote).get("/update/changelog").get_json()
         assert data["version"] == "2.3.5", data["version"]
         assert data["history"][0]["version"] == "2.3.5"
-        assert data["history"][0]["items"], "у верхней версии нет полного текста"
+        top = data["history"][0]
+        assert top["items"] or top["sections"], "у верхней версии нет полного текста"
         assert update_notes.summary("2.3.5") == data["changelog"]
 
     def test_texts_for_the_modal_come_from_the_package(self, monkeypatch):
@@ -122,7 +148,7 @@ class TestStampVersion:
         assert top["version"] == "2.3.5"
         assert top["title"] and top["date"]
         assert top["summary"] == update_notes.summary("2.3.5")
-        assert len(top["items"]) >= 1
+        assert len(top["sections"] or top["items"]) >= 1, "у версии нет полного текста"
         assert data["changelog"] == update_notes.summary("2.3.5")
         assert data["download_url"].endswith("v2.3.5/YandexBusinessParser-windows-x64.zip")
         assert len(data["history"]) <= stamp_version.HISTORY_LIMIT
@@ -134,3 +160,4 @@ class TestStampVersion:
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data["history"][0]["summary"]
         assert isinstance(data["history"][0]["items"], list)
+        assert isinstance(data["history"][0]["sections"], list)

@@ -91,8 +91,10 @@ def apply_version(path, version: str, *, changelog_file=None,
 
     if bump_history:
         if note:
+            # sections — полный текст разделами (как релиз на GitHub);
+            # items оставлен для заметок в старом формате.
             entry = {key: note.get(key) for key in
-                     ("version", "date", "title", "summary", "items")}
+                     ("version", "date", "title", "summary", "items", "sections")}
             entry["version"] = version
         else:
             entry = {"version": version,

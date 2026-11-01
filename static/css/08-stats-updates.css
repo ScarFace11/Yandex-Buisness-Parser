@@ -138,7 +138,10 @@
 @keyframes dot-pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,150,13,.55)}55%{box-shadow:0 0 0 6px rgba(232,150,13,0)}}
 
 /* ── Changelog viewer modal («История изменений») ── */
+/* Список версий — компактные карточки. Полный текст версии шире: он
+   повторяет релиз на GitHub, и в узком окне пункты рвутся на 3–4 строки. */
 .changelog-modal{max-width:620px}
+.changelog-modal.cl-wide{max-width:780px}
 .changelog-modal h3{display:flex;align-items:center;gap:7px}
 .cl-sub{margin:-4px 0 12px;font-size:12.5px;color:var(--muted);line-height:1.5}
 .cl-sub b{color:var(--txt)}
@@ -173,7 +176,25 @@
 .cl-text{font-size:12.5px;color:var(--sub);line-height:1.55}
 /* Полный текст версии (открывается нажатием на запись списка). */
 .cl-detail{display:flex;flex-direction:column;gap:12px}
-.cl-dtitle{margin:0;font-size:14px;font-weight:800;color:var(--txt);line-height:1.4}
+.cl-dhead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  padding-bottom:9px;border-bottom:1px solid var(--bdr)}
+.cl-dhead .cl-date{margin-left:auto}
+.cl-dtitle{margin:0;font-size:14.5px;font-weight:800;color:var(--txt);line-height:1.4}
+/* Разделы полного текста повторяют релиз на GitHub: заголовок с чертой,
+   под ним список пунктов. Так версию можно пролистать глазами, а не
+   читать подряд всё окно. */
+.cl-sec{display:flex;flex-direction:column;gap:7px}
+.cl-sec-t{margin:0 0 1px;padding-bottom:5px;border-bottom:1px solid var(--bdr);
+  font-size:13.5px;font-weight:800;color:var(--txt);line-height:1.4}
+.cl-points{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:6px}
+.cl-points li{font-size:13px;color:var(--sub);line-height:1.6;padding-left:2px}
+.cl-points li::marker{color:var(--c)}
+.cl-points strong,.cl-item-x strong{color:var(--txt);font-weight:700}
+.cl-points code,.cl-item-x code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px;padding:1px 4px;border-radius:4px;
+  background:var(--cl);color:var(--txt);
+}
 .cl-item{border-left:2px solid var(--c);padding-left:10px;display:flex;flex-direction:column;gap:3px}
 .cl-item-t{font-size:12.5px;font-weight:700;color:var(--txt)}
 .cl-item-x{margin:0;font-size:12.5px;color:var(--sub);line-height:1.6}
