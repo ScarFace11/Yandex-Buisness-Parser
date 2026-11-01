@@ -253,6 +253,10 @@
   transition:border-color .15s,box-shadow .15s;min-width:0;
 }
 .file-card:hover{border-color:var(--bdr-h);box-shadow:var(--sh)}
+/* Карточка сама открывает таблицу — курсор и фокус это обещают. Без
+   focus-visible с клавиатуры было не понять, на какой карточке стоишь. */
+.file-card.is-openable{cursor:pointer}
+.file-card.is-openable:focus-visible{outline:2px solid var(--c);outline-offset:2px}
 .file-info{display:flex;align-items:center;gap:11px;min-width:0;flex:1 1 0}
 /* Значок типа файла — SVG из спрайта: он один на сто с лишним строк списка,
    и цвет берёт из темы. Эмодзи тут были цветными и разной ширины. */

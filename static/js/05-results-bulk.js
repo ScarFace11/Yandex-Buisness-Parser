@@ -1085,8 +1085,16 @@ function fileCardHTML(section, it) {
   const archiveBtn = section === 'archive'
     ? `<button class="file-btn" data-act="restore" data-path="${escapeHtml(it.path)}" title="Вернуть файл в рабочую папку">${FILE_ACT_ICONS.restore}</button>`
     : `<button class="file-btn" data-act="archive" data-path="${escapeHtml(it.path)}" title="Убрать в архив (файл можно вернуть)">${FILE_ACT_ICONS.archive}</button>`;
+  // Карточка сама открывает таблицу: отдельная кнопка «в таблицу» была
+  // четвёртой иконкой в ряду и читалась как ещё одна служебная кнопка.
+  // У архивных карточек открытия нет — там файл только возвращают на место.
+  const openable = section !== 'archive';
+  const openAttrs = openable
+    ? ` data-open-path="${escapeHtml(it.path)}" role="button" tabindex="0"`
+    : '';
+  const openTitle = openable ? ' title="Открыть в таблице"' : '';
   return `
-    <div class="file-card">
+    <div class="file-card${openable ? ' is-openable' : ''}"${openAttrs}${openTitle}>
       <div class="file-info">
         <input type="checkbox" class="file-cb" data-path="${escapeHtml(it.path)}"
           ${_selectedFiles.has(it.path) ? 'checked' : ''}
@@ -1098,7 +1106,6 @@ function fileCardHTML(section, it) {
         </div>
       </div>
       <div class="file-actions">
-        <button class="file-btn" data-act="open" data-path="${escapeHtml(it.path)}" title="Открыть в таблице">${FILE_ACT_ICONS.open}</button>
         <button class="file-btn" data-act="download" data-path="${escapeHtml(it.path)}" title="Скачать">${FILE_ACT_ICONS.download}</button>
         ${archiveBtn}
         <button class="file-btn danger" data-act="delete" data-path="${escapeHtml(it.path)}" title="Удалить навсегда">${FILE_ACT_ICONS.delete}</button>
@@ -1373,15 +1380,32 @@ function initResultsPanel() {
   const hist = document.getElementById('hist-files');
   if (hist) hist.addEventListener('click', e => {
     const btn = e.target.closest('.file-btn');
-    if (!btn) return;
-    const rel = btn.dataset.path || '';
-    const act = btn.dataset.act;
-    if (!rel) return;
-    if (act === 'open') openFileInTable(rel);
-    else if (act === 'download') downloadResultsFile(rel);
-    else if (act === 'archive') archiveResultsFile(rel);
-    else if (act === 'restore') restoreResultsFile(rel);
-    else if (act === 'delete') deleteResultsFile(rel);
+    if (btn) {
+      const rel = btn.dataset.path || '';
+      const act = btn.dataset.act;
+      if (!rel) return;
+      if (act === 'download') downloadResultsFile(rel);
+      else if (act === 'archive') archiveResultsFile(rel);
+      else if (act === 'restore') restoreResultsFile(rel);
+      else if (act === 'delete') deleteResultsFile(rel);
+      return;
+    }
+    // Клик по самой карточке открывает таблицу. Чекбокс выбора и его
+    // подпись — служебные: они не должны тянуть за собой открытие файла.
+    if (e.target.closest('input, label, .file-actions')) return;
+    const card = e.target.closest('.file-card');
+    const path = card && (card.dataset.openPath || '');
+    if (path) openFileInTable(path);
+  });
+  // Карточка — роль кнопки, значит Enter и пробел должны работать так же,
+  // как мышь (см. tests/test_a11y_keyboard.py).
+  if (hist) hist.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest && e.target.closest('.file-card');
+    const path = card && (card.dataset.openPath || '');
+    if (!path || e.target.closest('.file-btn, input, label')) return;
+    e.preventDefault();
+    openFileInTable(path);
   });
 
   initHistorySubTab();

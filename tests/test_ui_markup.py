@@ -2320,6 +2320,20 @@ class TestHistoryOwnsThePast:
                        'id="btn-files-bulk-delete"'):
             assert needle in panel, needle
 
+    def test_file_card_opens_the_table_by_click(self):
+        """Кнопка «открыть в таблице» убрана: открывает сама карточка.
+
+        Четвёртая иконка в ряду читалась как ещё одна служебная кнопка, а
+        открыть файл — главное действие карточки. Клик по чекбоксу и по
+        самим кнопкам открытие не запускает.
+        """
+        assert 'data-act="open"' not in APP_JS
+        assert 'data-open-path' in APP_JS
+        assert "closest('.file-card')" in APP_JS
+        assert "closest('input, label, .file-actions')" in APP_JS
+        assert ".file-card.is-openable{cursor:pointer}" in STYLE
+        assert "is-openable:focus-visible{outline:2px solid var(--c)" in STYLE
+
     def test_views_toggle_without_replacing_the_table(self):
         assert 'function setHistorySubTab(' in APP_JS
         assert 'function setResultsSubTab(' not in APP_JS

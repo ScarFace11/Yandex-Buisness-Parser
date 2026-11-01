@@ -1345,15 +1345,20 @@ test('bulkOpenBatch reports an empty queue and leaves no blank tabs', async () =
 });
 
 // ── 7. File browser ───────────────────────────────────────────
-test('fileCardHTML shows meta, four actions for RAW and no archive for ARCHIVE', () => {
+test('fileCardHTML opens by card click, and keeps three service icons', () => {
   const raw = globalThis.fileCardHTML('raw', {
     name: 'raw_2026-09-15_22-19_кафе_уфа.xlsx', path: 'raw/raw_2026-09-15_22-19_кафе_уфа.xlsx',
     size: 18432, records: 42, modified: '15.09.2026 22:19', ext: 'xlsx',
   });
   assert.match(raw, /42 записи • 18 КБ • 15\.09\.2026 22:19/);
   assert.match(raw, /data-icon="xlsx"/, 'у файла Excel свой значок');
-  ['open', 'download', 'archive', 'delete'].forEach(a =>
+  ['download', 'archive', 'delete'].forEach(a =>
     assert.match(raw, new RegExp('data-act="' + a + '"'), 'missing action ' + a));
+  // Отдельной кнопки «открыть в таблице» больше нет: открывает сама карточка,
+  // и с клавиатуры тоже — роль кнопки и tabindex.
+  assert.ok(!/data-act="open"/.test(raw), 'кнопка открытия убрана из карточки');
+  assert.match(raw, /class="file-card is-openable" data-open-path="raw\/raw_2026-09-15_22-19_кафе_уфа.xlsx"/);
+  assert.match(raw, /role="button" tabindex="0"/);
 
   const arch = globalThis.fileCardHTML('archive', {
     name: 'old.xlsx', path: '_archive/2026-01-01/old.xlsx', size: 10, records: 1,
@@ -1365,13 +1370,15 @@ test('fileCardHTML shows meta, four actions for RAW and no archive for ARCHIVE',
   assert.match(arch, /stroke="currentColor"/, 'restore icon is a theme-aware SVG');
 });
 
-test('archived cards keep open and download available', () => {
+test('archived cards keep download but open nothing', () => {
   const arch = globalThis.fileCardHTML('archive', {
     name: 'old.xlsx', path: '_archive/2026-01-01/old.xlsx', size: 10, records: 1,
     modified: '01.01.2026 00:00', ext: 'xlsx',
   });
-  assert.match(arch, /data-act="open"/);
   assert.match(arch, /data-act="download"/);
+  // Архивный файл вне рабочей папки: открывать в таблице нечего.
+  assert.ok(!/data-open-path/.test(arch));
+  assert.ok(!/is-openable/.test(arch));
 });
 
 test('fileCardHTML surfaces read errors instead of a record count', () => {
@@ -1704,8 +1711,9 @@ test('file cards use theme-aware SVG icons, not emoji', () => {
     name: 'raw_кафе_уфа.xlsx', path: 'raw/raw_кафе_уфа.xlsx',
     size: 1024, records: 12, modified: '01.01.2026 10:00', ext: 'xlsx',
   });
-  // Значок типа файла + четыре действия — все SVG с stroke="currentColor".
-  assert.equal((html.match(/<svg/g) || []).length, 5, 'значок типа и четыре действия — SVG');
+  // Значок типа файла + три действия — все SVG с stroke="currentColor":
+  // четвёртое (открытие) ушло в саму карточку.
+  assert.equal((html.match(/<svg/g) || []).length, 4, 'значок типа и три действия — SVG');
   assert.ok(!/🗑/.test(html), 'the invisible emoji trash is gone');
   assert.ok(!/📥/.test(html) && !/📦/.test(html), 'no emoji left in the action row');
   assert.match(html, /stroke="currentColor"/);
