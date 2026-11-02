@@ -83,7 +83,7 @@ globalThis._runElapsed = () => '0:00';
 globalThis._lastSkippedCities = [];
 globalThis._historySubTab = 'runs';
 
-(0, eval)(grab('isRunActive') + '\n' + grab('showTab'));
+(0, eval)(grab('isRunActive') + '\n' + grab('showTab') + '\n' + grab('historySeenHtml'));
 
 function reset({ runActive = false, loadedOnce = false, results = [] } = {}) {
   for (const k of Object.keys(calls)) calls[k] = Array.isArray(calls[k]) ? [] : 0;
@@ -183,6 +183,31 @@ test("«История» → «Файлы» loads the file list, not the runs ag
   assert.equal(calls.loadFilesPanel, 1, 'открыт вид «Файлы» — список файлов нужен');
   assert.equal(calls.setResultsView.length, 0);
   globalThis._historySubTab = 'runs';
+});
+
+test('«История» показывает, сколько записей прогона просмотрено', () => {
+  // «44 записи» говорили только объём. Теперь карточка отвечает и на вопрос
+  // «сколько уже пройдено», а пройденный прогон зеленеет.
+  const part = globalThis.historySeenHtml({ results_count: 44, viewed: 1, viewed_total: 44 });
+  assert.match(part, /Просмотрено <b>1<\/b> из <b>44<\/b>/);
+  assert.ok(!/hist-seen all/.test(part), 'пока не всё пройдено — обычный цвет');
+  assert.match(part, /Осталось 43/);
+
+  const done = globalThis.historySeenHtml({ results_count: 44, viewed: 44, viewed_total: 44 });
+  assert.match(done, /class="hist-seen all"/, 'всё просмотрено — зелёная строка');
+  assert.match(done, /Просмотрено <b>44<\/b> из <b>44<\/b>/);
+
+  // Счётчика нет (нет файлов) — прежний вид, без выдуманных нулей.
+  assert.match(globalThis.historySeenHtml({ results_count: 44 }), /<b>44<\/b> записей/);
+  // Больше, чем всего, быть не может: цифры из разных источников не спорят.
+  assert.match(globalThis.historySeenHtml({ viewed: 50, viewed_total: 44 }),
+    /Просмотрено <b>44<\/b> из <b>44<\/b>/);
+});
+
+test('зелёный у пройденного прогона — токен темы, а не случайный оттенок', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(join(root, 'static/css/12-socials-empty.css'), 'utf8');
+  assert.match(css, /\.hist-seen\.all,\.hist-seen\.all b\{color:var\(--ok-txt\)\}/);
 });
 
 test("showTab('table', true) keeps the explicitly opened file", () => {

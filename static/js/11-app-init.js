@@ -993,6 +993,18 @@ function loadHistory() {
     });
 }
 
+// «Просмотрено 3 из 44» вместо сухого «44 записей»: история отвечает на вопрос,
+// сколько работы уже сделано, а не только сколько нашли. Все записи пройдены —
+// строка зеленеет, это видно, не раскрывая карточку.
+function historySeenHtml(entry) {
+  const total = Number(entry.viewed_total) || 0;
+  if (!total) return `<span>📊 <b>${entry.results_count}</b> записей</span>`;
+  const viewed = Math.min(Number(entry.viewed) || 0, total);
+  const all = viewed >= total;
+  const hint = all ? 'Все записи этого поиска просмотрены' : `Осталось ${total - viewed}`;
+  return `<span class="hist-seen${all ? ' all' : ''}" title="${hint}">📊 Просмотрено <b>${viewed}</b> из <b>${total}</b></span>`;
+}
+
 function toggleHistoryCard(btn) {
   btn.closest('.hist-card').classList.toggle('open');
 }
@@ -1029,7 +1041,7 @@ function renderHistoryEntry(entry) {
           <span class="hist-title">${escapeHtml((entry.queries || []).filter(q => String(q).trim()).join(', ') || 'без запроса')}</span>
           <span class="hist-meta">
             <span>🏙 <b>${entry.cities.length}</b> ${entry.cities.length === 1 ? 'город' : 'города'}</span>
-            <span>📊 <b>${entry.results_count}</b> записей</span>
+            ${historySeenHtml(entry)}
             <span>⏱ ${timeStr}</span>
             <span>${dateStr}</span>
           </span>

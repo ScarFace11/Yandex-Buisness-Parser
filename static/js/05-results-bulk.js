@@ -161,7 +161,6 @@ let _lastCities = [];           // города текущего вида (от 
 // Переключается кликом по заголовку колонки ✓ (замена кнопки «Непросмотренные»).
 let reviewedFilter = 'all';
 let favoriteCities = new Set(); // города со звёздочкой — закрепляются сверху
-let currentFileNote = '';       // «· файл: …» когда таблица показывает один файл
 let currentFile = '';           // rel-путь файла, открытого из «История» → «Файлы»
 let bulkBusy = false;
 let bulkState = { social: 'vk', opened: 0, blocked: 0, keys: new Set(), copied: new Set(), texts: new Map(), copiedTexts: new Set() };
@@ -450,7 +449,7 @@ function renderCityTabs(cities) {
   const allStats = cityReviewStats('');
   // «Все» — всегда первая; дальше избранные города, потом остальные.
   const tabs = [
-    `<button class="city-tab${activeCity ? '' : ' active'}" data-city="" onclick="setCityTab('')">Все <span class="city-count">(${total})</span>`
+    `<button class="city-tab${activeCity ? '' : ' active'}" data-city="" onclick="setCityTab('')">Все `
       + reviewProgressHtml(allStats.done, allStats.total || total, 'city-done')
       + '</button>',
   ].concat(orderCitiesForTabs(list).map(_cityTabHtml));
@@ -468,8 +467,7 @@ function _cityTabHtml(c) {
   const progress = reviewProgressHtml(stats.done, stats.total || c.count, 'city-done');
   return `<span class="city-tab-wrap${fav ? ' fav' : ''}" data-city="${escapeHtml(c.city)}">`
     + `<button class="city-tab${c.city === activeCity ? ' active' : ''}" data-city="${escapeHtml(c.city)}"`
-    + ` onclick="setCityTab(this.dataset.city)">${escapeHtml(c.city)}`
-    + ` <span class="city-count">(${c.count})</span>${progress}</button>`
+    + ` onclick="setCityTab(this.dataset.city)">${escapeHtml(c.city)} ${progress}</button>`
     + `<span class="fav-star${fav ? ' on' : ''}" role="button" tabindex="0" title="${hint}"`
     + ` aria-label="${hint}" onclick="toggleFavoriteCity(favStarCity(this), event)"`
     + ` onkeydown="onFavStarKey(event, this)">`
@@ -492,12 +490,6 @@ function setCityTab(city) {
 // → только просмотренные → всё. Отдельная кнопка «Непросмотренные» не нужна:
 // фильтр живёт там же, где и сама отметка.
 const REVIEWED_FILTER_CYCLE = ['all', 'unviewed', 'viewed'];
-
-function reviewedFilterNote() {
-  if (reviewedFilter === 'unviewed') return ' · только непросмотренные';
-  if (reviewedFilter === 'viewed') return ' · только просмотренные';
-  return '';
-}
 
 function syncReviewedFilterUI() {
   const th = document.querySelector('#results-table th[data-col="rev"]');
@@ -1294,12 +1286,9 @@ function openFileInTable(rel) {
       if (typeof refreshStatsFor === 'function') refreshStatsFor(recs);
       if (typeof updateStatsBadge === 'function') updateStatsBadge();
       renderTable(recs);
-      currentFileNote = ` · файл: ${basenameOf(rel)}`;
-      renderPage();              // перерисовать счётчик с именем файла
       showToast(`${recs.length} ${pluralRecords(recs.length)} · ${basenameOf(rel)}`, 'success');
     })
     .catch(() => {
-      currentFileNote = '';
       currentFile = '';
       if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Не удалось загрузить данные файла.</td></tr>`;
       showToast('Не удалось загрузить данные файла. Проверьте соединение и попробуйте снова.', 'error');

@@ -358,8 +358,6 @@ function toggleOnlyNewFilter() {
   filterTable();
 }
 
-function onlyNewNote() { return onlyNewFilter ? ' · только новые' : ''; }
-
 function setResultsView(view) {
   // Источник один — обработанные записи (этап 2). Старые вызовы передают
   // 'raw'/'all', их молча приводим к нему: отдельного переключателя больше нет.
@@ -368,7 +366,6 @@ function setResultsView(view) {
   _resultsLoadedOnce = true;   // вкладка больше не «пустая» — запрос ушёл
   const body = document.getElementById('tbl-body');
   if (body) body.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Загрузка…</td></tr>`;
-  currentFileNote = _resultsScope === 'all' ? ' · все файлы в папке' : '';
   currentFile = '';
   const seq = ++_resultsReqSeq;
   const scope = _resultsScope;
@@ -747,6 +744,13 @@ function siteHTML(row) {
   } catch (e) {}
   return `<a class="tbl-link site-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
     + ` title="${escapeHtml(raw)}">${escapeHtml(label)}</a>`;
+}
+
+// «Есть сайт» = в ячейке «Сайт» стоит рабочая ссылка, а не прочерк. Сортировка
+// по колонке спрашивает именно это, а не домен: сравнивать «kafe.ru» с «—» нечего.
+function hasSite(row) {
+  const raw = String((row && (row.aggregator_url || row.website)) || '').trim();
+  return /^https?:\/\//i.test(raw);
 }
 
 function socialsHTML(row, rowKey, rowIsRev) {
@@ -1206,8 +1210,9 @@ const NOSORT_COLS = new Set([0, 1]);
 // 7/8 — «Рейтинг»: колонка одна, а смысла два (оценка и число отзывов).
 // 9 — «Соцсети»: сортировка по числу сетей у компании, а не по алфавиту.
 // Сервер повторяет её в _sort_like_table для «Массового обхода».
-const COL_SORT_INDEX = { rev: null, num: null, name: 2, category: 3, address: 4, phone: null, score: 6, socials: 9, rating: 7 };
-const SORT_INDEX_COL = { 2: 'name', 3: 'category', 4: 'address', 5: 'phone', 6: 'score', 7: 'rating', 9: 'socials' };
+// 10 — «Сайт»: сортировка по наличию ссылки (свой сайт или страница-визитка).
+const COL_SORT_INDEX = { rev: null, num: null, name: 2, category: 3, address: 4, website: 10, phone: null, score: 6, socials: 9, rating: 7 };
+const SORT_INDEX_COL = { 2: 'name', 3: 'category', 4: 'address', 5: 'phone', 6: 'score', 7: 'rating', 9: 'socials', 10: 'website' };
 
 // Заголовок берём по data-col, а не по позиции в строке: столбцы можно
 // переставлять («Столбцы» → перетаскивание), а сортировка должна оставаться
@@ -1297,7 +1302,7 @@ function sortTable(col) {
   if (sortCol === col) { sortAsc = !sortAsc; }
   // «Соцсети»: первый клик показывает компании с бо́льшим числом сетей —
   // именно этого ждут от такой сортировки; дальше направление меняется.
-  else { sortCol = col; sortAsc = col !== 9; }
+  else { sortCol = col; sortAsc = col !== 9 && col !== 10; }
   // «Соцсети»: строки с большим числом сетей — первыми. Сравнение числом,
   // поэтому 0 (нет сетей) честно уезжает в конец при сортировке по убыванию.
   if (col === 9) {
@@ -1317,6 +1322,19 @@ function sortTable(col) {
     filteredRows.sort((a, b) => {
       const va = +a.lead_score || 0, vb = +b.lead_score || 0;
       return sortAsc ? va - vb : vb - va;
+    });
+    renderPage();
+    return;
+  }
+  // «Сайт»: сравниваем не домены, а факт «ссылка есть или нет».
+  // Первый клик — компании с сайтом сверху, повторный разворачивает.
+  if (col === 10) {
+    resetSortHeaders();
+    th.classList.add(sortAsc ? 'asc' : 'desc');
+    filteredRows.sort((a, b) => {
+      const d = (hasSite(a) ? 1 : 0) - (hasSite(b) ? 1 : 0);
+      // sortAsc=false — «по убыванию», а убывание здесь = «сайт есть».
+      return sortAsc ? d : -d;
     });
     renderPage();
     return;
@@ -1427,15 +1445,6 @@ function renderPage() {
   const total = filteredRows.length;
   const slice = filteredRows;
 
-  // Счётчик показывает ход работы, а не только объём: «44 записи» ничего не
-  // говорили о том, сколько уже пройдено. Считаем по текущей выборке — под
-  // фильтром «просмотрено 0 из 12» честнее, чем цифры по всему файлу.
-  const doneCount = slice.filter(r => isReviewed(r)).length;
-  const countEl = document.getElementById('tbl-count');
-  countEl.textContent = total
-    ? `Просмотрено ${doneCount} из ${total}${currentFileNote}${reviewedFilterNote()}${onlyNewNote()}` : '';
-  countEl.title = total
-    ? `Просмотрено ${doneCount} из ${total} · осталось ${total - doneCount}` : '';
   const exportWrap = document.getElementById('export-sel-wrap');
   if (exportWrap) exportWrap.style.display = total ? 'flex' : 'none';
   // Счётчики выборки: сколько строк уедет в Excel/CSV и сколько откроется

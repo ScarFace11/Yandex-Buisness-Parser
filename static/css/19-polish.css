@@ -264,7 +264,6 @@ input[type=radio]{accent-color:var(--c)}
 /* ── Поля с числами: ровные разряды везде ── */
 input[type=number],
 .tbl-phone,
-#tbl-count,
 .dyn-vlab,
 .snum,
 .bar-val,

@@ -634,13 +634,146 @@ def analytics_route():
 
 # ── Search History ──────────────────────────────────────────
 
+# ── Прогресс разбора в истории ─────────────────────────────────
+# «44 записи» отвечали только на вопрос «сколько нашли». Сколько из них уже
+# пройдено — теперь видно в карточке прогона. Считаем по тем же отметкам, что
+# и таблица, а файлы прогона ищем по метке времени в имени
+# (raw_2026-11-01_16-30_автомойка_ярославль.xlsx): в записях истории список
+# файлов появился позже, у прошлых прогонов он пуст.
+_STAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}_\d{2}-\d{2}")
+_RUN_INDEX_LOCK = threading.Lock()
+_run_index: dict = {"key": None, "by_stamp": {}, "processed": {}, "newest": {}}
+# Считаем только верхние карточки: разбор файлов — работа с диском, а до
+# нижних строк без прокрутки всё равно не доходят.
+HISTORY_PROGRESS_ENTRIES = 12
+
+
+def _dir_key(root: str) -> tuple:
+    try:
+        return (root, os.stat(root).st_mtime_ns)
+    except OSError:
+        return (root, 0)
+
+
+def _run_base(name: str) -> str:
+    """«автомойка_ярославль» и для raw_…_автомойка_ярославль.xlsx, и для …_filtered.json."""
+    stem = _STAMP_RE.sub("", name.rsplit(".", 1)[0]).replace("raw_", "", 1)
+    return stem.replace("_filtered", "").strip("_ ").lower()
+
+
+def _scan_names(root: str) -> list[str]:
+    try:
+        return sorted(os.listdir(root))
+    except OSError:
+        return []
+
+
+def _run_files_index() -> dict:
+    """Файлы прогонов по метке времени запуска; пересобирается при смене папок."""
+    raw_dir = os.path.join(_results_dir(), "raw")
+    dirs = (raw_dir,
+            os.path.join(_results_dir(), "processed", "excel"),
+            os.path.join(_results_dir(), "processed", "json"))
+    key = tuple(_dir_key(d) for d in dirs)
+    with _RUN_INDEX_LOCK:
+        if _run_index["key"] == key:
+            return dict(_run_index)
+    by_stamp: dict[str, list[tuple[str, str]]] = {}
+    processed: dict[str, str] = {}
+    newest: dict[str, str] = {}
+    for root in dirs:
+        for name in _scan_names(root):
+            low = name.lower()
+            # Служебные (`_`) и файлы-замки Excel (`~$`) к результатам не относятся.
+            if low.startswith(("_", "~")) or not low.endswith((".json", ".xlsx", ".csv")):
+                continue
+            base = _run_base(name)
+            if not base:
+                continue
+            full = os.path.join(root, name)
+            if root != raw_dir:
+                # processed перезаписывается свежим прогоном — годится только для него.
+                processed[base] = full
+                continue
+            m = _STAMP_RE.search(name)
+            if not m:
+                continue
+            stamp = m.group(0)
+            by_stamp.setdefault(stamp, []).append((base, full))
+            if stamp > newest.get(base, ""):
+                newest[base] = stamp
+    with _RUN_INDEX_LOCK:
+        _run_index.update(key=key, by_stamp=by_stamp, processed=processed, newest=newest)
+        return dict(_run_index)
+
+
+def _run_files_for(entry: dict, index: dict) -> list[str]:
+    """Файлы одного прогона: processed — для последнего, raw — для прошлых."""
+    out: list[str] = []
+    for rel in (entry.get("files") or []):
+        full = _safe_output_file(str(rel)) if str(rel or "").strip() else None
+        if full and os.path.isfile(full):
+            out.append(full)
+    if out:
+        return out
+    try:
+        stamp = datetime.fromtimestamp(float(entry.get("timestamp") or 0)).strftime("%Y-%m-%d_%H-%M")
+    except (TypeError, ValueError, OSError):
+        return []
+    for base, full in index.get("by_stamp", {}).get(stamp, []):
+        # Свежий прогон того же запроса и города лежит в processed — там уже
+        # отфильтрованные записи, ровно те, что показывает таблица.
+        if index.get("newest", {}).get(base) == stamp and base in index.get("processed", {}):
+            out.append(index["processed"][base])
+        else:
+            out.append(full)
+    return out
+
+
+def _review_progress(files: list[str], reviewed: dict) -> tuple[int, int]:
+    """(просмотрено, всего) по записям файлов. Дубль между файлами считаем один раз."""
+    keys: set[str] = set()
+    unkeyed = 0
+    for full in files:
+        for rec in _read_records_cached(full):
+            k = _review_key(rec)
+            if k:
+                keys.add(k)
+            else:
+                unkeyed += 1        # запись без ссылки и адреса — считаем поштучно
+    viewed = sum(1 for k in keys if reviewed.get(k))
+    return viewed, len(keys) + unkeyed
+
+
+def _attach_review_progress(entries: list[dict]) -> list[dict]:
+    """Копии записей истории с полями `viewed`/`viewed_total` (кэш истории не мутируем)."""
+    out = [dict(e) for e in entries]
+    try:
+        reviewed = _load_reviewed()
+        index = _run_files_index()
+    except Exception:
+        return out
+    for entry in out[:HISTORY_PROGRESS_ENTRIES]:
+        files = _run_files_for(entry, index)
+        if not files:
+            continue
+        try:
+            viewed, total = _review_progress(files, reviewed)
+        except Exception:
+            continue
+        if total:
+            entry["viewed"] = viewed
+            entry["viewed_total"] = total
+    return out
+
+
 @bp.route("/history")
 def history_list():
-    """List search history."""
+    """List search history with the «просмотрено / всего» progress of each run."""
     from search_history import get_history, get_stats
     limit = request.args.get("limit", 50, type=int)
     return jsonify({
-        "history": get_history(limit),
+        "history": _attach_review_progress(get_history(limit)),
         "stats": get_stats(),
     })
 

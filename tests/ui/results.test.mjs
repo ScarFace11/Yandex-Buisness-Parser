@@ -83,7 +83,7 @@ function mkEl(id) {
 
 const els = {};
 for (const id of [
-  'city-tabs', 'tbl-search', 'tbl-count', 'tbl-body', 'pager', 'pg-info', 'pg-prev', 'pg-next',
+  'city-tabs', 'tbl-search', 'tbl-body', 'pager', 'pg-info', 'pg-prev', 'pg-next',
   'export-sel-wrap', 'f-collapse-chains', 'results-table',
   'bulk-panel', 'bulk-social', 'bulk-count', 'bulk-stats-note', 'unviewed-count', 'bulk-open-btn',
   'bulk-order-note', 'bulk-only-filtered', 'bulk-only-filtered-txt', 'bulk-only-filtered-wrap',
@@ -206,7 +206,6 @@ globalThis._scorePopAnchor = null;
 globalThis._scorePopKey = '';
 globalThis.activeCity = '';
 globalThis._lastCities = [];
-globalThis.currentFileNote = '';
 globalThis.currentFile = '';
 globalThis._resultsView = 'raw';
 globalThis._resultsScope = 'current';   // «Текущий результат» = последний поиск
@@ -284,9 +283,9 @@ const fns = [
   '_groupRowsByCity', '_cityGroupHtml', '_resultRowHtml', '_tableColspan',
   'updateBulkStats', 'renderBulkProgress', 'resetBulkProgress', 'setBulkCount',
   // Показ по отметке «Просмотрено»: фильтр живёт в заголовке колонки «✓»
-  'toggleReviewedFilter', 'reviewedFilterNote', 'syncReviewedFilterUI',
+  'toggleReviewedFilter', 'syncReviewedFilterUI',
     // «Только новые» — фильтр таблицы и его кнопка в тулбаре
-  'toggleOnlyNewFilter', 'updateOnlyNewButton', 'onlyNewNote', 'onlyNewStats',
+  'toggleOnlyNewFilter', 'updateOnlyNewButton', 'onlyNewStats',
   'bulkOnlyFiltered', 'onBulkOnlyFilteredChange',
   // Прогресс обхода в полосах городов и звезда в списке «Где ищем?»
   'cityReviewStats', 'reviewProgressHtml', 'toggleCityFavorite',
@@ -346,8 +345,7 @@ function resetState(rows = ROWS) {
   globalThis.reviewedFilter = 'all';
   globalThis.onlyNewFilter = false;
   globalThis.updateOnlyNewButton();
-  globalThis.currentFileNote = '';
-  globalThis.currentFile = '';
+    globalThis.currentFile = '';
   globalThis.bulkState = { social: 'vk', opened: 0, blocked: 0, keys: new Set(), copied: new Set(), texts: new Map(), copiedTexts: new Set() };
   globalThis.bulkBusy = false;
   scheduled.length = 0;
@@ -520,7 +518,7 @@ test('renderCityTabs draws a star and keeps «Все» in front', () => {
   assert.match(html, /class="fav-star on"/);
   assert.equal((html.match(/class="fav-star/g) || []).length, 2,
     'звезда должна быть у каждого города, а не только у избранного');
-  assert.match(html, /Все <span class="city-count">\(4\)<\/span>/);
+  assert.match(html, /Все <span class="city-done"[^>]*>✓0\/4<\/span>/);
   assert.ok(html.indexOf('data-city="Уфа"') < html.indexOf('data-city="Москва"'),
     'избранный город должен идти до не-избранного');
   // Звезда — вне кнопки-вкладки: клик по ней не переключает фильтр.
@@ -662,9 +660,12 @@ test('renderCityTabs renders «Все» plus a tab per city with counts', () => 
   ]);
   const html = els['city-tabs'].innerHTML;
   assert.equal(els['city-tabs'].hidden, false);
-  assert.match(html, /Все <span class="city-count">\(4\)<\/span>/);
-  assert.match(html, /Москва <span class="city-count">\(2\)<\/span>/);
-  assert.match(html, /Уфа <span class="city-count">\(2\)<\/span>/);
+  assert.match(html, /Все <span class="city-done"[^>]*>✓0\/4<\/span>/);
+  assert.match(html, /Москва <span class="city-done"[^>]*>✓0\/2<\/span>/);
+  assert.match(html, /Уфа <span class="city-done"[^>]*>✓0\/2<\/span>/);
+  // В скобках после города числа больше нет: «(2)» дублировало знаменатель
+  // прогресса и читалось как второй счётчик.
+  assert.ok(!/class="city-count"/.test(html), 'счётчика в скобках больше нет');
   // «Все» is active by default
   assert.match(html, /class="city-tab active" data-city="" onclick="setCityTab\(''\)">Все/);
 });
@@ -919,11 +920,9 @@ test('filterTable applies the city tab filter', () => {
   resetState();
   globalThis.filterTable();
   assert.equal(globalThis.filteredRows.length, 4);
-  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 4');
   globalThis.activeCity = 'Уфа';
   globalThis.filterTable();
   assert.equal(globalThis.filteredRows.length, 2);
-  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 2');
 });
 
 test('выбор соцсетей в настройках не сужает уже показанную таблицу', () => {
@@ -965,7 +964,8 @@ test('клик по заголовку «✓» переключает показ
   globalThis.toggleReviewedFilter();
   assert.equal(globalThis.reviewedFilter, 'unviewed');
   assert.equal(globalThis.filteredRows.length, 3, 'просмотренные уходят из показа');
-  assert.match(globalThis.reviewedFilterNote(), /только непросмотренные/);
+  assert.ok(globalThis.filteredRows.every(r => !globalThis.isReviewed(r)),
+    'в показе остались только непросмотренные');
 
   globalThis.toggleReviewedFilter();
   assert.equal(globalThis.reviewedFilter, 'viewed');
@@ -975,7 +975,6 @@ test('клик по заголовку «✓» переключает показ
   globalThis.toggleReviewedFilter();
   assert.equal(globalThis.reviewedFilter, 'all');
   assert.equal(globalThis.filteredRows.length, 4, 'цикл замкнулся');
-  assert.equal(globalThis.reviewedFilterNote(), '');
 });
 
 test('refreshReviewedUI re-applies the reviewed filter after a bulk run', () => {
@@ -986,19 +985,7 @@ test('refreshReviewedUI re-applies the reviewed filter after a bulk run', () => 
   globalThis.reviewedState[globalThis.reviewKey(ROWS[1])] = true;
   globalThis.refreshReviewedUI();
   assert.equal(globalThis.filteredRows.length, 2, 'marked rows drop out at once');
-  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 2 · только непросмотренные');
   assert.equal(els['unviewed-count'].textContent, '2', 'bulk counter follows the marks');
-});
-
-test('счётчик показывает, сколько записей уже просмотрено', () => {
-  // «44 записи» говорили только объём: сколько пройдено, приходилось
-  // считать по отметкам вручную.
-  resetState();
-  globalThis.filterTable();
-  globalThis.reviewedState[globalThis.reviewKey(ROWS[0])] = true;
-  globalThis.renderPage();
-  assert.equal(els['tbl-count'].textContent, 'Просмотрено 1 из 4');
-  assert.match(els['tbl-count'].title, /осталось 3/);
 });
 
 // ── «Только новые» (сервер метит записи признаком `_is_new`) ──────
@@ -1011,14 +998,11 @@ test('фильтр «Только новые» прячет организаци
   globalThis.toggleOnlyNewFilter();
   assert.equal(globalThis.onlyNewFilter, true);
   assert.equal(globalThis.filteredRows.length, 2, 'остались только новые');
-  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 2 · только новые');
   assert.equal(els['btn-only-new'].getAttribute('aria-pressed'), 'true',
     'aria-pressed обязан отражать состояние — aria-checked для button недопустим');
 
   globalThis.toggleOnlyNewFilter();
   assert.equal(globalThis.filteredRows.length, 4, 'фильтр снимается');
-  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 4');
-  assert.equal(globalThis.onlyNewNote(), '');
   assert.equal(els['btn-only-new'].getAttribute('aria-pressed'), 'false');
 });
 
@@ -1190,13 +1174,6 @@ test('повторный клик по той же сети не дублиру�
   el = mk();
   await globalThis.onSocialBadgeClick({ preventDefault: () => {} }, el);
   assert.deepEqual(el._cls, [], 'повторный клик уже открытую сеть не меняет');
-});
-
-test('currentFileNote is appended to the table counter', () => {
-  resetState();
-  globalThis.currentFileNote = ' · файл: raw_a.xlsx';
-  globalThis.filterTable();
-  assert.equal(els['tbl-count'].textContent, 'Просмотрено 0 из 4 · файл: raw_a.xlsx');
 });
 
 // ── 6. Bulk opening (popup-blocker regression) ────────────────

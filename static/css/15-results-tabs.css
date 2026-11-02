@@ -129,8 +129,6 @@
 }
 .city-tab:hover{color:var(--c)}
 .city-tab.active{color:var(--c);border-bottom-color:var(--c);font-weight:800}
-.city-count{color:var(--muted);font-size:12px;font-weight:700}
-.city-tab.active .city-count{color:var(--c)}
 /* Вкладка города вместе со звёздочкой: звезда — отдельный элемент РЯДОМ с
    кнопкой (вложенные кнопки невалидны), клик по ней только закрепляет город. */
 .city-tab-wrap{display:inline-flex;align-items:stretch}

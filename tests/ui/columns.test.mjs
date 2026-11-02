@@ -175,7 +175,7 @@ globalThis.localStorage = {
 
 const fns = ['normalizeColOrder', 'saveColOrder', 'loadColOrder', 'resetColOrder',
   'applyColOrder', 'applyColClasses', 'moveCol', 'renderColDropdown',
-  'sortTableByKey', 'sortTable', 'resetSortHeaders', '_thByCol', 'socialsCount',
+  'sortTableByKey', 'sortTable', 'resetSortHeaders', '_thByCol', 'socialsCount', 'hasSite',
   // Цикл «Рейтинг»: оценка ↓ → оценка ↑ → отзывы ↓ → отзывы ↑
   'cycleRatingSort', '_sortRatingRows', '_numSortVal', '_clearRatingSortLabel',
   '_stampMissingColIds'];
@@ -270,11 +270,11 @@ test('a hidden column is hidden by class on its own cells, not by position', () 
 // ── 3. Сортировка остаётся привязана к колонке ────────────────
 test('sorting maps the column key to the legacy numeric index', () => {
   assert.deepEqual(globalThis.COL_SORT_INDEX,
-    { rev: null, num: null, name: 2, category: 3, address: 4, phone: null,
-      score: 6, socials: 9, rating: 7 });
-  // «Сайт» — витрина ссылки: сортировать по домену никто не просил, и в
-  // контракте сервера такого индекса нет.
-  assert.equal(globalThis.COL_SORT_INDEX.website, undefined, 'колонка «Сайт» не сортируется');
+    { rev: null, num: null, name: 2, category: 3, address: 4, website: 10,
+      phone: null, score: 6, socials: 9, rating: 7 });
+  // «Сайт» сортируется по факту «ссылка есть или нет» — домены сравнивать
+  // бессмысленно, а обзванивают в первую очередь тех, у кого сайта нет.
+  assert.equal(globalThis.COL_SORT_INDEX.website, 10);
   // «Соцсети» сортируются числом сетей (индекс 9); «Просмотрено» — нет;
   // телефон убран из сортировки: в ячейке несколько номеров и порядок им
   // не задаётся.
@@ -304,6 +304,33 @@ test('socials sort counts networks instead of comparing letters', () => {
     globalThis.sortTable(9);
     assert.deepEqual(globalThis.filteredRows.map(r => r.name), ['0', '1', '2'],
       'повторный клик — по возрастанию');
+  } finally {
+    globalThis.renderPage = prev;
+  }
+});
+
+test('website sort groups companies by «есть сайт / нет», не по домену', () => {
+  resetOrder();
+  globalThis.sortCol = -1;
+  globalThis.sortAsc = true;
+  globalThis.filteredRows = [
+    { name: 'со сайтом', website: 'https://kafe.ru' },
+    { name: 'без', website: '' },
+    { name: 'визитка', aggregator_url: 'https://vk.com/kafe' },
+    { name: 'битая', website: 'ftp://nope' },
+  ];
+  const prev = globalThis.renderPage;
+  globalThis.renderPage = () => {};
+  try {
+    globalThis.sortTable(10);
+    assert.equal(globalThis.sortCol, 10, 'колонка помнит свой индекс');
+    assert.deepEqual(globalThis.filteredRows.map(r => r.name),
+      ['со сайтом', 'визитка', 'без', 'битая'],
+      'первый клик — компании с сайтом (своим или визиткой) сверху');
+    globalThis.sortTable(10);
+    assert.deepEqual(globalThis.filteredRows.map(r => r.name),
+      ['без', 'битая', 'со сайтом', 'визитка'],
+      'повторный клик — сверху те, у кого сайта нет');
   } finally {
     globalThis.renderPage = prev;
   }

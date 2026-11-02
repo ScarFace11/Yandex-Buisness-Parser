@@ -1231,7 +1231,6 @@
             <input type="text" id="tbl-search" placeholder="Поиск по строкам: название, адрес, телефон, сайт…"
                    oninput="filterTable()"
                    aria-label="Поиск по данным таблицы">
-            <span class="tbl-count" id="tbl-count"></span>
             <label class="tbl-tpl-wrap" for="tbl-template"
                    title="Шаблон, который скопируется в буфер обмена при клике по соцсети в таблице. «— шаблон не выбран —»: клик просто открывает профиль, ничего не копируя">Шаблон:
               <select id="tbl-template" onchange="onTableTemplateChange()"></select>
@@ -1288,8 +1287,8 @@
                   <th data-col="name" onclick="sortTableByKey('name')">Название</th>
                   <th data-col="category" onclick="sortTableByKey('category')">Категория</th>
                   <th data-col="address" onclick="sortTableByKey('address')">Адрес</th>
-                  <th class="nosort" data-col="website"
-                      title="Страница клиента из карточки: свой сайт или страница-визитка">Сайт</th>
+                  <th data-col="website" onclick="sortTableByKey('website')"
+                      title="Страница клиента из карточки: свой сайт или страница-визитка. Клик — сначала компании с сайтом, повторный клик меняет порядок">Сайт</th>
                   <th class="nosort" data-col="phone"
                       title="Телефон не сортируется: в ячейке несколько номеров и порядок им не задаётся">Телефон</th>
                   <th data-col="score" onclick="sortTableByKey('score')"
