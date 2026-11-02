@@ -210,35 +210,47 @@
       <svg class="ico" aria-hidden="true"><use href="#i-skip"/></svg>
       <span class="hdr-lbl">Город</span>
     </button>
-    <!-- Служебные кнопки — отдельной группой справа: от пользовательских
-         их отделяет тонкая линия (см. .hdr-tools в style.css). -->
-    <div class="hdr-tools" role="group" aria-label="Служебные кнопки">
-    <button id="btn-logs" onclick="showLogsModal()" title="Подробные логи всех запусков" aria-label="Логи">
-      <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>
-      <span class="hdr-lbl">Логи</span>
-    </button>
-    <button id="btn-diag" onclick="showDiagnostics()"
-            title="Проверить ключи, папки и окружение — без чтения логов" aria-label="Диагностика">
-      <svg class="ico" aria-hidden="true"><use href="#i-pulse"/></svg>
-      <span class="hdr-lbl">Диагностика</span>
-    </button>
-    <button id="btn-report" onclick="openReportModal()"
-            title="Сообщить о проблеме или предложить улучшение — откроется форма issue на GitHub с метками и приложенным контекстом"
-            aria-label="Сообщить о проблеме">
-      <svg class="ico" aria-hidden="true"><use href="#i-bug"/></svg>
-      <span class="hdr-lbl">Проблема</span>
-    </button>
-    <button id="btn-whatsnew" onclick="showChangelog()"
-            title="История изменений: что появилось и что починили в каждой версии"
-            aria-label="История изменений">
-      <svg class="ico" aria-hidden="true"><use href="#i-history"/></svg>
-      <span class="hdr-lbl">Что нового</span>
-    </button>
-    <button id="btn-updates" onclick="manualUpdateCheck(this)"
-            title="Проверить наличие новой версии на GitHub" aria-label="Обновления">
-      <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>
-      <span class="hdr-lbl">Обновления</span>
-    </button>
+    <!-- Служебные действия — в одном меню: восемь кнопок в ряд делали шапку
+         перегруженной и отнимали место у названия. Пользовательские действия
+         (Соглашение, Готово, Уведомления, тема) остаются на виду. -->
+    <div class="hdr-tools" role="group" aria-label="Служебные действия">
+      <button id="btn-tools" onclick="toggleToolsMenu(event)" aria-haspopup="true"
+              aria-expanded="false" aria-controls="hdr-tools-menu"
+              title="Логи, диагностика, проблема, что нового и обновления"
+              aria-label="Ещё: логи, диагностика, проблема, что нового, обновления">
+        <svg class="ico" aria-hidden="true"><use href="#i-sliders"/></svg>
+        <span class="hdr-lbl">Ещё</span>
+      </button>
+      <div class="hdr-tools-menu" id="hdr-tools-menu" role="menu"
+           aria-label="Служебные действия" hidden>
+        <button id="btn-logs" role="menuitem" onclick="showLogsModal()"
+                title="Подробные логи всех запусков" aria-label="Логи">
+          <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>
+          <span class="hdr-lbl">Логи</span>
+        </button>
+        <button id="btn-diag" role="menuitem" onclick="showDiagnostics()"
+                title="Проверить ключи, папки и окружение — без чтения логов" aria-label="Диагностика">
+          <svg class="ico" aria-hidden="true"><use href="#i-pulse"/></svg>
+          <span class="hdr-lbl">Диагностика</span>
+        </button>
+        <button id="btn-report" role="menuitem" onclick="openReportModal()"
+                title="Сообщить о проблеме или предложить улучшение — откроется форма issue на GitHub с метками и приложенным контекстом"
+                aria-label="Сообщить о проблеме">
+          <svg class="ico" aria-hidden="true"><use href="#i-bug"/></svg>
+          <span class="hdr-lbl">Проблема</span>
+        </button>
+        <button id="btn-whatsnew" role="menuitem" onclick="showChangelog()"
+                title="История изменений: что появилось и что починили в каждой версии"
+                aria-label="История изменений">
+          <svg class="ico" aria-hidden="true"><use href="#i-history"/></svg>
+          <span class="hdr-lbl">Что нового</span>
+        </button>
+        <button id="btn-updates" role="menuitem" onclick="manualUpdateCheck(this)"
+                title="Проверить наличие новой версии на GitHub" aria-label="Обновления">
+          <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>
+          <span class="hdr-lbl">Обновления</span>
+        </button>
+      </div>
     </div>
   </div>
 </header>

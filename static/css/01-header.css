@@ -62,8 +62,30 @@ header h1{
 }
 /* Служебные кнопки (логи, диагностика, проблема, версии) — отдельная группа
    справа: тонкая вертикаль отделяет их от пользовательских кнопок слева. */
-.hdr-tools{display:flex;align-items:center;gap:7px;padding-left:7px;
+/* Служебные действия — одна кнопка «Ещё» с меню: восемь кнопок в ряд
+   растягивали шапку до 1100px и оставляли заголовку меньше 150px. */
+.hdr-tools{position:relative;display:flex;align-items:center;padding-left:7px;
   border-left:1px solid rgba(127,127,127,.45)}
+.hdr-tools-menu{
+  position:absolute;top:calc(100% + 7px);right:0;z-index:70;
+  min-width:206px;padding:6px;display:flex;flex-direction:column;gap:2px;
+  background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-md);
+  box-shadow:var(--sh-lg);
+}
+.hdr-tools-menu[hidden]{display:none}
+.hdr-tools-menu button{
+  display:flex;align-items:center;gap:9px;width:100%;
+  padding:8px 10px;border:none;border-radius:var(--r-sm);
+  background:transparent;color:var(--txt);
+  font-family:inherit;font-size:12.5px;font-weight:600;text-align:left;
+  cursor:pointer;transition:background .13s,color .13s;
+}
+.hdr-tools-menu button:hover{background:var(--track)}
+.hdr-tools-menu button:focus-visible{outline:2px solid var(--c);outline-offset:-2px}
+/* Подписи пунктов меню видны всегда: правило «узкой шапки» прячет только
+   .hdr-lbl у кнопок первого ряда, а здесь меню шириной 206px. */
+.hdr-tools-menu .hdr-lbl{display:inline}
+.hdr-tools-menu .ico{width:15px;height:15px}
 .hdr-right > button:hover,
 .hdr-right .hdr-tools > button:hover,
 .hdr-right .notify-wrap > button:hover{background:rgba(255,255,255,.14)}

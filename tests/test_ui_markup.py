@@ -1068,6 +1068,65 @@ class TestDiagnosticsPanel:
         assert "rgba(" not in css, "тёмная тема сломается"
 
 
+class TestHeaderMenu:
+    """Служебные кнопки шапки собраны в одно меню «Ещё».
+
+    Восемь кнопок в ряд занимали больше 1000px: заголовок сжимался до
+    «Поиск кли…», а на узком окне шапка уезжала вбок. Теперь на виду только
+    пользовательские действия, а логи, диагностика, «Проблема», «Что нового»
+    и «Обновления» открываются из меню. Id и обработчики прежние — снаружи
+    ничего не поменялось.
+    """
+
+    MENU = ("btn-logs", "btn-diag", "btn-report", "btn-whatsnew", "btn-updates")
+
+    def menu_block(self) -> str:
+        start = TEMPLATE.index('id="hdr-tools-menu"')
+        return TEMPLATE[start:TEMPLATE.index("</div>", start)]
+
+    def test_single_trigger_opens_the_menu(self):
+        assert 'id="btn-tools"' in TEMPLATE
+        trigger = TEMPLATE[TEMPLATE.index('id="btn-tools"'):]
+        trigger = trigger[:trigger.index(">") + 1]
+        assert 'onclick="toggleToolsMenu(event)"' in trigger
+        assert 'aria-haspopup="true"' in trigger
+        assert 'aria-expanded="false"' in trigger, "состояние меню обязано быть в разметке"
+        assert 'aria-controls="hdr-tools-menu"' in trigger
+        assert "aria-label=" in trigger, "на телефоне подпись скрыта — нужен aria-label"
+
+    def test_every_service_action_lives_inside(self):
+        block = self.menu_block()
+        for bid in self.MENU:
+            assert f'id="{bid}"' in block, f"{bid} должна быть в меню"
+        # Пользовательские действия не прячем: они и есть повседневные.
+        for bid in ("btn-terms", "btn-notify", "btn-theme"):
+            button = TEMPLATE[TEMPLATE.index(f'id="{bid}"'):]
+            assert button.index("</button>") < TEMPLATE.index('id="btn-tools"'), bid
+
+    def test_menu_starts_closed(self):
+        opening = TEMPLATE[TEMPLATE.rindex("<div", 0, TEMPLATE.index('id="hdr-tools-menu"')):]
+        opening = opening[:opening.index(">")]
+        assert "hidden" in opening, "меню не должно висеть открытым при загрузке"
+        assert 'role="menu"' in opening
+
+    def test_js_opens_and_closes_it(self):
+        for name in ("function toggleToolsMenu(", "function closeToolsMenu("):
+            assert name in APP_JS, name
+        assert "e.key === 'Escape'" in APP_JS, "Esc обязан закрывать меню"
+        assert "document.addEventListener('click'" in APP_JS, "клик вне меню закрывает его"
+
+    def test_styles_are_a_popover_with_theme_tokens(self):
+        block = STYLE[STYLE.index(".hdr-tools-menu{"):]
+        block = block[:block.index("}")]
+        assert "position:absolute" in block
+        assert "z-index:" in block
+        assert "background:var(--card)" in block
+        assert not re.search(r"#[0-9a-fA-F]{3,6}", block), "цвета только токенами"
+        assert ".hdr-tools-menu .hdr-lbl{display:inline}" in STYLE, (
+            "подписи пунктов меню не должны прятаться правилом узкой шапки"
+        )
+
+
 class TestDesignSystem:
     """Визуальная система: шрифт рядом с приложением, значки вместо эмодзи.
 

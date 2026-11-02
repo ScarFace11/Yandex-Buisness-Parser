@@ -1021,3 +1021,47 @@ function companyTypeCountHTML(j) {
 
 // ═══════════════════════════════════════════
 //  Tabs
+
+// ── Меню служебных действий в шапке ─────────────────────────────
+// Служебные кнопки переехали в одно меню «Ещё»: их id и обработчики остались
+// прежними, изменилось только место на экране. Слушатели на документе
+// вешаются один раз — меню живёт всю сессию, а на каждое открытие новый
+// обработчик копился бы и закрывал меню несколько раз за клик.
+function toggleToolsMenu(ev) {
+  if (ev && typeof ev.stopPropagation === 'function') ev.stopPropagation();
+  const menu = document.getElementById('hdr-tools-menu');
+  const btn = document.getElementById('btn-tools');
+  if (!menu || !btn) return;
+  if (!menu.hidden) { closeToolsMenu(false); return; }
+  menu.hidden = false;
+  btn.setAttribute('aria-expanded', 'true');
+  // Фокус на первый пункт: меню открывают и с клавиатуры.
+  const first = menu.querySelector('button');
+  if (first && typeof first.focus === 'function') first.focus();
+}
+
+function closeToolsMenu(returnFocus) {
+  const menu = document.getElementById('hdr-tools-menu');
+  const btn = document.getElementById('btn-tools');
+  if (!menu || menu.hidden) return;
+  menu.hidden = true;
+  if (!btn) return;
+  btn.setAttribute('aria-expanded', 'false');
+  if (returnFocus && typeof btn.focus === 'function') btn.focus();
+}
+
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('click', e => {
+    const menu = document.getElementById('hdr-tools-menu');
+    if (!menu || menu.hidden) return;
+    if (menu.contains(e.target)) {
+      // Пункт меню уже сработал: меню закрываем, окно остаётся открытым.
+      if (e.target.closest && e.target.closest('button')) closeToolsMenu(true);
+      return;
+    }
+    closeToolsMenu(false);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeToolsMenu(true);
+  });
+}

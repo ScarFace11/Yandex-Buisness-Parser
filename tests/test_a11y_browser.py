@@ -145,9 +145,9 @@ def test_theme_switch_keeps_the_notify_popover_readable(browser_cdp, live_app_ur
     assert dark["findings"] == [], format_findings(dark["findings"])
 
 # ── Кнопки шапки: клик доходит до обработчика ────────────────────
-HEADER_BUTTONS = ("btn-terms", "btn-notify", "btn-theme",
-                  "btn-logs", "btn-diag", "btn-report",
-                  "btn-whatsnew", "btn-updates")
+# Кнопки первого ряда; служебные действия живут в меню «Ещё» (MENU_BUTTONS).
+HEADER_BUTTONS = ("btn-terms", "btn-notify", "btn-theme", "btn-tools")
+MENU_BUTTONS = ("btn-logs", "btn-diag", "btn-report", "btn-whatsnew", "btn-updates")
 
 
 def test_header_buttons_are_clickable(browser_cdp, live_app_url):
@@ -191,6 +191,14 @@ def test_header_buttons_are_clickable(browser_cdp, live_app_url):
             " }); })()"
         )
         assert blocked == [], "клик не доходит до кнопок шапки: " + ", ".join(blocked)
+        # Служебные действия — в меню «Ещё»: сначала открываем его.
+        assert tab.click("#btn-tools"), "кнопка «Ещё» не найдена"
+        hidden = tab.evaluate(
+            "(() => { const ids = " + json.dumps(list(MENU_BUTTONS)) + ";"
+            " return ids.filter(id => { const el = document.getElementById(id);"
+            " return !(el && el.offsetParent); }); })()"
+        )
+        assert hidden == [], "пункты меню не открылись: " + ", ".join(hidden)
         assert tab.click("#btn-logs"), "кнопка «Логи» не найдена"
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline:

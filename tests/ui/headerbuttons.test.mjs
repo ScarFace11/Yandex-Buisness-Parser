@@ -24,7 +24,7 @@ const src = readAppSrc();
 
 // Кнопки, без которых шапка перестаёт быть шапкой: у каждой свой id и onclick.
 const HEADER_BUTTONS = [
-  'btn-terms', 'btn-notify', 'btn-theme', 'btn-skip',
+  'btn-terms', 'btn-notify', 'btn-theme', 'btn-skip', 'btn-tools',
   'btn-logs', 'btn-diag', 'btn-report', 'btn-whatsnew', 'btn-updates',
 ];
 
