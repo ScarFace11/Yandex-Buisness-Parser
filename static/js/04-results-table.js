@@ -88,6 +88,13 @@ function _resetTableBadge() {
 let _liveRenderTimer = null;
 
 function onLiveResult(rec) {
+  // Название приходит из карточки и иногда оказывается пустым — тогда строка
+  // в таблице выглядела немой. Подставляем, что есть: заголовок карточки,
+  // потом адрес; совсем без подписи остаётся только честное «Без названия».
+  if (rec && typeof rec === 'object') {
+    const name = String(rec.name || rec.title || '').trim();
+    rec.name = name || String(rec.address || '').trim();
+  }
   allResults.push(rec);
   // Тихая строка в полосе хода поиска: город и последняя найденная
   // организация. Имён в событиях прогресса нет — источник только результат.
@@ -1376,7 +1383,6 @@ function _cityGroupHtml(g) {
     + `${UI_ICONS.star}</span>`
     + `<span class="city-group-name">${escapeHtml(g.city)}</span>`
     + reviewProgressHtml(g.rows.filter(r => isReviewed(r)).length, g.rows.length, 'city-group-done')
-    + `<span class="city-group-count">${g.rows.length}</span>`
     + '</td></tr>';
 }
 
@@ -1428,7 +1434,7 @@ function _resultRowHtml(r, n) {
         data-review-url="${reviewUrl}"
         onchange="toggleReviewed(this.dataset.reviewUrl, this)"></td>
       <td data-col="num">${n}</td>
-      <td data-col="name"><a class="tbl-link" href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.name || '—')}</a>${newTagHTML(r)}</td>
+      <td data-col="name"><a class="tbl-link" href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(String(r.name || '').trim() || 'Без названия')}</a>${newTagHTML(r)}</td>
       <td data-col="category" class="tbl-cat">${escapeHtml(r.category || '—')}</td>
       <td data-col="address">${escapeHtml(r.address || '—')}</td>
       <td data-col="website">${siteHTML(r)}</td>

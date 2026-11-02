@@ -1069,9 +1069,14 @@ const FILE_ACT_ICONS = {
 function fileCardHTML(section, it) {
   // Значок перед текстом — SVG, поэтому сообщение экранируем построчно, а не
   // оборачиваем целиком (escapeHtml съел бы саму разметку значка).
+  // «0/60 записей» вместо сухого «60 записей»: сколько уже пройдено, видно
+  // на карточке файла, не открывая таблицу.
+  const seen = typeof it.viewed === 'number'
+    ? `${it.viewed}/${it.records} ${pluralRecords(it.records)}`
+    : `${it.records} ${pluralRecords(it.records)}`;
   const meta = it.error
     ? UI_ICONS.warn + escapeHtml(it.error)
-    : escapeHtml(`${it.records} ${pluralRecords(it.records)} • ${fmtBytes(it.size)} • ${it.modified}`);
+    : escapeHtml(`${seen} • ${fmtBytes(it.size)} • ${it.modified}`);
   const icon = FILE_TYPE_ICONS[it.ext] || FILE_TYPE_ICONS.dir;
   // Архивные файлы не архивируем повторно, но даём вернуть на место.
   const archiveBtn = section === 'archive'

@@ -730,6 +730,34 @@ def _run_files_for(entry: dict, index: dict) -> list[str]:
     return out
 
 
+# Кэш «просмотрено по файлу»: список файлов открывают часто, а разбор xlsx —
+# самая дорогая часть. Ключ включает отпечаток файла и отметок: новая галочка
+# или новый файл сразу дают пересчёт.
+_REVIEW_COUNT_LOCK = threading.Lock()
+_REVIEW_COUNT_CACHE: OrderedDict = OrderedDict()
+_REVIEW_COUNT_MAX = 200
+
+
+def _file_review_counts(full: str, reviewed: dict, stamp: tuple) -> tuple[int, int]:
+    """(просмотрено, всего) по одному файлу — с кэшем по отпечатку."""
+    try:
+        st = os.stat(full)
+    except OSError:
+        return 0, 0
+    key = (os.path.abspath(full), st.st_mtime_ns, st.st_size, stamp)
+    with _REVIEW_COUNT_LOCK:
+        hit = _REVIEW_COUNT_CACHE.get(key)
+        if hit is not None:
+            _REVIEW_COUNT_CACHE.move_to_end(key)
+            return hit
+    viewed, total = _review_progress([full], reviewed)
+    with _REVIEW_COUNT_LOCK:
+        _REVIEW_COUNT_CACHE[key] = (viewed, total)
+        while len(_REVIEW_COUNT_CACHE) > _REVIEW_COUNT_MAX:
+            _REVIEW_COUNT_CACHE.popitem(last=False)
+    return viewed, total
+
+
 def _review_progress(files: list[str], reviewed: dict) -> tuple[int, int]:
     """(просмотрено, всего) по записям файлов. Дубль между файлами считаем один раз."""
     keys: set[str] = set()
@@ -2047,6 +2075,8 @@ def reviewed_persist():
 @bp.route("/files/list")
 def files_list():
     """Every results file with size/date/record count (newest first)."""
+    reviewed = _load_reviewed()
+    rev_stamp = _dir_key(REVIEWED_FILE)
     from datetime import datetime
 
     def _section(root: str, recursive: bool) -> list[dict]:
@@ -2080,6 +2110,11 @@ def files_list():
                     item["error"] = "не удалось прочитать файл"
                 else:
                     item["records"] = n
+                    # «0/60 записей» на карточке файла: прогресс разбора виден до
+                    # открытия таблицы. Считается по тем же отметкам, что и там.
+                    viewed, seen_total = _file_review_counts(full, reviewed, rev_stamp)
+                    if seen_total:
+                        item["viewed"] = viewed
                 items.append(item)
         items.sort(key=lambda i: i.get("mtime", 0), reverse=True)
         return items

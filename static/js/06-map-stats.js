@@ -134,11 +134,15 @@ const MAP_REVIEW_STEPS = [0, 5, 10, 50, 100];
 // Ступени оценки лида те же, что у пресетов таблицы: на карте нужен не
 // произвольный порог, а тот же отбор «горячих» клиентов.
 const MAP_SCORE_STEPS = [0, 35, 50, 65];
+// Рейтинг — звёзды карточки: «5 звёзд» оставляет отличников, «от 3» — всё,
+// что не ругают. У Карт шкала 1–5, других ступеней не нужно.
+const MAP_RATING_STEPS = [0, 5, 4, 3];
 
 let mapHiddenCats = new Set();     // категории, снятые галочкой в легенде
 let mapSearch = '';                // поиск по названию бизнеса
 let mapMinReviews = 0;
 let mapMinScore = 0;
+let mapMinRating = 0;          // 0 — любой, иначе минимум звёзд
 let mapSiteMode = 'all';           // all | with | without
 let mapOnlyNew = false;
 let mapLayer = null;               // слой меток; пересобирается без пересоздания карты
@@ -234,6 +238,7 @@ function mapRowVisible(r, opts) {
   if (q && !String(r.name || '').toLowerCase().includes(q)) return false;
   if (o.minReviews && (parseFloat(r.reviews_count) || 0) < o.minReviews) return false;
   if (o.minScore && (parseFloat(r.lead_score) || 0) < o.minScore) return false;
+  if (o.minRating && (parseFloat(r.rating) || 0) < o.minRating) return false;
   // «Сайт» — и своя страница, и визитка-таплинк: обе ведут клиента наружу.
   const hasSite = !!(String(r.website || '').trim() || String(r.aggregator_url || '').trim());
   if (o.siteMode === 'with' && !hasSite) return false;
@@ -250,6 +255,7 @@ function mapFilterState() {
     search: mapSearch,
     minReviews: mapMinReviews,
     minScore: mapMinScore,
+    minRating: mapMinRating,
     siteMode: mapSiteMode,
     onlyNew: mapOnlyNew,
   };
@@ -379,6 +385,7 @@ function renderMapPanel() {
   const total = allResults.filter(r => r.lat && r.lon).length;
   const shown = document.getElementById('map-shown');
   if (shown) shown.textContent = `${rows.length} из ${total}`;
+  mapUpdateFiltersBadge();
   const box = document.getElementById('map-cats');
   if (!box) return;
   // Несколько городов — легенда делится по городам: «Кафе» в Ярославле и в
@@ -440,9 +447,29 @@ function mapReadFilters() {
   if (site) mapSiteMode = site.value || 'all';
   const score = document.getElementById('map-score');
   if (score) mapMinScore = parseInt(score.value, 10) || 0;
+  const rating = document.getElementById('map-rating');
+  if (rating) mapMinRating = parseFloat(rating.value) || 0;
   const newest = document.getElementById('map-only-new');
   if (newest) mapOnlyNew = !!newest.checked;
   renderMapMarkers();
+}
+
+// Сколько фильтров включено — цифра на свёрнутом заголовке: иначе активный
+// отбор прятался бы в закрытой панели, и пропавшие точки выглядели бы поломкой.
+function mapActiveFilters() {
+  return [mapMinReviews > 0, mapMinRating > 0, mapMinScore > 0,
+    mapSiteMode !== 'all', mapOnlyNew].filter(Boolean).length;
+}
+
+function mapUpdateFiltersBadge() {
+  const n = mapActiveFilters();
+  const badge = document.getElementById('map-filters-n');
+  if (badge) {
+    badge.textContent = n ? String(n) : '';
+    badge.hidden = n === 0;
+  }
+  const box = document.getElementById('map-filters');
+  if (box) box.classList.toggle('has-active', n > 0);
 }
 
 // Набор данных сменился — открыли файл из «Истории», переключили срез или
@@ -453,6 +480,7 @@ function resetMapView() {
   mapHiddenCats = new Set();
   mapSearch = '';
   mapMinReviews = 0;
+  mapMinRating = 0;
   mapMinScore = 0;
   mapSiteMode = 'all';
   mapOnlyNew = false;
@@ -460,7 +488,7 @@ function resetMapView() {
   // select выглядел бы сломанным (нет выбранного пункта вообще).
   const search = document.getElementById('map-search');
   if (search) search.value = '';
-  const defaults = { 'map-reviews': '0', 'map-site': 'all', 'map-score': '0' };
+  const defaults = { 'map-reviews': '0', 'map-rating': '0', 'map-site': 'all', 'map-score': '0' };
   Object.keys(defaults).forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = defaults[id];

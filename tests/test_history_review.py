@@ -115,3 +115,20 @@ def test_history_without_files_keeps_the_plain_count(client):
     entry = client.get("/history").get_json()["history"][0]
     assert "viewed_total" not in entry, "нечего считать — выдуманных нулей не показываем"
     assert entry["results_count"] == 44
+
+
+def test_files_list_shows_review_progress_per_file(client):
+    """Карточка файла показывает «0/60 записей» — прогресс до открытия таблицы."""
+    _write_json(client.raw / f"raw_{STAMP}_автомойка_ярославль.json", RECORDS)
+    _marks(client, [RECORDS[0]["yandex_maps_url"]])
+
+    files = client.get("/files/list").get_json()
+    item = files["raw"][0]
+    assert item["records"] == 4
+    assert item["viewed"] == 1
+
+
+def test_files_list_without_marks_reports_zero(client):
+    _write_json(client.raw / f"raw_{STAMP}_автомойка_ярославль.json", RECORDS)
+    item = client.get("/files/list").get_json()["raw"][0]
+    assert item["viewed"] == 0

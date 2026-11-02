@@ -272,3 +272,18 @@ test('попап не выводит пустые поля и экранируе
   assert.ok(!/map-pop-row/.test(html), 'пустых строк нет');
   assert.ok(!/Открыть на Я\.Картах/.test(html), 'без ссылки на карточку — без строки');
 });
+
+test('рейтинг на карте: «5 звёзд» и «от 4» отсекают слабые оценки', () => {
+  const base = { lat: 1, lon: 1 };
+  const rows = [
+    { ...base, name: 'A', rating: '5' },
+    { ...base, name: 'B', rating: '4.2' },
+    { ...base, name: 'C', rating: '3.1' },
+    { ...base, name: 'D' },
+  ];
+  assert.deepEqual(rows.filter(r => mapRowVisible(r, { minRating: 5 })).map(r => r.name), ['A']);
+  assert.deepEqual(rows.filter(r => mapRowVisible(r, { minRating: 4 })).map(r => r.name), ['A', 'B']);
+  assert.deepEqual(rows.filter(r => mapRowVisible(r, { minRating: 3 })).map(r => r.name),
+    ['A', 'B', 'C'], 'компания без рейтинга порог не проходит');
+  assert.equal(rows.filter(r => mapRowVisible(r, {})).length, 4, 'без фильтра видны все');
+});

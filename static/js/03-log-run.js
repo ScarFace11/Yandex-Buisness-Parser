@@ -172,13 +172,21 @@ function _runOverallFrac() {
 // «4 из 4 городов» — единственное место, где считается число городов
 // (раньше оно дублировалось строкой под списком городов).
 function updateRunCities() {
-  const total = _totalCities || 0;
+  // Один город — тоже город: сервер не присылает для него city_list, и раньше
+  // счётчик держался на прошлом прогоне («0 из 9 городов») или уходил в
+  // «0 из 0». Источник истины — город, который идёт сейчас.
+  let total = _totalCities || 0;
+  if (!total) {
+    const known = Object.keys(_cityProgressData).length;
+    total = known || (_currentCityName ? 1 : 0);
+  }
   const done = Object.values(_cityProgressData)
     .filter(d => d.status === 'done' || d.status === 'skipped').length;
   const el = document.getElementById('run-cities');
   if (el) {
     const word = total % 10 === 1 && total % 100 !== 11 ? 'города' : 'городов';
-    el.textContent = `${done} из ${total} ${word}`;
+    // Нет города — нет и счётчика: «0 из 0 городов» не сообщал ничего.
+    el.textContent = total ? `${Math.min(done, total)} из ${total} ${word}` : '';
   }
   const eta = document.getElementById('run-eta');
   if (eta) {
@@ -819,8 +827,9 @@ function handleProgress(raw) {
     setRunEntity(name, 'ждём первую организацию');
     setRunEta('');
     _lastCompletedCityIdx = idx;
-    // Init multi-city progress
-    if (total > 1) initCityProgress(total);
+    // Прогресс городов нужен и для одного: без этого счётчик жил на цифрах
+    // прошлого прогона.
+    if (total > 0) initCityProgress(total);
     _currentCityName = name;
     updateCityProgress(name, 0, 0, 'running');
     setRunCityPct(0);
@@ -929,6 +938,10 @@ function onContinueToggle() {
 function resetRunUI() {
   _cityProgressData = {};
   _totalCities = 0;
+  // Хвост прошлого прогона: без сброса новый поиск по одному городу начинался
+  // с «0 из 9 городов», унаследованных от предыдущей серии.
+  _cityProgressData = {};
+  _currentCityName = '';
   _currentCityName = '';
   _lastCompletedCityIdx = 0;
   if (_liveStatsTimer) { clearTimeout(_liveStatsTimer); _liveStatsTimer = null; }

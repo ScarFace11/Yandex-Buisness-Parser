@@ -624,7 +624,7 @@ test('renderPage shows a full-width city row in «Все» mode', () => {
   assert.match(html, /<tr class="city-group" data-city="Уфа">/);
   assert.match(html, /<td colspan="10">/);
   assert.match(html, /<span class="city-group-name">Уфа<\/span>/);
-  assert.match(html, /<span class="city-group-count">2<\/span>/);
+  assert.match(html, /<span class="city-group-done"[^>]*>✓0\/2<\/span>/);
   // Нумерация столбца «#» — сквозная по таблице, а не внутри группы.
   assert.match(html, /<td data-col="num">3<\/td>/);
 });
@@ -647,7 +647,7 @@ test('renderPage keeps the city band when every row is one city', () => {
   globalThis.renderPage();
   const html = els['tbl-body'].innerHTML;
   assert.match(html, /<tr class="city-group" data-city="Уфа">/);
-  assert.match(html, /<span class="city-group-count">2<\/span>/);
+  assert.match(html, /<span class="city-group-done"[^>]*>✓0\/2<\/span>/);
   // Нумерация по-прежнему сквозная.
   assert.match(html, /<td data-col="num">2<\/td>/);
 });

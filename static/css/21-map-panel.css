@@ -24,7 +24,28 @@
 /* Поля фильтров в одну колонку: подпись сверху, контрол во всю ширину.
    Раньше подпись и узкий select стояли в строке и правые края не совпадали
    ни между собой, ни с полем поиска — панель выглядела собранной на глаз. */
-.map-filters{display:flex;flex-direction:column;gap:9px}
+/* Пять фильтров подряд отодвигали категории за край панели: свёрнутая
+   раскрывашка оставляет на виду поиск, счётчик и легенду. */
+.map-filters{border:1px solid var(--bdr);border-radius:var(--r-sm);background:var(--panel)}
+.map-filters>summary{
+  display:flex;align-items:center;gap:7px;min-height:30px;padding:6px 9px;
+  font-size:12px;font-weight:800;letter-spacing:.02em;color:var(--sub);
+  cursor:pointer;list-style:none;user-select:none;
+}
+.map-filters>summary::-webkit-details-marker{display:none}
+.map-filters>summary::after{content:'▾';margin-left:auto;color:var(--muted)}
+.map-filters[open]>summary::after{content:'▴'}
+.map-filters>summary:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+/* Включённый фильтр не прячется в закрытой панели. */
+.map-filters.has-active>summary{color:var(--c)}
+.map-filters-n{
+  min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  background:var(--txt);color:var(--card);
+  font-size:12px;font-weight:800;line-height:18px;text-align:center;
+}
+.map-filters-n[hidden]{display:none}
+.map-filters-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:2px 9px 9px}
+.map-filters-grid .map-check{grid-column:1/-1}
 .map-field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .map-field label{font-size:12px;font-weight:700;color:var(--sub)}
 .map-field select{
@@ -37,7 +58,7 @@
    вправо после двух select-ов. */
 .map-check{
   width:100%;box-sizing:border-box;justify-content:flex-start;
-  min-height:32px;padding:6px 8px;font-size:12px;
+  min-height:30px;padding:6px 8px;font-size:12px;
 }
 .map-cats-head{
   display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;

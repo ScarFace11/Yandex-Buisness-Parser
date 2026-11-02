@@ -2654,6 +2654,9 @@ class TestMapPanel:
         panel = self._panel()
         assert 'id="map-reviews"' in panel
         assert 'id="map-score"' in panel, "фильтр по оценке лида"
+        assert 'id="map-rating"' in panel, "фильтр по рейтингу (5 / от 4 / от 3)"
+        assert '<details class="map-filters"' in panel, "фильтры свёрнуты в раскрывашку"
+        assert 'class="map-filters-grid"' in panel, "поля в две колонки"
         assert 'id="map-site"' in panel
         # «Только новые» повторяет логику таблицы: серверный признак _is_new.
         assert 'id="map-only-new"' in panel
@@ -2664,17 +2667,24 @@ class TestMapPanel:
             assert f'<option value="{step}">' in panel, step
 
     def test_filter_controls_share_one_grid(self):
-        # Подпись сверху, контрол во всю ширину: иначе узкие select-ы и
-        # галочка стояли каждый по-своему и правые края не совпадали.
+        # Пять фильтров в столбик отодвигали категории за край панели, поэтому
+        # они живут в свёрнутой раскрывашке, а внутри — сетка на два столбца.
         panel = self._panel()
-        assert panel.count('class="map-field"') == 3
+        assert panel.count('class="map-field"') == 4, "отзывы, рейтинг, оценка, сайт"
         assert "class=\"map-filter-row\"" not in panel
+        assert '<details class="map-filters"' in panel
+        grid = STYLE[STYLE.index(".map-filters-grid{"):]
+        grid = grid[:grid.index("}")]
+        assert "grid-template-columns:1fr 1fr" in grid, "поля в две колонки"
+        assert ".map-filters-grid .map-check{grid-column:1/-1}" in STYLE, "галочка на всю ширину"
         field = STYLE[STYLE.index(".map-field{"):]
         field = field[:field.index("}")]
         assert "flex-direction:column" in field
         select = STYLE[STYLE.index(".map-field select{"):]
         assert "width:100%" in select[:select.index("}")]
-        check = STYLE[STYLE.index(".map-check{"):]
+        # Якорь с переносом: ".map-check{" встречается ещё и в
+        # ".map-filters-grid .map-check{" — без него срез начинается не там.
+        check = STYLE[STYLE.index("\n.map-check{"):]
         assert "width:100%" in check[:check.index("}")]
 
     def test_zoom_is_not_refit_on_every_filter(self):
