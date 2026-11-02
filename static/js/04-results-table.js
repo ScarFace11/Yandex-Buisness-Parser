@@ -548,93 +548,6 @@ function resetOutputDir() {
     .finally(() => { if (btn) btn.disabled = false; });
 }
 
-// 🔄 Re-run stage 2 (filtering) on the saved raw data — no new crawling.
-// There are two of these buttons (the filter accordion and the RAW section of
-// «История» → «Файлы»); both drive the same call and show the same progress.
-// Подпись с иконкой: эмодзи здесь перекрывало SVG из разметки (textContent
-// стирал значок), поэтому и восстановление идёт тем же инлайновым SVG.
-const REFILTER_LABEL = UI_ICONS.refresh + 'Применить фильтры заново';
-function _refilterButtons() {
-  return ['btn-refilter', 'btn-refilter-files']
-    .map(id => document.getElementById(id)).filter(Boolean);
-}
-function refilterNow() {
-  const buttons = _refilterButtons();
-  // How much work is coming: the raw files are already on disk, so the count
-  // is known before the request starts.
-  const rawCount = ((filesData || {}).raw || []).length;
-  const busy = rawCount ? `Обрабатываю ${rawCount} ${pluralFiles(rawCount)}…` : 'Обработка…';
-  buttons.forEach(b => { b.disabled = true; b.innerHTML = UI_ICONS.busy + busy; });
-  const formats = [];
-  if (document.getElementById('f-excel')?.checked) formats.push('excel');
-  if (document.getElementById('f-json')?.checked)  formats.push('json');
-  if (document.getElementById('f-csv')?.checked)   formats.push('csv');
-  if (document.getElementById('f-map')?.checked)   formats.push('html');
-  if (!formats.length) formats.push('excel');
-  // The payload mirrors a fresh run: EVERY stage-2 filter travels along.
-  // Leaving the VK/score ones out made «Применить фильтры заново» quietly
-  // return a different slice than the same settings during a search.
-  const body = {
-    formats,
-    collapse_chains: document.getElementById('f-collapse-chains')?.checked || false,
-    chain_key:       (document.getElementById('f-chain-key') || {}).value || 'name_city',
-    parse_mode:      parseMode || 'all',
-    social_mode:     socialMode || 'all',
-    required_socials:[...requiredSocials],
-    raw_mode:        (document.getElementById('f-raw-mode')||{}).value || 'keep',
-    vk_check:         !!(document.getElementById('f-vk-check') || {}).checked,
-    vk_mode:          vkMode || 'all',
-    vk_max_post_days: (document.getElementById('f-vk-max-days')     || {}).value || 0,
-    vk_min_followers: (document.getElementById('f-vk-min-followers') || {}).value || 0,
-    min_lead_score:   (document.getElementById('f-min-score') || {}).value || 0,
-    sort_by_score:    (document.getElementById('f-sort-score') || {}).checked !== false,
-    blacklist_words:  [...blacklistWords],
-    // «🎯 Тип компании» — тот же payload, что и у обычного запуска.
-    only_single_branch: onlySingleChecked(),
-    only_new_months:    newMonthsValue(),
-  };
-  fetch('/process-filters', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(body),
-  })
-    .then(r => r.json())
-    .then(data => {
-      if (!data.ok) {
-        showToast(data.error || 'Ошибка обработки', 'error');
-        appendLog('warn', '  [!] ' + (data.error || 'Ошибка обработки'));
-        return;
-      }
-      if (data.empty) {
-        showToast('По фильтрам ничего не подошло — снимите часть условий в «Фильтрации результата»', 'warn');
-        appendLog('warn', '  ⚠ По фильтрам ничего не подошло — снимите часть условий в «Фильтрации результата».');
-        return;
-      }
-      // Полный путь: папка результатов может быть пользовательской.
-      const outDir = data.out_dir ? data.out_dir.replace(/[\\/]+$/, '') : 'output';
-      // У рефильтра нет потоковых логов сервера, поэтому строку про blacklist
-      // пишем по счётчику из ответа — иначе слово-исключение «работает молча».
-      if (blacklistWords.length) {
-        appendLog('info', `  🚫 Blacklist: исключено ${data.blacklist_excluded || 0} компаний`);
-      }
-      // То же для «типа компании»: у рефильтра нет потоковых логов сервера.
-      if (data.company_type_excluded) {
-        appendLog('info', `  🎯 Тип компании: исключено ${data.company_type_excluded}`
-          + ` (одиночки ${data.single_excluded || 0}, новые ${data.new_excluded || 0})`);
-      }
-      showToast(`Готово: ${data.count} организаций → ${data.files.length} файлов`, 'success');
-      appendLog('ok', `  🎯 Processed: ${data.count} организаций → ${data.files.length} файлов в ${outDir}/processed/`);
-      // The file lists just changed under the user's feet — refresh them.
-      loadFilesPanel(true);
-      setResultsView(_resultsView);
-      updateStatsBadge();
-    })
-    .catch(() => showToast('Ошибка обработки', 'error'))
-    .finally(() => {
-      buttons.forEach(b => { b.disabled = false; b.innerHTML = REFILTER_LABEL; });
-    });
-}
-
 // Значки типов файлов — из того же спрайта, что и кнопки: в списке на 100+
 // строк эмодзи рисовались цветными квадратами разной ширины и не слушали
 // цвет темы (в тёмной теме выглядели как чужие).
@@ -1470,7 +1383,7 @@ function renderPage() {
   if (!total) {
     // Столбцов у плейсхолдера нет, но ему нужна ширина строки: её считаем по
     // видимым колонкам — пользователь может скрыть часть в настройках.
-    tbody.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Ничего не найдено — измените запрос, города или фильтры</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${_tableColspan()}" class="no-data">Ничего не найдено — измените запрос, города или фильтры в «Фильтрации результата»</td></tr>`;
 
     closeScorePopover(false);       // разбирать больше нечего — строки ушли
     document.getElementById('pager').style.display = 'none';

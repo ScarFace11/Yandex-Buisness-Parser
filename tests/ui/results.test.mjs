@@ -96,14 +96,12 @@ for (const id of [
   // Bulk file actions: delete / archive / clear selection
   'btn-files-bulk-delete', 'btn-files-bulk-archive',
   'btn-files-bulk-cancel', 'files-bulk-n', 'files-bulk-arch-n',
-  // «Применить фильтры заново» — обе кнопки (аккордеон и раздел RAW)
-  'btn-refilter', 'btn-refilter-files',
-  // Фильтры этапа 2, которые рефильтр обязан отправить на сервер
+  // Фильтры этапа 2, которые читает обработка результата
   'f-excel', 'f-json', 'f-csv', 'f-map', 'f-chain-key', 'f-raw-mode',
   'f-vk-check', 'f-vk-max-days', 'f-vk-min-followers',
   // Lead-score controls read by filterTable / rendered by renderPage
   'f-sort-score', 'f-min-score',
-  // «🎯 Тип компании»: галочки и период, которые рефильтр тоже отправляет
+  // «🎯 Тип компании»: галочки и период
   'f-only-single', 'f-only-new', 'f-new-months',
 ]) els[id] = mkEl(id);
 els['f-new-months'].value = '6';
@@ -263,7 +261,7 @@ globalThis.clearTimeout = () => {};
 
 // Score tables and limits live at module scope — load them verbatim.
 (0, eval)(['SCORE_MAX', 'SCORE_AGGREGATORS', 'SCORE_EXPENSIVE', 'SCORE_RULES',
-  'REVIEWED_AUTOSAVE_MS', 'FILE_ACT_ICONS', 'UI_ICONS', 'REFILTER_LABEL',
+  'REVIEWED_AUTOSAVE_MS', 'FILE_ACT_ICONS', 'UI_ICONS',
   // Показ по отметке «Просмотрено» — цикл заголовка колонки «✓».
   'REVIEWED_FILTER_CYCLE',
   // «🎯 Тип компании» едет в рефильтр вместе с остальными фильтрами.
@@ -295,9 +293,7 @@ const fns = [
   // File history: bulk archive / clear selection
   'onFileSelect', 'updateBulkDeleteBtn', 'clearFileSelection', 'bulkArchiveSelected',
   'bulkDeleteSelected',
-  // Рефильтр без повторного парсинга
-  'refilterNow', '_refilterButtons',
-  // «🎯 Тип компании»: значения для payload рефильтра
+  // «🎯 Тип компании»: значения для запуска поиска
   'onlySingleChecked', 'newMonthsValue', 'newMonthsPeriod', 'companyTypeOn',
   'showBulkWarn', 'hideBulkWarn', 'postJSON', 'openBlankTabs', 'fillTab', 'closeTab',
   'markReviewedBatch', 'bulkOpenBatch',
@@ -1774,152 +1770,9 @@ test('«📦 В архив» sends one batch request and refreshes the list', as
 // Регресс: клиент отправлял только часть настроек, поэтому рефильтр давал не
 // тот срез, что поиск с теми же настройками (терялись ВК и оценка лида), и
 // непонятно было, сколько файлов обрабатывается.
-test('refilterNow sends every stage-2 filter and reports progress', async () => {
-  resetState();
-  fetchCalls = [];
-  logLines.length = 0;
-  filesReloads = 0;
-  globalThis.filesData = {raw: [{}, {}, {}], processed: [], archive: []};
-  globalThis.parseMode = 'without_website';
-  globalThis.socialMode = 'with_socials';
-  globalThis.requiredSocials = new Set(['vk', 'telegram']);
-  globalThis.vkMode = 'active';
-  els['f-excel'].checked = true;
-  els['f-json'].checked = true;
-  els['f-csv'].checked = false;
-  els['f-map'].checked = false;
-  els['f-collapse-chains'].checked = true;
-  els['f-chain-key'].value = 'phone';
-  els['f-raw-mode'].value = 'archive';
-  els['f-vk-check'].checked = true;
-  els['f-vk-max-days'].value = '30';
-  els['f-vk-min-followers'].value = '250';
-  els['f-min-score'].value = '50';
-  els['f-sort-score'].checked = true;
-  els['f-only-single'].checked = true;
-  els['f-only-new'].checked = true;
-  els['f-new-months'].value = '12';
 
-  const realFetch = globalThis.fetch;
-  let body = null;
-  let busyLabel = '';
-  globalThis.fetch = async (url, opts) => {
-    if (url === '/process-filters') {
-      body = JSON.parse(opts.body);
-      busyLabel = els['btn-refilter'].innerHTML;
-      return {ok: true, json: async () => ({ok: true, count: 9, empty: false,
-                                            files: ['a.xlsx'], out_dir: '/data/MyResults'})};
-    }
-    return {ok: true, json: async () => ({})};
-  };
-  try {
-    globalThis.refilterNow();
-    await new Promise(r => setImmediate(r));
-  } finally {
-    globalThis.fetch = realFetch;
-  }
 
-  assert.equal(body.formats.join(','), 'excel,json', 'только отмеченные форматы');
-  assert.equal(body.parse_mode, 'without_website');
-  assert.equal(body.social_mode, 'with_socials');
-  assert.deepEqual(body.required_socials, ['vk', 'telegram']);
-  assert.equal(body.collapse_chains, true);
-  assert.equal(body.chain_key, 'phone');
-  assert.equal(body.raw_mode, 'archive');
-  // То, что раньше терялось и ломало результат рефильтра:
-  assert.equal(body.vk_check, true);
-  assert.equal(body.vk_mode, 'active');
-  assert.equal(body.vk_max_post_days, '30');
-  assert.equal(body.vk_min_followers, '250');
-  assert.equal(body.min_lead_score, '50');
-  assert.equal(body.sort_by_score, true);
-  // «🎯 Тип компании» — тоже часть payload'а, иначе рефильтр вернул бы
-  // другую выборку, чем тот же запуск с этими же галочками.
-  assert.equal(body.only_single_branch, true);
-  assert.equal(body.only_new_months, 12);
 
-  assert.match(busyLabel, /#i-hourglass/, 'работа идёт — значок часов');
-  assert.match(busyLabel, /Обрабатываю 3 файла/, 'виден объём работы: ' + busyLabel);
-  assert.match(els['btn-refilter'].innerHTML, /Применить фильтры заново/, 'кнопка вернулась в норму');
-  assert.match(els['btn-refilter'].innerHTML, /<svg class="ico"/, 'и подпись снова со значком');
-  assert.equal(filesReloads, 1, 'список файлов обновился');
-  // Полный путь в журнале: папка результатов может быть пользовательской.
-  assert.ok(logLines.some(l => /🎯 Processed: 9 организаций.*\/data\/MyResults\/processed\//.test(l.msg)),
-    'журнал показывает полный путь: ' + JSON.stringify(logLines.map(l => l.msg)));
-});
-
-test('рефильтр рассказывает в журнале, сколько снял «🎯 Тип компании»', async () => {
-  resetState();
-  logLines.length = 0;
-  globalThis.filesData = {raw: [{}], processed: [], archive: []};
-  els['f-only-single'].checked = true;
-  els['f-only-new'].checked = false;
-
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async (url) => {
-    if (url === '/process-filters') {
-      return {ok: true, json: async () => ({ok: true, count: 4, empty: false, files: [],
-                                            out_dir: '/out',
-                                            company_type_excluded: 3, single_excluded: 2,
-                                            new_excluded: 1})};
-    }
-    return {ok: true, json: async () => ({})};
-  };
-  try {
-    globalThis.refilterNow();
-    await new Promise(r => setImmediate(r));
-  } finally {
-    globalThis.fetch = realFetch;
-    els['f-only-single'].checked = false;
-  }
-
-  const line = logLines.find(l => /🎯 Тип компании/.test(l.msg));
-  assert.ok(line, 'у рефильтра нет потоковых логов — цифра из ответа: '
-    + JSON.stringify(logLines.map(l => l.msg)));
-  assert.match(line.msg, /исключено 3/);
-  assert.match(line.msg, /одиночки 2, новые 1/);
-});
-
-test('both refilter buttons share the progress state', async () => {
-  resetState();
-  const realFetch = globalThis.fetch;
-  globalThis.filesData = {raw: [{}], processed: [], archive: []};
-  let labels = null;
-  globalThis.fetch = async (url, opts) => {
-    if (url === '/process-filters') {
-      labels = [els['btn-refilter'].innerHTML, els['btn-refilter-files'].innerHTML];
-      return {ok: true, json: async () => ({ok: true, count: 1, files: [], out_dir: '/x'})};
-    }
-    return {ok: true, json: async () => ({})};
-  };
-  try {
-    globalThis.refilterNow();
-    await new Promise(r => setImmediate(r));
-  } finally {
-    globalThis.fetch = realFetch;
-  }
-  labels.forEach(l => {
-    assert.match(l, /#i-hourglass/);
-    assert.match(l, /Обрабатываю 1 файл…/);
-  });
-  assert.equal(els['btn-refilter-files'].disabled, false, 'обе кнопки снова доступны');
-});
-
-test('refiltering without raw files fails honestly', async () => {
-  resetState();
-  logLines.length = 0;
-  globalThis.filesData = {raw: [], processed: [], archive: []};
-  const realFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({ok: false, json: async () => ({
-    ok: false, error: 'Нет сырых данных в output/raw/ — сначала запустите сбор.'})});
-  try {
-    globalThis.refilterNow();
-    await new Promise(r => setImmediate(r));
-  } finally {
-    globalThis.fetch = realFetch;
-  }
-  assert.ok(logLines.some(l => l.lvl === 'warn' && /Нет сырых данных/.test(l.msg)));
-});
 
 // ── 12. Колонка «Сайт» ───────────────────────────────────────
 // В файле ссылка живёт в поле «Сайт / Таплинк» (туда же при записи попадает

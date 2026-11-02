@@ -126,9 +126,6 @@
    Переключатель «Сырые / Обработанные» убран — таблица показывает единый
    итог обработки.
    ══════════════════════════════════════════════════════════ */
-#btn-refilter:hover:not(:disabled){border-color:var(--c);color:var(--c)}
-#btn-refilter:disabled{opacity:.55;cursor:wait}
-
 /* ══════════════════════════════════════════════════════════
    SIDEBAR RESTRUCTURE: api-keys block, groups, app-shell scroll
    ══════════════════════════════════════════════════════════ */

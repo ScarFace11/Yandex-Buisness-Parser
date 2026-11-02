@@ -375,7 +375,7 @@
 /* «В архив» — обратимое действие, поэтому янтарный, а не красный. */
 .files-bulk-arch{border-color:var(--warn-bdr);color:var(--warn-strong);font-weight:700}
 .files-bulk-arch:hover{background:var(--warn-bg);border-color:var(--warn-bdr);color:var(--warn-strong)}
-/* Строка заголовка раздела с действием справа (RAW + «Применить фильтры») */
+/* Строка заголовка раздела: название слева, счётчик справа */
 .history-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .bar-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
 .bar-lbl{font-size:12px;width:150px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--sub)}

@@ -1195,7 +1195,7 @@ let _historyCollapsed = (() => {
 })();
 
 function toggleHistorySection(e, section) {
-  // Клик по кнопке внутри заголовка (например, «Применить фильтры заново»)
+  // Клик по кнопке внутри заголовка
   // раздел не сворачивает.
   if (e && e.target && e.target.closest && e.target.closest('button')) return;
   _historyCollapsed[section] = !_historyCollapsed[section];

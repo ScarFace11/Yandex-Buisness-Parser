@@ -967,6 +967,17 @@ function initTermsGate() {
 // ═══════════════════════════════════════════
 //  Search History
 // ═══════════════════════════════════════════
+// Список поисков рисуется из кэша: поиск по категориям и переключение вида
+// не должны ходить на сервер за теми же данными.
+let _historyCache = [];
+let _historyStats = {};
+let _historySearch = '';
+
+function _historyView() {
+  try { return localStorage.getItem('hist-view') === 'grid' ? 'grid' : 'rows'; }
+  catch (e) { return 'rows'; }
+}
+
 function loadHistory() {
   const el = document.getElementById('history-list');
   if (!el) return;
@@ -975,22 +986,67 @@ function loadHistory() {
   fetch('/history')
     .then(r => r.json())
     .then(data => {
-      const history = data.history || [];
-      const stats = data.stats || {};
-      if (!history.length) {
-        el.innerHTML = '<div class="no-data">История пуста — запущенные поиски появятся здесь</div>';
-        return;
-      }
-      el.innerHTML = `
-        <div class="hist-summary">
-          Всего поисков: <b>${stats.total}</b> · Найдено записей: <b>${stats.total_results}</b> · Общее время: <b>${Math.round(stats.total_time / 60)}мин</b>
-        </div>
-        ${history.map(h => renderHistoryEntry(h)).join('')}
-      `;
+      _historyCache = data.history || [];
+      _historyStats = data.stats || {};
+      renderHistory();
     })
     .catch(err => {
       el.innerHTML = `<div class="no-data">Ошибка загрузки: ${err.message}</div>`;
     });
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!el) return;
+  _syncHistoryViewBtn();
+  if (!_historyCache.length) {
+    el.classList.remove('hist-grid');
+    el.innerHTML = '<div class="no-data">История пуста — запущенные поиски появятся здесь</div>';
+    _setHistoryFound('');
+    return;
+  }
+  // Категория — это запрос поиска («автомойка», «стоматология»): ищем по нему.
+  const q = _historySearch.trim().toLowerCase();
+  const shown = q
+    ? _historyCache.filter(h => (h.queries || []).some(c => String(c).toLowerCase().includes(q)))
+    : _historyCache;
+  el.classList.toggle('hist-grid', _historyView() === 'grid');
+  const stats = _historyStats;
+  el.innerHTML = `
+    <div class="hist-summary">
+      Всего поисков: <b>${stats.total}</b> · Найдено записей: <b>${stats.total_results}</b> · Общее время: <b>${Math.round(stats.total_time / 60)}мин</b>
+    </div>
+    ${shown.length
+      ? shown.map(h => renderHistoryEntry(h)).join('')
+      : `<div class="no-data">По запросу «${escapeHtml(_historySearch.trim())}» поисков нет — очистите поле, чтобы увидеть все.</div>`}
+  `;
+  _setHistoryFound(q ? `${shown.length} из ${_historyCache.length}` : '');
+}
+
+function _setHistoryFound(text) {
+  const el = document.getElementById('hist-found');
+  if (el) el.textContent = text;
+}
+
+function onHistorySearchInput() {
+  const input = document.getElementById('hist-search');
+  _historySearch = input ? input.value : '';
+  renderHistory();
+}
+
+function _syncHistoryViewBtn() {
+  const btn = document.getElementById('btn-hist-view');
+  if (!btn) return;
+  const grid = _historyView() === 'grid';
+  btn.setAttribute('aria-pressed', grid ? 'true' : 'false');
+  btn.textContent = grid ? 'Список' : 'Сетка';
+  btn.title = grid ? 'Показать поиски одной строкой' : 'Показать поиски карточками в сетке';
+}
+
+function toggleHistoryView() {
+  const next = _historyView() === 'grid' ? 'rows' : 'grid';
+  try { localStorage.setItem('hist-view', next); } catch (e) {}
+  renderHistory();
 }
 
 // «Просмотрено 3 из 44» вместо сухого «44 записей»: история отвечает на вопрос,

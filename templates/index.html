@@ -844,7 +844,7 @@
                         <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить список</button>
                     </div>
                     <div class="hint" id="blacklist-count">Список пуст — исключений нет</div>
-                    <div class="hint">Таблица и файлы обновятся после «Применить фильтры заново».</div>
+                    <div class="hint">Таблица и файлы обновляются после поиска.</div>
                   </div>
 
                 </div>
@@ -872,14 +872,6 @@
                   </div>
                 </div>
               </details>
-
-              <!-- Действие в sticky-футере: кнопка не уезжает за кромку -->
-              <div class="flt-footer">
-                <button type="button" class="btn-sm" id="btn-refilter" onclick="refilterNow()"
-                        title="Применить текущие фильтры к собранным сырым данным — без повторного парсинга">
-                  <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>Применить фильтры заново</button>
-                <div class="hint">Без повторного парсинга — по сырым данным</div>
-              </div>
 
             </div>
           </div>
@@ -1447,6 +1439,15 @@
                 <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить кэш</button>
             </div>
           </div>
+          <div class="hist-filters">
+            <input type="search" id="hist-search" class="hist-search" autocomplete="off"
+                   placeholder="Поиск по категориям…" aria-label="Поиск по категориям"
+                   oninput="onHistorySearchInput()">
+            <span class="hist-found" id="hist-found" aria-live="polite"></span>
+            <button type="button" class="btn-sm hist-view-btn" id="btn-hist-view"
+                    onclick="toggleHistoryView()" aria-pressed="false"
+                    title="Показать поиски карточками в сетке">Сетка</button>
+          </div>
           <div id="seen-status" class="seen-status" style="display:none"></div>
           <div id="history-list">
             <div class="no-data">Загрузка...</div>
@@ -1481,9 +1482,6 @@
                 <h3 class="history-title">
                   <svg class="ico" aria-hidden="true"><use href="#i-folder"/></svg>RAW · сырые данные
                 </h3>
-                <button class="btn-sm" id="btn-refilter-files" onclick="refilterNow()"
-                        title="Применить текущие фильтры к собранным сырым файлам — без повторного парсинга">
-                  <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>Применить фильтры заново</button>
                 <span class="history-caret" aria-hidden="true">▾</span>
               </div>
               <details class="hint-more history-more">

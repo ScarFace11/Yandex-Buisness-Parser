@@ -1180,7 +1180,7 @@ def _file_mtime(path: str) -> float:
 
 
 def _view_files(view: str, scope: str = "current") -> list[str]:
-    """Absolute paths of every file backing a results view (raw / processed). scope="current" (default) keeps only the files of the current search — everything written after it started, so a later «Применить фильтры заново» is included too."""
+    """Absolute paths of every file backing a results view (raw / processed). scope="current" (default) keeps only the files of the current search — everything written after it started, so a later reprocessing pass is included too."""
     out: list[str] = []
     if view in ("raw", "all"):
         raw_d = _raw_dir()
@@ -1791,7 +1791,7 @@ def preview_blacklist():
 
 @bp.route("/preview-company-type", methods=["POST"])
 def preview_company_type():
-    """Сколько компаний подойдёт под «🎯 Тип компании» — без запуска этапа 2. Body: {only_single_branch: bool, only_new_months: 1|3|6|12|24|null} Reply: {ok, total, single, new, both, with_date, months} Считаем по СЫРЫМ данным текущего поиска той же функцией (processing.company_type_breakdown), что и сам фильтр, — иначе цифра в подсказке разошлась бы с результатом «Применить фильтры заново». `with_date` — у скольких записей есть дата добавления: без неё видно, что «только новые» не отсеивает не потому, что все компании новые."""
+    """Сколько компаний подойдёт под «🎯 Тип компании» — без запуска этапа 2. Body: {only_single_branch: bool, only_new_months: 1|3|6|12|24|null} Reply: {ok, total, single, new, both, with_date, months} Считаем по СЫРЫМ данным текущего поиска той же функцией (processing.company_type_breakdown), что и сам фильтр, — иначе цифра в подсказке разошлась бы с результатом повторной обработки. `with_date` — у скольких записей есть дата добавления: без неё видно, что «только новые» не отсеивает не потому, что все компании новые."""
     from yandex_maps_parser.processing import (
         annotate_branch_counts,
         company_type_breakdown,

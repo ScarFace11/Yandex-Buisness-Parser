@@ -700,11 +700,9 @@ test('сеть молчит — счётчик честно говорит об 
 });
 
 // ── 7. Что уходит на сервер ──────────────────────────────────
-test('список уезжает в форму, в рефильтр и в пресет', () => {
-  assert.match(grab('refilterNow'), /blacklist_words:\s*\[\.\.\.blacklistWords\]/, 'рефильтр обязан отправить список');
+test('список уезжает в форму и в пресет', () => {
+  // Отдельной повторной обработки больше нет — список идёт только с поиском.
   assert.match(grab('getParams'), /blacklist_words:\s*\[\.\.\.blacklistWords\]/, 'новый поиск — тоже');
   assert.match(grab('getCurrentSettings'), /blacklist:\s*\[\.\.\.blacklistWords\]/, 'пресет забирает список');
   assert.match(grab('applySettings'), /setBlacklistWords\(s\.blacklist\)/, 'и возвращает его обратно');
-  assert.match(grab('refilterNow'), /🚫 Blacklist: исключено \$\{data\.blacklist_excluded \|\| 0\} компаний/,
-               'журнал рефильтра: у рефильтра нет потоковых логов сервера');
 });

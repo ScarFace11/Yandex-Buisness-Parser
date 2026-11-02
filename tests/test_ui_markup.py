@@ -444,10 +444,9 @@ class TestNotificationSettings:
 class TestFilterAccordionGroups:
     """«Фильтрация результата»: группы вместо одиннадцати блоков подряд.
 
-    Аккордеон читался как один длинный список, редкие настройки тонули в
-    середине, а кнопка «Применить фильтры заново» уезжала за нижнюю кромку
-    сайдбора. Теперь это группы с подзаголовками, «Дополнительно»
-    свёрнуто по умолчанию, а действие — в sticky-футере.
+    Аккордеон читался как один длинный список: редкие настройки тонули в
+    середине. Теперь это группы с подзаголовками, а «Дополнительно»
+    свёрнуто по умолчанию.
     """
 
     def _section(self) -> str:
@@ -485,7 +484,7 @@ class TestFilterAccordionGroups:
                        'id="vk-filter-block"', 'id="f-vk-max-days"', 'id="f-vk-min-followers"',
                        'id="f-sort-score"', 'id="f-min-score"', 'id="score-presets"',
                        'id="score-hint"', 'id="f-collapse-chains"', 'id="f-chain-key"',
-                       'id="f-raw-mode"', 'id="btn-refilter"'):
+                       'id="f-raw-mode"'):
             assert needle in sec, f"{needle} потерялся при перегруппировке"
         for needle in ('name="parse_mode"', 'name="social_mode"', 'name="vk_mode"'):
             assert needle in sec, needle
@@ -545,16 +544,16 @@ class TestFilterAccordionGroups:
         assert ".ct-new-row select{flex:1 1 100%}" in STYLE
 
     def test_company_type_counter_is_wired(self):
-        """Счётчик ленивый, а оба фильтра уезжают и в запуск, и в рефильтр."""
+        """Счётчик ленивый, и оба фильтра уезжают в запуск поиска."""
         for fn in ("onlySingleChecked", "newMonthsValue", "newMonthsPeriod",
                    "companyTypeOn", "syncCompanyTypeUi", "onCompanyTypeChange",
                    "scheduleCompanyTypePreview", "previewCompanyType",
                    "companyTypeCountHTML"):
             assert f"function {fn}(" in APP_JS, fn
         assert "'/preview-company-type'" in APP_JS
-        # Два пути: обычный запуск (getParams) и «Применить фильтры заново».
-        assert APP_JS.count("only_single_branch: onlySingleChecked()") == 2
-        assert APP_JS.count("only_new_months:    newMonthsValue()") == 2
+        # Один путь — запуск (getParams): отдельной повторной обработки нет.
+        assert APP_JS.count("only_single_branch: onlySingleChecked()") == 1
+        assert APP_JS.count("only_new_months:    newMonthsValue()") == 1
         # Как и чёрный список — только при открытии раздела.
         assert "scheduleCompanyTypePreview();" in APP_JS
         # Реестр периодов в браузере совпадает с серверным COMPANY_TYPE_MONTHS.
@@ -597,30 +596,16 @@ class TestFilterAccordionGroups:
         rule = self._rule(".flt-extra-body{")
         assert "padding:11px" in rule
 
-    def test_footer_is_the_last_block_and_carries_the_action(self):
+    def test_refilter_button_is_gone(self):
+        """Кнопка «Применить фильтры заново» убрана: по подписи нельзя было
+        понять, что она пересчитывает уже готовый результат поверх фильтров.
+        """
         sec = self._section()
-        footer = sec.index('class="flt-footer"')
-        assert sec.index('</details>') < footer, "футер должен идти после «Дополнительно»"
-        assert 'id="btn-refilter"' in sec[footer:]
-        assert 'onclick="refilterNow()"' in sec[footer:]
-        assert "Применить фильтры заново</button>" in sec[footer:]
-        assert "refilterNow()" in sec[footer:]
-        # Футер — последний блок аккордеона: после него ни групп, ни настроек.
-        assert "flt-group-title" not in sec[footer:]
-        assert sec.count('class="flt-footer"') == 1
-
-    def test_sticky_footer_parks_above_the_dock(self):
-        rule = self._rule(".flt-footer{")
-        assert "position:sticky" in rule
-        assert "bottom:calc(var(--dock-h" in rule
-        assert "z-index:5" in rule
-        assert "background:var(--card)" in rule
-        assert "box-shadow:0 -4px 12px" in rule
-        assert "margin:16px -13px 0" in rule, "футер должен быть во всю ширину аккордеона"
-        assert "width:100%" in self._rule(".flt-footer #btn-refilter{")
-        # Запасное значение токена + ноль на телефоне (там док статичный).
+        assert 'class="flt-footer"' not in sec, "пустой липкий футер тоже убран"
+        assert 'btn-refilter' not in TEMPLATE
+        assert "Применить фильтры заново" not in TEMPLATE
+        # Док запуска по-прежнему сообщает свою высоту липким блокам.
         assert ":root{--dock-h:62px}" in STYLE
-        assert "@media(max-width:860px){:root{--dock-h:0px}}" in STYLE
         assert "@media(max-width:860px){#run-dock{position:static}}" in STYLE
 
     def test_sticky_needs_clip_where_hidden_would_kill_it(self):
@@ -674,13 +659,12 @@ class TestBlacklistChips:
                         'onclick="toggleBlacklistDropdown(event)"'):
             assert handler in sec, handler
 
-    def test_block_sits_before_the_advanced_box_and_the_footer(self):
-        """Список — обычная группа: редкое живёт в «Дополнительно», а действие — в
-        футере, поэтому исключения не должны оказаться после них."""
+    def test_block_sits_before_the_advanced_box(self):
+        """Список — обычная группа: редкое живёт в «Дополнительно», поэтому
+        исключения не должны оказаться после него."""
         sec = self._section()
         block = sec.index('id="blacklist-chips"')
         assert block < sec.index('id="filters-extra"')
-        assert block < sec.index('class="flt-footer"')
         # и после групп качества/оценки/активности/обработки
         assert block > sec.index('<div class="flt-group-title">Обработка</div>')
 
@@ -697,7 +681,7 @@ class TestBlacklistChips:
         # слов до 50 символов. Лимит на одно слово проверяет JS
         # (BLACKLIST_MAX_LEN), а не атрибут поля.
         assert 'maxlength=' not in sec
-        assert 'Таблица и файлы обновятся после «Применить фильтры заново».' in sec
+        assert 'Таблица и файлы обновляются после поиска.' in sec
 
     def test_template_options_are_built_from_the_registry(self):
         """Дропдаун — кастомный (у select не бывает кнопок в опциях): в разметке
@@ -1201,7 +1185,6 @@ class TestDesignSystem:
         for key in ("search", "pause", "bell", "sun", "moon"):
             assert f"{key}:" in APP_JS, key
         # Подписи, которые JS восстанавливает сам, тоже с иконкой.
-        assert "const REFILTER_LABEL = UI_ICONS.refresh" in APP_JS
         assert "const UPDATE_BTN_IDLE = UI_ICONS.refresh" in APP_JS
 
     def test_narrow_phone_keeps_only_icons_in_the_header(self):
@@ -1399,7 +1382,6 @@ class TestIconSprite:
             assert bad not in APP_JS, f"эмодзи в подписи управления: {bad}"
         # И то, чем они заменены — тоже часть контракта.
         for good in ("UI_ICONS.trash + 'Удалить выбранные",
-                     "const REFILTER_LABEL = UI_ICONS.refresh + 'Применить фильтры заново'",
                      "UI_ICONS.checkSquare : UI_ICONS.square",
                      "UI_ICONS.check + 'Все просмотрены'",
                      "UI_ICONS.gear + 'Столбцы'",
@@ -2327,10 +2309,10 @@ class TestEmptyStates:
         assert 'Запустите парсер' not in TEMPLATE
 
     def test_filters_point_to_the_section_not_just_settings(self):
-        assert 'снимите часть условий в «Фильтрации результата»' in APP_JS
+        # Условия живут в конкретном разделе — пустой экран называет его.
+        assert ('Ничего не найдено — измените запрос, города или фильтры '
+                'в «Фильтрации результата»') in APP_JS
         assert 'Измените настройки.' not in APP_JS
-        # Общий плейсхолдер таблицы тоже подсказывает, что менять.
-        assert 'Ничего не найдено — измените запрос, города или фильтры' in APP_JS
 
     def test_history_explains_what_will_appear(self):
         assert 'История пуста — запущенные поиски появятся здесь' in APP_JS
