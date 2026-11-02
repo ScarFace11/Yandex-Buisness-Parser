@@ -110,7 +110,21 @@ select.field-invalid{border-color:var(--red) !important;box-shadow:0 0 0 3px rgb
 .hist-search::placeholder{color:var(--muted)}
 .hist-search:focus-visible{outline:2px solid var(--c);outline-offset:1px;border-color:var(--c)}
 .hist-found{font-size:12px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums}
-.hist-view-btn{min-height:34px;white-space:nowrap}
+/* Пара иконок вместо текстовой кнопки: видно, что даст нажатие, — строка
+   или карточки. Активная половина «утоплена» в подложку. */
+.hist-view-switch{
+  display:inline-flex;gap:2px;padding:2px;
+  border:1px solid var(--bdr);border-radius:9px;background:var(--row-alt);
+}
+.hist-view-btn{
+  width:30px;height:28px;min-width:24px;display:inline-flex;align-items:center;justify-content:center;
+  border:none;border-radius:7px;background:transparent;color:var(--muted);
+  cursor:pointer;transition:background .12s,color .12s,box-shadow .12s;
+}
+.hist-view-btn:hover{color:var(--txt)}
+.hist-view-btn[aria-pressed="true"]{background:var(--card);color:var(--c);box-shadow:var(--sh)}
+.hist-view-btn:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+.hist-view-btn .ico{width:15px;height:15px;margin-right:0}
 
 .btn-sm.danger{border-color:var(--err-bdr);color:var(--red)}
 .btn-sm.danger:hover{background:var(--err-bg);border-color:var(--red)}

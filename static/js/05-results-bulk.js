@@ -1251,6 +1251,8 @@ function renderFiles() {
   // «Найдено: X из Y» only while a filter is active — otherwise it is noise.
   const found = document.getElementById('files-found');
   if (found) found.textContent = filesFilter ? `Найдено: ${shown} из ${total}` : '';
+  // Списки перерисованы — вернём выбранный вид (строка или сетка).
+  if (typeof _applyHistoryView === 'function') _applyHistoryView();
 }
 
 function openFileInTable(rel) {

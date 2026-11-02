@@ -1426,6 +1426,20 @@
                   aria-pressed="false" aria-controls="hist-files" onclick="setHistorySubTab('files')">
             <svg class="ico" aria-hidden="true"><use href="#i-folder"/></svg>Файлы</button>
           <span class="subt-spacer"></span>
+          <!-- Вид списка общий для «Поисков» и «Файлов»: две иконки показывают,
+               что получится, — строка или карточки в несколько колонок. -->
+          <span class="hist-view-switch" role="group" aria-label="Вид списка истории">
+            <button type="button" class="hist-view-btn" id="btn-hist-view-rows" data-view="rows"
+                    onclick="setHistoryView('rows')" aria-pressed="true" aria-label="Списком"
+                    title="Списком — по одной строке">
+              <svg class="ico" aria-hidden="true"><use href="#i-list"/></svg>
+            </button>
+            <button type="button" class="hist-view-btn" id="btn-hist-view-grid" data-view="grid"
+                    onclick="setHistoryView('grid')" aria-pressed="false" aria-label="Сеткой"
+                    title="Сеткой — карточки в несколько колонок">
+              <svg class="ico" aria-hidden="true"><use href="#i-grid"/></svg>
+            </button>
+          </span>
         </div>
         <div class="history-body" id="hist-runs" aria-label="Исторические поиски">
           <div class="history-toolbar">
@@ -1444,9 +1458,6 @@
                    placeholder="Поиск по категориям…" aria-label="Поиск по категориям"
                    oninput="onHistorySearchInput()">
             <span class="hist-found" id="hist-found" aria-live="polite"></span>
-            <button type="button" class="btn-sm hist-view-btn" id="btn-hist-view"
-                    onclick="toggleHistoryView()" aria-pressed="false"
-                    title="Показать поиски карточками в сетке">Сетка</button>
           </div>
           <div id="seen-status" class="seen-status" style="display:none"></div>
           <div id="history-list">

@@ -33,15 +33,38 @@ def test_history_searches_by_category():
 
 
 def test_history_has_grid_mode_with_short_cards():
-    assert 'id="btn-hist-view"' in TEMPLATE
-    assert 'aria-pressed="false"' in TEMPLATE
-    assert "function toggleHistoryView" in HISTORY_JS
+    # Две маленькие иконки вместо текстовой кнопки: сразу видно, что выйдет.
+    assert 'id="btn-hist-view-rows"' in TEMPLATE
+    assert 'id="btn-hist-view-grid"' in TEMPLATE
+    assert '<use href="#i-list"/>' in TEMPLATE
+    assert '<use href="#i-grid"/>' in TEMPLATE
+    assert "function setHistoryView" in HISTORY_JS
     # Режим запоминается между открытиями истории.
     assert "hist-view" in HISTORY_JS
     assert "hist-grid" in HISTORY_JS
     assert "#history-list.hist-grid" in STYLE
     # В узкой карточке категория занимает две строки, дальше — многоточие.
     assert "-webkit-line-clamp:2" in STYLE
+
+
+def test_one_view_switch_drives_both_history_tabs():
+    """«Поиски» и «Файлы» — один список: переключатель общий, режим вешается
+    и на поиски, и на три списка файлов."""
+    assert "function _applyHistoryView" in HISTORY_JS
+    assert "#hist-files .history-list" in HISTORY_JS
+    files_js = (ROOT / "static/js/05-results-bulk.js").read_text(encoding="utf-8")
+    assert "_applyHistoryView()" in files_js
+    files_css = (ROOT / "static/css/15-results-tabs.css").read_text(encoding="utf-8")
+    assert ".history-list.hist-grid{" in files_css
+    assert ".history-list.hist-grid .file-card{flex-direction:column" in files_css
+
+
+def test_map_follows_the_dark_theme():
+    """Тёмной карты у OSM нет: инвертируем только слой тайлов, маркеры и
+    попапы остаются в цветах темы."""
+    map_css = (ROOT / "static/css/06-map-stats.css").read_text(encoding="utf-8")
+    assert '[data-theme="dark"] .leaflet-tile-pane{' in map_css
+    assert "filter:invert(1) hue-rotate(180deg)" in map_css
 
 
 def test_refilter_button_and_its_code_are_gone():

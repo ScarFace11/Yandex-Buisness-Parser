@@ -998,9 +998,8 @@ function loadHistory() {
 function renderHistory() {
   const el = document.getElementById('history-list');
   if (!el) return;
-  _syncHistoryViewBtn();
+  _applyHistoryView();
   if (!_historyCache.length) {
-    el.classList.remove('hist-grid');
     el.innerHTML = '<div class="no-data">История пуста — запущенные поиски появятся здесь</div>';
     _setHistoryFound('');
     return;
@@ -1010,7 +1009,6 @@ function renderHistory() {
   const shown = q
     ? _historyCache.filter(h => (h.queries || []).some(c => String(c).toLowerCase().includes(q)))
     : _historyCache;
-  el.classList.toggle('hist-grid', _historyView() === 'grid');
   const stats = _historyStats;
   el.innerHTML = `
     <div class="hist-summary">
@@ -1034,19 +1032,32 @@ function onHistorySearchInput() {
   renderHistory();
 }
 
-function _syncHistoryViewBtn() {
-  const btn = document.getElementById('btn-hist-view');
-  if (!btn) return;
-  const grid = _historyView() === 'grid';
-  btn.setAttribute('aria-pressed', grid ? 'true' : 'false');
-  btn.textContent = grid ? 'Список' : 'Сетка';
-  btn.title = grid ? 'Показать поиски одной строкой' : 'Показать поиски карточками в сетке';
+function _syncHistoryViewBtns() {
+  const view = _historyView();
+  [['rows', 'btn-hist-view-rows'], ['grid', 'btn-hist-view-grid']].forEach(([name, id]) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.setAttribute('aria-pressed', view === name ? 'true' : 'false');
+  });
 }
 
-function toggleHistoryView() {
-  const next = _historyView() === 'grid' ? 'rows' : 'grid';
+// Один режим на обе вкладки истории: «Поиски» и «Файлы» — два вида одного
+// списка, и два отдельных переключателя заставляли бы настраивать вид дважды.
+// Поэтому класс вешается сразу на список поисков и на три списка файлов, а не
+// запоминается внутри каждого рендера.
+function _applyHistoryView() {
+  const grid = _historyView() === 'grid';
+  const runs = document.getElementById('history-list');
+  if (runs) runs.classList.toggle('hist-grid', grid);
+  document.querySelectorAll('#hist-files .history-list').forEach(box => {
+    box.classList.toggle('hist-grid', grid);
+  });
+  _syncHistoryViewBtns();
+}
+
+function setHistoryView(view) {
+  const next = view === 'grid' ? 'grid' : 'rows';
   try { localStorage.setItem('hist-view', next); } catch (e) {}
-  renderHistory();
+  _applyHistoryView();
 }
 
 // «Просмотрено 3 из 44» вместо сухого «44 записей»: история отвечает на вопрос,
