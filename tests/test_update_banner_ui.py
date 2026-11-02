@@ -119,13 +119,13 @@ class TestChangelogWindow:
         texts = _func("_clTexts")
         assert "'latest'" in texts and "'yours'" in texts
 
-    def test_list_shows_a_short_summary(self):
+    def test_list_shows_the_essentials_only(self):
+        # В списке — версия, название, число изменений и «Подробнее»: длинное
+        # описание читается только в полном тексте.
         render = _func("_renderChangelog")
-        assert "cl-sum" in render
-        assert "_clVersions" in render
-        # Краткое и полное описание — разные поля, а не один текст.
-        versions = _func("_clVersions")
-        assert "summary" in versions and "items" in versions
+        assert "cl-count" in render and "cl-rail" in render
+        assert "cl-sum" not in render, "абзац описания из списка убран"
+        assert "_clVersions" in render and "_clCount" in render
 
     def test_version_opens_the_full_text(self):
         render = _func("_renderChangelog")

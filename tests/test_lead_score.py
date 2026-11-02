@@ -54,8 +54,9 @@ class TestComputeScore:
         ))
         assert score == 100
         assert any("нет сайта" in r for r in reasons)
-        assert any("есть соцсети" in r for r in reasons)
-        assert any("есть мессенджер" in r for r in reasons)
+        # Соцсети и мессенджер — один сигнал: за Telegram не начисляется
+        # второй раз, иначе одна и та же ссылка давала 15 и 5 баллов.
+        assert any("есть соцсети или мессенджер" in r for r in reasons)
         assert any("дорогая категория" in r for r in reasons)
 
     def test_a_perfect_lead_reaches_one_hundred_without_vk(self):
@@ -94,18 +95,19 @@ class TestComputeScore:
         assert score == 0
         assert reasons == []
 
-    def test_socials_without_website_add_ten(self):
+    def test_socials_without_website_add_fifteen(self):
         score, reasons = compute_score(_rec(vk="https://vk.com/kafe"))
         assert score == lead_score.NO_WEBSITE + lead_score.SOCIALS_PRESENT
-        assert any("есть соцсети" in r for r in reasons)
+        assert lead_score.SOCIALS_PRESENT == 15, "пятёрка мессенджера перешла сюда"
+        assert any("есть соцсети или мессенджер" in r for r in reasons)
 
-    def test_messenger_adds_points(self):
-        """Telegram/WhatsApp — канал, куда можно написать уже сегодня."""
+    def test_messenger_counts_once_as_socials(self):
+        """Telegram/WhatsApp — тот же канал, что и соцсети: балл один."""
         score, reasons = compute_score(_rec(whatsapp="https://wa.me/7900"))
-        # WhatsApp — и соцсеть, и мессенджер: считаются оба сигнала.
-        assert score == (lead_score.NO_WEBSITE + lead_score.SOCIALS_PRESENT
-                         + lead_score.MESSENGER)
-        assert any("есть мессенджер" in r for r in reasons)
+        assert score == lead_score.NO_WEBSITE + lead_score.SOCIALS_PRESENT
+        assert any("есть соцсети или мессенджер" in r for r in reasons)
+        assert not any("мессенджер +5" in r for r in reasons)
+        assert not hasattr(lead_score, "MESSENGER"), "отдельного критерия больше нет"
 
     def test_complete_card_adds_points(self):
         score, reasons = compute_score(_rec(address="ул. Ленина, 1",
@@ -167,11 +169,12 @@ class TestFrontendMirror:
         js = self._app_js()
         table = js[js.index("const SCORE_RULES"):js.index("function scoreBreakdown")]
         pts = [int(p) for p in re.findall(r"pts: (\d+)", table)]
+        # Шесть критериев: соцсети и мессенджер — один сигнал (15 баллов),
+        # иначе Telegram давал бы баллы дважды за одну и ту же ссылку.
         assert sorted(pts) == sorted([
             lead_score.NO_WEBSITE, lead_score.RATING_GOOD, lead_score.REVIEWS_MANY,
             lead_score.HAS_PHONE, lead_score.EXPENSIVE_CATEGORY,
-            lead_score.SOCIALS_PRESENT, lead_score.MESSENGER,
-            lead_score.CARD_COMPLETE,
+            lead_score.SOCIALS_PRESENT, lead_score.CARD_COMPLETE,
         ])
         # Таблица правил в интерфейсе тоже должна набирать ровно 100 без ВК.
         assert sum(pts) == MAX_SCORE

@@ -1440,6 +1440,22 @@ function _clInline(text) {
 
 // Полный текст версии разделами, как в релизе: заголовок с чертой
 // и пункты списком под ним.
+// Сколько изменений в версии: пункты разделов, у старых версий — строки
+// списка. Цифра заменяет прежний абзац описания: список читается глазами, а
+// полный текст открывается по нажатию.
+function _clCount(entry) {
+  if (!entry) return 0;
+  if (Array.isArray(entry.items) && entry.items.length) return entry.items.length;
+  return (entry.sections || []).reduce((n, s) => n + ((s.points || []).length), 0);
+}
+
+function _clCountWord(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'изменение';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'изменения';
+  return 'изменений';
+}
+
 function _clSections(entry) {
   return (entry.sections || []).map(sec => `
     <section class="cl-sec">
@@ -1461,7 +1477,7 @@ function _renderChangelog(meta, err) {
   let body;
   if (open) {
     // Заголовок как у релиза на GitHub: версия, тире, человеческое название.
-    const heading = `v${escapeHtml(open.version)}` + (open.title ? ' — ' + escapeHtml(open.title) : '');
+    const heading = escapeHtml(open.version) + (open.title ? ' — ' + escapeHtml(open.title) : '');
     // Разделы — новый формат; заметки старых версий приходят пунктами.
     const sections = open.sections.length ? _clSections(open) : '';
     const items = !sections && open.items.length
@@ -1489,19 +1505,24 @@ function _renderChangelog(meta, err) {
       const when = e.date ? `<time class="cl-date" datetime="${escapeHtml(e.date)}">${escapeHtml(e.date)}</time>` : '';
       return `
         <button type="button" class="cl-entry ${isLatest ? 'cl-latest' : ''}" onclick="openChangelogVersion('${escapeHtml(e.version)}')" title="${escapeHtml(t.details)}">
+          <span class="cl-rail" aria-hidden="true"></span>
+          <span class="cl-main">
           <span class="cl-head">
-            <span class="cl-ver">v${escapeHtml(e.version)}</span>
+            <span class="cl-ver">${escapeHtml(e.version)}</span>
             ${isLatest ? `<span class="cl-tag">${escapeHtml(t.latest)}</span>` : ''}
             ${isYours ? `<span class="cl-tag cl-yours">${escapeHtml(t.yours)}</span>` : ''}
             ${when}
           </span>
           ${e.title ? `<span class="cl-name">${escapeHtml(e.title)}</span>` : ''}
-          <span class="cl-sum">${escapeHtml(e.summary || '—')}</span>
-          <span class="cl-more">${escapeHtml(t.details)} →</span>
+          <span class="cl-row">
+            <span class="cl-count">${_clCount(e) ? _clCount(e) + ' ' + _clCountWord(_clCount(e)) : ''}</span>
+            <span class="cl-more">${escapeHtml(t.details)} →</span>
+          </span>
+          </span>
         </button>`;
     }).join('');
     body = rows || `<div class="cl-empty">${err
-      ? escapeHtml(t.error) + (cur ? ' Текущая версия: v' + escapeHtml(cur) : '')
+      ? escapeHtml(t.error) + (cur ? ' Текущая версия: ' + escapeHtml(cur) : '')
       : escapeHtml(t.empty)}</div>`;
   }
 
@@ -1511,7 +1532,7 @@ function _renderChangelog(meta, err) {
   overlay.innerHTML = `
     <div class="ui-modal changelog-modal${open ? ' cl-wide' : ''}" role="dialog" aria-modal="true" aria-labelledby="cl-title">
       <h3 id="cl-title">${UI_ICONS.file}${escapeHtml(t.title)}</h3>
-      <p class="cl-sub">${escapeHtml(t.subtitle)}${cur ? ' Вы на <b>v' + escapeHtml(cur) + '</b>.' : ''}</p>
+      <p class="cl-sub">${escapeHtml(t.subtitle)}${cur ? ' Вы на <b>' + escapeHtml(cur) + '</b>.' : ''}</p>
       ${meta && meta.offline ? `<p class="cl-offline">${escapeHtml(t.offline)}</p>` : ''}
       <div class="cl-list">${body}</div>
       <div class="ui-modal-btns cl-foot">

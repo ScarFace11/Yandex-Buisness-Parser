@@ -1582,7 +1582,7 @@ test('score breakdown lists only the criteria that fired', () => {
   for (const line of [
     '✅ Нет сайта +30', '✅ Рейтинг 4.7 +15',
     '✅ Отзывов 128 +15', '✅ Есть телефон +10', '✅ Дорогая категория +10',
-    '✅ Есть соцсети +10', '✅ Есть мессенджер +5',
+    '✅ Есть соцсети или мессенджер +15',
     '✅ Адрес и категория заполнены +5',
   ]) {
     assert.ok(lines.includes(line), line);
@@ -1598,7 +1598,7 @@ test('score breakdown marks the criteria that did not fire', () => {
   assert.match(why, /❌ Телефон — не указан/);
   assert.match(why, /❌ Дорогая категория — нет/);
   assert.match(why, /❌ Рейтинг — нет данных/);
-  assert.match(why, /❌ Соцсетей нет/);
+  assert.match(why, /❌ Соцсетей и мессенджеров нет/);
   // Критерия «дата добавления» больше нет: дату карточка не отдаёт, и строку
   // «нет данных» нельзя держать на виду у пользователя.
   assert.ok(!/Дата добавления/.test(why));
@@ -1617,7 +1617,7 @@ test('score breakdown counts socials and ignores the removed date criterion', ()
   const { total } = globalThis.scoreBreakdown({
     website: 'https://x.ru', telegram: 'https://t.me/x',
   });
-  assert.equal(total, 15, 'соцсети 10 + мессенджер 5');
+  assert.equal(total, 15, 'соцсети и мессенджер — один критерий на 15 баллов');
   // Дата добавления не собирается — что бы ни лежало в записи, баллы она
   // больше не двигает.
   assert.equal(globalThis.scoreBreakdown(

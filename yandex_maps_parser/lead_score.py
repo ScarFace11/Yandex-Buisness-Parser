@@ -19,17 +19,15 @@ RATING_GOOD = 15         # бизнес реальный, клиенты им д
 REVIEWS_MANY = 15        # есть поток клиентов
 HAS_PHONE = 10           # до него можно дозвониться
 EXPENSIVE_CATEGORY = 10  # услуги дорогие — бюджет на сайт есть
-SOCIALS_PRESENT = 10     # уже ведёт маркетинг, просто не на своём сайте
-MESSENGER = 5            # есть WhatsApp/Telegram: писать можно уже сегодня
+SOCIALS_PRESENT = 15     # уже ведёт маркетинг: соцсети или мессенджер
 CARD_COMPLETE = 5        # адрес и категория заполнены — бизнес можно проверить
 
 # Сумма базовых сигналов = 100: идеальный лид добирает шкалу без ВК.
 BASE_MAX = (NO_WEBSITE + RATING_GOOD + REVIEWS_MANY + HAS_PHONE
-            + EXPENSIVE_CATEGORY + SOCIALS_PRESENT + MESSENGER + CARD_COMPLETE)
+            + EXPENSIVE_CATEGORY + SOCIALS_PRESENT + CARD_COMPLETE)
 MAX_SCORE = 100
 
 SOCIAL_FIELDS = ("vk", "telegram", "instagram", "whatsapp")
-MESSENGER_FIELDS = ("telegram", "whatsapp")
 
 _AGGREGATORS = r"taplink|linktree|linktr\.ee|becons\.ai|illions\.app"
 
@@ -52,11 +50,6 @@ def _num(value, default=0.0) -> float:
 
 def _has_socials(record: dict) -> bool:
     return any(str(record.get(field) or "").strip() for field in SOCIAL_FIELDS)
-
-
-def _has_messenger(record: dict) -> bool:
-    """Мессенджер — канал, куда можно написать сейчас, без почты и сайта."""
-    return any(str(record.get(field) or "").strip() for field in MESSENGER_FIELDS)
 
 
 def _card_is_complete(record: dict) -> bool:
@@ -100,13 +93,12 @@ def compute_score(record: dict) -> tuple[int, list[str]]:
         score += EXPENSIVE_CATEGORY
         reasons.append(f"дорогая категория +{EXPENSIVE_CATEGORY}")
 
+    # Соцсети и мессенджеры — один канал: Telegram есть в обоих списках, и
+    # отдельный критерий давал второй балл за ту же ссылку. Пятёрка мессенджера
+    # перешла сюда, сумма сигналов по-прежнему 100.
     if _has_socials(record):
         score += SOCIALS_PRESENT
-        reasons.append(f"есть соцсети +{SOCIALS_PRESENT}")
-
-    if _has_messenger(record):
-        score += MESSENGER
-        reasons.append(f"есть мессенджер +{MESSENGER}")
+        reasons.append(f"есть соцсети или мессенджер +{SOCIALS_PRESENT}")
 
     if _card_is_complete(record):
         score += CARD_COMPLETE

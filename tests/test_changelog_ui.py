@@ -31,14 +31,15 @@ def test_changelog_list_shows_summary_and_opens_full_text(browser_cdp, live_app_
         tab.evaluate("showChangelog()")
         assert _wait(tab, "!!document.querySelector('#changelog-overlay .cl-entry')"), "список версий не появился"
 
-        # 1. В списке — краткое описание, а не полный текст.
+        # 1. В списке — версия, название и число изменений, без простыни.
         info = tab.evaluate("""(() => {
           const rows = [...document.querySelectorAll('#changelog-overlay .cl-entry')];
           const r = rows[0];
           return JSON.stringify({
             count: rows.length,
             ver: r.querySelector('.cl-ver').textContent.trim(),
-            sum: (r.querySelector('.cl-sum') || {}).textContent || '',
+            count_lbl: (r.querySelector('.cl-count') || {}).textContent || '',
+            hasRail: !!r.querySelector('.cl-rail'),
             hasItems: !!r.querySelector('.cl-item-x'),
             buttons: [...document.querySelectorAll('#changelog-overlay button')].map(b => b.textContent.trim()),
             title: document.querySelector('#cl-title').textContent.trim(),
@@ -47,8 +48,9 @@ def test_changelog_list_shows_summary_and_opens_full_text(browser_cdp, live_app_
         })()""")
         info = json.loads(info) if isinstance(info, str) else info
         assert info["count"] >= 3, info
-        assert info["ver"].startswith("v"), info
-        assert len(info["sum"]) > 20, info
+        assert not info["ver"].startswith("v"), "буква «v» уже есть в подписи «Вы на»"
+        assert info["hasRail"] is True, "у записи есть линия-таймлайн"
+        assert "изменени" in info["count_lbl"], info
         assert info["hasItems"] is False, "в списке не должно быть полного текста"
         assert not any("Проверить обновление" in b for b in info["buttons"]), info
 

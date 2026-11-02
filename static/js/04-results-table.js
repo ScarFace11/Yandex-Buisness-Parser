@@ -838,10 +838,10 @@ const SCORE_RULES = [
     yes: () => 'Есть телефон', no: () => 'Телефон — не указан' },
   { pts: 10, hit: r => SCORE_EXPENSIVE.some(w => String(r.category || '').toLowerCase().includes(w)),
     yes: () => 'Дорогая категория', no: () => 'Дорогая категория — нет' },
-  { pts: 10, hit: r => scoreHasSocials(r),
-    yes: () => 'Есть соцсети', no: () => 'Соцсетей нет' },
-  { pts: 5, hit: r => ['telegram', 'whatsapp'].some(f => !!String(r[f] || '').trim()),
-    yes: () => 'Есть мессенджер', no: () => 'Мессенджера нет' },
+  // Соцсети и мессенджер — один критерий: Telegram был в обоих правилах и
+  // давал второй балл за ту же ссылку. Пятёрка мессенджера перешла в соцсети.
+  { pts: 15, hit: r => scoreHasSocials(r),
+    yes: () => 'Есть соцсети или мессенджер', no: () => 'Соцсетей и мессенджеров нет' },
   { pts: 5, hit: r => !!String(r.address || '').trim() && !!String(r.category || '').trim(),
     yes: () => 'Адрес и категория заполнены', no: () => 'Адрес или категория — нет данных' },
 ];
@@ -1434,7 +1434,7 @@ function _resultRowHtml(r, n) {
         data-review-url="${reviewUrl}"
         onchange="toggleReviewed(this.dataset.reviewUrl, this)"></td>
       <td data-col="num">${n}</td>
-      <td data-col="name"><a class="tbl-link" href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(String(r.name || '').trim() || 'Без названия')}</a>${newTagHTML(r)}</td>
+      <td data-col="name"><span class="name-cell"><a class="tbl-link" href="${escapeHtml(safeUrl(r.yandex_maps_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(String(r.name || '').trim() || 'Без названия')}</a>${newTagHTML(r)}</span></td>
       <td data-col="category" class="tbl-cat">${escapeHtml(r.category || '—')}</td>
       <td data-col="address">${escapeHtml(r.address || '—')}</td>
       <td data-col="website">${siteHTML(r)}</td>
