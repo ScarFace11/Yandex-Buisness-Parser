@@ -63,7 +63,7 @@ jobs:
       - name: Check the tag — публикуем только стабильные релизы
         id: tag
         # Нормализация и проверка формата — в scripts/release_tag.py.
-        run: python scripts/release_tag.py publish
+        run: python3 scripts/release_tag.py publish
       - name: Wait for both builds to be green
         id: builds
         if: steps.tag.outputs.publish == 'true'
@@ -72,7 +72,7 @@ jobs:
           PWAIT_ATTEMPTS: '40'
           PWAIT_SLEEP: '30'
         run: |
-          python scripts/wait_builds.py --tag "${{ steps.tag.outputs.tag }}"
+          python3 scripts/wait_builds.py --tag "${{ steps.tag.outputs.tag }}"
       - name: Check the draft — файлы на месте, релиз ещё черновик
         id: draft
         if: steps.builds.outputs.ok == 'true'

@@ -50,7 +50,7 @@ jobs:
           INPUT_TAG: ${{ inputs.tag }}
         run: |
           LATEST=$(gh release view --json tagName --jq .tagName 2>/dev/null || true)
-          python scripts/release_tag.py announce --latest "$LATEST"
+          python3 scripts/release_tag.py announce --latest "$LATEST"
       - name: Skip when the version is already announced
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -66,11 +66,11 @@ jobs:
           WR_ATTEMPTS: '15'
           WR_SLEEP: '10'
         run: |
-          python scripts/wait_release.py --tag "$TAG"
+          python3 scripts/wait_release.py --tag "$TAG"
       - name: Stamp version.json and push it to main
         if: env.SKIP != '1'
         run: |
-          python scripts/stamp_version.py --tag "$TAG" --changelog CHANGELOG.md \
+          python3 scripts/stamp_version.py --tag "$TAG" --changelog CHANGELOG.md \
             --repo "${{ github.repository }}"
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
