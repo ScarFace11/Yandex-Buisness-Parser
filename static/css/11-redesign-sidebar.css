@@ -315,9 +315,12 @@
 .app-modal{position:fixed;inset:0;z-index:1200;display:flex;align-items:center;justify-content:center;padding:24px}
 .app-modal[hidden]{display:none}
 .app-modal-backdrop{position:absolute;inset:0;background:var(--scrim)}
-/* Высота фиксированная, а не «по содержимому»: иначе окно прыгает вверх-вниз
-   при переключении вкладок с разной длиной. */
-.ms-box{
+/* Оба окна — одна геометрия: непрозрачная карточка поверх затемнения,
+   шапка сверху, подвал снизу, тело прокручивается внутри. Раньше у редактора
+   объёма был только размер, поэтому фон просвечивал и подвал наезжал на поля.
+   Высота «Ещё настройки» фиксированная, а не «по содержимому»: иначе окно
+   прыгает вверх-вниз при переключении вкладок с разной длиной. */
+.ms-box,.ee-box{
   position:relative;display:flex;flex-direction:column;width:min(760px,100%);
   height:min(680px,88vh);max-height:88vh;
   background:var(--card);border:1px solid var(--bdr);border-radius:var(--r-lg);box-shadow:var(--sh-lg);
@@ -343,7 +346,7 @@
 .ms-foot-note{font-size:12px;color:var(--muted);font-weight:600;line-height:1.4}
 @media(max-width:620px){
   .app-modal{padding:10px}
-  .ms-box{max-height:94vh}
+  .ms-box,.ee-box{max-height:94vh}
 }
 
 /* Пресеты фильтрации: три плитки, у каждой — что она оставит в отчёте. */
@@ -363,6 +366,6 @@ body.app-modal-open{overflow:hidden}
 /* Редактор карточки объёма — компактное окно, та же геометрия, что у «Ещё
    настройки», но по содержимому. */
 .ee-box{width:min(460px,100%);height:auto;max-height:88vh}
-.ee-body{display:grid;gap:12px;padding:6px 20px 14px;overflow-y:auto}
+.ee-body{display:grid;gap:12px;padding:6px 20px 14px;overflow-y:auto;min-height:0}
 .ee-body input[type="text"]{width:100%}
 .ms-foot-btns{display:flex;gap:8px;flex-shrink:0}
