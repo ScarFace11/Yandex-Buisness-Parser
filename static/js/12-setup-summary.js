@@ -181,6 +181,12 @@ function renderSetupSummary() {
 function _setupJump(target, key) {
   const sec = document.getElementById(target);
   if (!sec) return;
+  // Разделы, уехавшие в окно «Ещё настройки», сначала открывают его на нужной
+  // вкладке: иначе чип уводил фокус в невидимую секцию и выглядел сломанным.
+  // Карта внутри функции — её одну и выдёргивают тесты.
+  const tab = { 'acc-parse': 'data', 'acc-tech': 'data',
+                'acc-filters': 'filters', 'acc-formats': 'files' }[target];
+  if (tab && typeof openMoreSettings === 'function') openMoreSettings(tab);
   if (!sec.classList.contains('open')) {
     const hdr = sec.querySelector('.acc-hdr');
     if (hdr) toggleAccordion(hdr);

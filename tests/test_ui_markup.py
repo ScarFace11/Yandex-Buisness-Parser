@@ -1171,11 +1171,10 @@ class TestDesignSystem:
         assert not self.EMOJI.search(self.LOGBAR), "в панели лога остались эмодзи"
 
     def test_eyebrow_labels_lost_their_emoji(self):
-        for title in ("Сбор данных", "Вывод и фильтрация"):
-            assert f'<div class="group-title">{title}</div>' in TEMPLATE
-        # Ни один подзаголовок фильтров не начинается со значка.
-        blocks = re.findall(r'<div class="(?:group-title|flt-group-title)">([^<]*)</div>',
-                            self.RENDERED)
+        # Групповых подписей «Сбор данных» / «Вывод и фильтрация» больше нет:
+        # на первом экране два шага, остальное — в окне «Ещё настройки».
+        assert 'class="group-title"' not in TEMPLATE
+        blocks = re.findall(r'<div class="flt-group-title">([^<]*)</div>', self.RENDERED)
         assert blocks, "подзаголовки не найдены"
         for text in blocks:
             assert not self.EMOJI.search(text), f"эмодзи вернулся в подзаголовок: {text}"
@@ -1806,15 +1805,26 @@ class TestParseFieldsAccordion:
     Выбор полей заменил вкладку «Форматы вывода» и управляет сбором соцсетей.
     """
 
-    def test_accordion_numbering_is_sequential(self):
-        # 01 Основные → 02 Что парсить → 03 Глубина → 04 Фильтрация → 05 Форматы.
-        order = ['acc-basic', 'acc-parse', 'acc-tech', 'acc-filters', 'acc-formats']
-        pos = [TEMPLATE.index(f'id="{a}"') for a in order]
-        assert pos == sorted(pos), "аккордеоны идут не по порядку"
-        for a, num in zip(order, ['01', '02', '03', '04', '05']):
-            start = TEMPLATE.index(f'id="{a}-hdr"')
-            seg = TEMPLATE[start:start + 400]
-            assert f'>{num}</span>' in seg, f"{a} должен быть под номером {num}"
+    def test_sidebar_keeps_two_steps_and_the_rest_lives_in_a_window(self):
+        """Два шага на виду, остальное — в окне «Ещё настройки».
+
+        Сайдбор отвечает на «что и где ищем» и «сколько собирать»; «Что
+        парсить», «Глубина», «Фильтрация» и «Форматы» уехали в окно с
+        вкладками, чтобы не обещать важное на первом экране.
+        """
+        sidebar = TEMPLATE[:TEMPLATE.index('id="more-settings"')]
+        assert sidebar.index('id="acc-basic"') < sidebar.index('id="acc-effort"')
+        assert sidebar.index('id="acc-effort"') < sidebar.index('id="run-dock"')
+        for moved in ('acc-parse', 'acc-tech', 'acc-filters', 'acc-formats'):
+            assert f'id="{moved}"' not in sidebar, f"{moved} остался в сайдборе"
+            assert f'id="{moved}"' in TEMPLATE
+        # Нумерация «01…05» ушла вместе с переездом: разделы называются словами.
+        assert 'acc-num' not in TEMPLATE
+        modal = TEMPLATE[TEMPLATE.index('id="more-settings"'):]
+        for pane in ('data', 'filters', 'files'):
+            assert f'data-ms-pane="{pane}"' in modal, pane
+        assert modal.index('id="acc-parse"') < modal.index('id="acc-tech"')
+        assert modal.index('id="acc-filters"') < modal.index('id="acc-formats"')
 
     def test_parse_grid_has_both_groups(self):
         assert 'id="acc-parse"' in TEMPLATE
