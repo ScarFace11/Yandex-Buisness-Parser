@@ -45,7 +45,7 @@ function setupVolumeEstimate() {
   const v = searchVolumeEstimate();
   return {
     cells: v.cells, cities: v.cities, queries: v.queries, pages: v.pages,
-    searchPages: v.searchPages, maxCandidates: v.cap,
+    searchPages: v.searchPages, maxCandidates: v.cap, perCity: v.perCity,
     cards: v.total, capped: v.capped,
   };
 }
@@ -95,6 +95,11 @@ function buildSetupSummary() {
       + ` · Страниц на точку: ${vol.pages} → ${_setupNum(vol.searchPages)}`
       + ` ${_setupPlural(vol.searchPages, 'страница', 'страницы', 'страниц')} выдачи,`
       + ` до ${CARDS_PER_PAGE} организаций со страницы.`
+      // Лимит действует на каждый город: для нескольких городов итог — это
+      // сумма, и её надо показать явно.
+      + (vol.cities > 1
+          ? ` На каждый город — до ${_setupNum(vol.perCity)}.`
+          : '')
       + (vol.capped
           ? ` Потолок «Макс. организаций» (${_setupNum(vol.maxCandidates)}) сработает раньше.`
           : '')

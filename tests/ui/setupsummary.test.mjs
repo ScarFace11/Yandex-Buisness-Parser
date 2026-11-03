@@ -229,6 +229,31 @@ test('объём не превышает потолок «Макс. органи
   assert.match(chip.detail, /Страниц на точку: 5/);
 });
 
+test('объём показывает, сколько приходится на каждый город', () => {
+  globalThis._gridMode = 'whole';
+  globalThis.selectedCities = ['Москва', 'Казань', 'Сочи'];
+  els['f-queries'].value = 'кафе';
+  els['f-pages'].value = '2';
+  els['f-max-candidates'].value = '200';
+
+  const vol = globalThis.setupVolumeEstimate();
+  // 2 страницы × 25 = 50 на город, три города — 150.
+  assert.equal(vol.perCity, 50);
+  assert.equal(vol.cards, 150);
+  const chip = byKey().volume;
+  assert.match(chip.value, /^до 150 организаций/);
+  assert.match(chip.detail, /На каждый город — до 50/);
+});
+
+test('для одного города лишней строки про город нет', () => {
+  globalThis.selectedCities = ['Уфа'];
+  els['f-queries'].value = 'кафе';
+  els['f-pages'].value = '2';
+  els['f-max-candidates'].value = '200';
+
+  assert.doesNotMatch(byKey().volume.detail, /На каждый город/);
+});
+
 test('без города и запроса объём не считается', () => {
   globalThis.selectedCities = [];
   els['f-queries'].value = '';

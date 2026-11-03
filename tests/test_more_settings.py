@@ -30,6 +30,8 @@ def test_sidebar_offers_volume_choices_and_a_counter():
     assert "search-effort" in JS
     # Счётчик объясняет объём словами, а не только числом.
     assert "организац" in JS
+    # Для нескольких городов видно, сколько приходится на каждый.
+    assert "на город" in JS
 
 
 def test_more_settings_window_has_four_tabs():

@@ -78,6 +78,11 @@ function updateEffortEstimate() {
   const est = searchVolumeEstimate();
   el.textContent = est.total
     ? `до ${est.total.toLocaleString('ru-RU')} ${effortOrgWord(est.total)}, ~${est.minutes} мин`
+      // Лимит «Макс. организаций» действует на каждый город — без этой строки
+      // число для трёх городов выглядит как ошибка.
+      + (est.cities > 1
+          ? ` · по ${est.perCity.toLocaleString('ru-RU')} на город`
+          : '')
     : 'Выберите город и запрос — посчитаю объём';
 }
 
@@ -140,6 +145,9 @@ function updateEditorEstimate() {
   });
   el.textContent = est.total
     ? `Этот вариант: до ${est.total.toLocaleString('ru-RU')} ${effortOrgWord(est.total)}, ~${est.minutes} мин`
+      + (est.cities > 1
+          ? ` · по ${est.perCity.toLocaleString('ru-RU')} на город`
+          : '')
     : 'Выберите город и запрос в сайдборе — покажу, сколько получится';
 }
 
