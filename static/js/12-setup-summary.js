@@ -22,11 +22,6 @@ const SETUP_SUM_TARGETS = {
   formats: 'acc-formats',
 };
 
-// Яндекс отдаёт по 25 организаций на страницу выдачи — та же константа, что
-// у сервера (browser_search._CARDS_PER_PAGE). Оценка карточек строится на ней,
-// поэтому числа в сводке и в логе прогона говорят об одном и том же.
-const SETUP_CARDS_PER_PAGE = 25;
-
 function _setupQueries() {
   return (document.getElementById('f-queries')?.value || '')
     .split('\n').map(s => s.trim()).filter(Boolean);
@@ -44,30 +39,14 @@ function _setupFormats() {
   return on;
 }
 
-// Оценка объёма прогона ДО запуска: сколько страниц выдачи откроет браузер
-// и сколько организаций из них получится.
-//
-// Модель — та же, что в подсказке «Глубины поиска»: точек поиска на город
-// (1 в режиме «весь город», иначе — сетка «радиус × шаг»), умножить на число
-// городов, запросов и страниц. Карточек ≈ страницы × 25, но не больше лимита
-// «Макс. организаций» — этот потолок тут и видно.
+// Оценка объёма прогона ДО запуска. Считает searchVolumeEstimate (js/01):
+// одна модель на карточки объёма и на сводку, иначе числа расходятся.
 function setupVolumeEstimate() {
-  const queries = _setupQueries().length;
-  const cities  = _setupCities().length;
-  const pages   = Math.max(1, +((document.getElementById('f-pages') || {}).value || 1));
-  const manual  = _gridMode === 'manual';
-  const cells   = manual
-    ? gridCellsEstimate((document.getElementById('f-grad') || {}).value,
-                        (document.getElementById('f-gstep') || {}).value)
-    : 1;
-  const searchPages = cities * queries * cells * pages;
-  const maxCandidates = Math.max(1, +((document.getElementById('f-max-candidates') || {}).value || 200));
-  const byPages = searchPages * SETUP_CARDS_PER_PAGE;
+  const v = searchVolumeEstimate();
   return {
-    cells, cities, queries, pages, searchPages, maxCandidates,
-    cards: Math.min(maxCandidates, byPages),
-    // Потолок срабатывает — в подсказке объясняем, почему число не растёт.
-    capped: byPages > maxCandidates,
+    cells: v.cells, cities: v.cities, queries: v.queries, pages: v.pages,
+    searchPages: v.searchPages, maxCandidates: v.cap,
+    cards: v.total, capped: v.capped,
   };
 }
 
@@ -115,7 +94,7 @@ function buildSetupSummary() {
     ? `Точек поиска на город: ${vol.cells} · Городов: ${vol.cities} · Запросов: ${vol.queries}`
       + ` · Страниц на точку: ${vol.pages} → ${_setupNum(vol.searchPages)}`
       + ` ${_setupPlural(vol.searchPages, 'страница', 'страницы', 'страниц')} выдачи,`
-      + ` до ${SETUP_CARDS_PER_PAGE} организаций с каждой.`
+      + ` до ${CARDS_PER_PAGE} организаций со страницы.`
       + (vol.capped
           ? ` Потолок «Макс. организаций» (${_setupNum(vol.maxCandidates)}) сработает раньше.`
           : '')
@@ -126,7 +105,7 @@ function buildSetupSummary() {
     { key: 'cities',  label: 'Города',    value: citiesText,  tone: cities.length ? 'ok' : 'warn' },
     { key: 'volume',  label: 'Объём',
       value: volumeKnown
-        ? `≈${_setupNum(vol.cards)}`
+        ? `до ${_setupNum(vol.cards)}`
           + ` ${_setupPlural(vol.cards, 'организация', 'организации', 'организаций')}`
           + ` · ${_setupNum(vol.searchPages)} стр.`
         : '—',

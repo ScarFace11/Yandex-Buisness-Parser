@@ -12,14 +12,18 @@ JS = (ROOT / "static/js/14-more-settings.js").read_text(encoding="utf-8")
 STYLE = (ROOT / "static/css/11-redesign-sidebar.css").read_text(encoding="utf-8")
 
 
-def test_sidebar_offers_three_volume_choices_and_a_counter():
+def test_sidebar_offers_volume_choices_and_a_counter():
+    # Карточки рисует JS из сохранённого списка: четыре готовых варианта —
+    # семена первого запуска, а не жёсткая разметка.
+    assert 'id="effort-choices"' in TEMPLATE
     for name, note in (("Быстро", "первые 20 организаций с города"),
                        ("Обычный", "две страницы с города"),
                        ("Тщательно", "все страницы и полные карточки"),
                        ("Своё", "ваши настройки")):
-        assert f'<span class="effort-name" data-effort-name>{name}</span>' in TEMPLATE, name
-        assert note in TEMPLATE, name
+        assert f"name: '{name}'" in JS, name
+        assert note in JS, name
     assert 'id="effort-estimate"' in TEMPLATE
+    assert "function renderEffortCards" in JS
     assert "function setSearchEffort" in JS and "function updateEffortEstimate" in JS
     assert "EFFORT_DEFAULTS" in JS
     # Выбор запоминается между запусками приложения.
@@ -28,20 +32,20 @@ def test_sidebar_offers_three_volume_choices_and_a_counter():
     assert "организац" in JS
 
 
-def test_more_settings_window_has_three_tabs():
+def test_more_settings_window_has_four_tabs():
     assert 'id="more-settings"' in TEMPLATE
     assert 'role="dialog" aria-modal="true"' in TEMPLATE
-    for pane in ("data", "filters", "files"):
+    for pane in ("effort", "data", "filters", "files"):
         assert f'data-ms-pane="{pane}"' in TEMPLATE, pane
     assert "function openMoreSettings" in JS
     assert "function setMoreSettingsTab" in JS
     assert "function closeMoreSettings" in JS
     # Окно закрывается и мышью по подложке, и клавишей Escape.
     assert 'onclick="closeMoreSettings()"' in TEMPLATE
-    assert "event.key !== 'Escape'" in JS, "Escape закрывает окно и редактор"
-    # Ссылка «Ещё настройки» — маленькая и под счётчиком, а не раздел сайдбора.
-    assert 'id="btn-more-settings"' in TEMPLATE
-    assert 'class="more-settings-link"' in TEMPLATE
+    assert "event.key !== 'Escape'" in JS
+    # Отдельной ссылки «Ещё настройки» больше нет: окно открывают шестерёнки.
+    assert 'id="btn-more-settings"' not in TEMPLATE
+    assert "openEffortVariant" in JS
 
 
 def test_filter_presets_explain_what_they_keep():
@@ -70,23 +74,22 @@ def test_setup_chips_open_the_window_on_the_right_tab():
         assert f"'{section}': '{tab}'" in setup, section
 
 
-def test_volume_cards_can_be_edited_and_renamed():
-    """Шестерёнка в углу карточки открывает состав прогона и позволяет
-    переписать название с описанием; «Своё» — такая же карточка."""
-    cards = TEMPLATE[TEMPLATE.index('class="effort-choices"'):TEMPLATE.index('id="effort-estimate"')]
-    # В описаниях не осталось технических слов про ВК: их место — в редакторе.
-    assert "ВК" not in cards and "ВКонтакте" not in cards
-    for key in ("fast", "normal", "thorough", "custom"):
-        assert f'data-effort-edit="{key}"' in cards, key
-        assert ("onclick=\"openEffortEditor('%s')\"" % key) in cards, key
-    assert "function openEffortEditor" in JS
-    assert "function saveEffortEditor" in JS
+def test_volume_cards_can_be_added_renamed_and_deleted():
+    """Шестерёнка открывает настройки варианта в общем окне; карточку можно
+    переименовать, добавить новую и удалить лишнюю."""
+    assert "function openEffortVariant" in JS
+    assert "function addEffortCard" in JS and "function deleteEffortCard" in JS
+    assert 'onclick="addEffortCard()"' in TEMPLATE
+    assert 'onclick="deleteEffortCard()"' in TEMPLATE
     assert 'id="ee-name"' in TEMPLATE and 'id="ee-note"' in TEMPLATE
     assert 'id="ee-pages"' in TEMPLATE and 'id="ee-candidates"' in TEMPLATE
-    assert 'id="ee-save"' in TEMPLATE and ">Сохранить</button>" in TEMPLATE
+    assert 'id="ee-delete"' in TEMPLATE
     # Свои варианты живут в браузере пользователя.
-    assert "effort-presets" in JS
+    assert "effort-cards" in JS
     assert "localStorage" in JS
+    # Правка сохраняется сразу: отдельного диалога и кнопки «Сохранить» нет.
+    assert "function saveEffortEditor" in JS
+    assert 'id="effort-editor"' not in TEMPLATE
 
 
 def test_more_settings_window_does_not_jump():

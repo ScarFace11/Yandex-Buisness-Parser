@@ -588,6 +588,51 @@ function gridCellsEstimate(radius, step) {
   return Math.max(1, Math.round(Math.PI * Math.pow(r / s, 2) * 0.64) + 1);
 }
 
+// Сколько организаций даст прогон и сколько это займёт.
+//
+// Приблизительная цифра хуже честного потолка: страница выдачи отдаёт 25
+// карточек (browser_search._CARDS_PER_PAGE), «Макс. организаций» действует на
+// КАЖДЫЙ город, а скорость — около двух карточек в минуту на поток (замер:
+// 58 записей за 80 с при 20 потоках). Функция одна на карточки объёма и на
+// сводку: два разных числа для одного прогона читаются как ошибка.
+const CARDS_PER_PAGE = 25;
+const CARDS_PER_MINUTE_PER_WORKER = 2;
+
+function searchVolumeEstimate(overrides) {
+  // Аргумент без значения по умолчанию: слайсеры тестов ищут тело функции от
+  // первой открывающей скобки, а пустой объект в параметрах ломал разбор.
+  const opts = overrides || {};
+  const num = (id, fallback) => {
+    const el = document.getElementById(id);
+    const value = Number(el && el.value);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  };
+  const queriesEl = document.getElementById('f-queries');
+  const queries = Math.max(1, queriesEl
+    ? queriesEl.value.split('\n').map(s => s.trim()).filter(Boolean).length
+    : 1);
+  const cities = Math.max(0,
+    (typeof selectedCities !== 'undefined' && selectedCities.length) || 0);
+  const pages = Math.max(1, Math.round(Number(opts.pages) || num('f-pages', 1)));
+  const cap = Math.max(1, Math.round(Number(opts.cap) || num('f-max-candidates', 200)));
+  const workers = Math.max(1, Math.round(num('f-workers', 20)));
+  const cells = (typeof _gridMode !== 'undefined' && _gridMode === 'manual')
+    ? gridCellsEstimate(num('f-grad', 1), num('f-gstep', 1))
+    : 1;
+  const byPages = queries * cells * pages * CARDS_PER_PAGE;
+  const perCity = Math.min(cap, byPages);
+  const total = cities * perCity;
+  const minutes = total
+    ? Math.max(1, Math.round(total / (workers * CARDS_PER_MINUTE_PER_WORKER)))
+    : 0;
+  return {
+    queries, cities, cells, pages, cap, workers,
+    perCity, total, minutes,
+    searchPages: cities * queries * cells * pages,
+    capped: byPages > cap,
+  };
+}
+
 // ── Grid coverage mode: «Весь город» / «Настроить вручную» ─────
 // The hidden checkbox f-grid stays the single source of truth for the
 // backend contract (use_grid), and the hidden number inputs f-grad/f-gstep

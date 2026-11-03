@@ -105,8 +105,12 @@ globalThis.toggleAccordion = hdr => hdr.closest('.acc')._classes.add('open');
 // глобального объекта, и со стороны теста её не видно.
 const sliced = [
   grabConst('SETUP_SUM_TARGETS').replace(/^const /, 'globalThis.SETUP_SUM_TARGETS = '),
-  grabScalarConst('SETUP_CARDS_PER_PAGE').replace(/^const /, 'globalThis.SETUP_CARDS_PER_PAGE = '),
+  // Оценка объёма одна на сайдбор и сводку — берём её из js/01.
+  grabScalarConst('CARDS_PER_PAGE').replace(/^const /, 'globalThis.CARDS_PER_PAGE = '),
+  grabScalarConst('CARDS_PER_MINUTE_PER_WORKER')
+    .replace(/^const /, 'globalThis.CARDS_PER_MINUTE_PER_WORKER = '),
   grab('gridCellsEstimate'),
+  grab('searchVolumeEstimate'),
   grab('_setupQueries'),
   grab('_setupCities'),
   grab('_setupFormats'),
@@ -181,9 +185,9 @@ test('объём в режиме «весь город»: одна точка н
   assert.equal(vol.cells, 1, 'автоматика ищет с одной точки на город');
   // 2 города × 2 запроса × 1 точка × 2 страницы = 8 страниц выдачи
   assert.equal(vol.searchPages, 8);
-  assert.equal(vol.cards, 8 * 25);
+  assert.equal(vol.cards, 200);
   assert.equal(vol.capped, false);
-  assert.equal(byKey().volume.value, '≈200 организаций · 8 стр.');
+  assert.equal(byKey().volume.value, 'до 200 организаций · 8 стр.');
   assert.match(byKey().volume.detail, /8 страниц выдачи/, 'число и слово должны согласоваться');
 });
 
@@ -200,7 +204,8 @@ test('объём в ручной сетке растёт вместе с чис�
   assert.equal(vol.cells, globalThis.gridCellsEstimate(20, 5));
   assert.ok(vol.cells > 1, 'сетка должна давать больше одной точки');
   assert.equal(vol.searchPages, vol.cells);
-  assert.equal(byKey().volume.value, `≈${(vol.cells * 25).toLocaleString('ru-RU')} организаций · ${vol.cells} стр.`);
+  assert.equal(byKey().volume.value,
+    `до ${(vol.cells * 25).toLocaleString('ru-RU')} организаций · ${vol.cells} стр.`);
 });
 
 test('объём не превышает потолок «Макс. организаций»', () => {
@@ -213,10 +218,11 @@ test('объём не превышает потолок «Макс. органи
   els['f-max-candidates'].value = '200';
 
   const vol = globalThis.setupVolumeEstimate();
-  assert.equal(vol.cards, 200, 'потолок срабатывает раньше страниц');
+  // «Макс. организаций» — лимит на КАЖДЫЙ город: три города × 200.
+  assert.equal(vol.cards, 600, 'потолок срабатывает раньше страниц, но на город');
   assert.equal(vol.capped, true);
   const chip = byKey().volume;
-  assert.match(chip.value, /^≈200 организаций/);
+  assert.match(chip.value, /^до 600 организаций/);
   assert.match(chip.detail, /Потолок «Макс. организаций» \(200\) сработает раньше/);
   // В подсказке видна вся арифметика, а не только итог.
   assert.match(chip.detail, /Точек поиска на город: \d+/);

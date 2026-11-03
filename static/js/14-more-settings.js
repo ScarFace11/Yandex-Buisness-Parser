@@ -7,41 +7,59 @@
 
 // Что входит в вариант: название, описание и значения формы. Название и
 // описание можно переписать — под свою работу, а не под наши слова.
+// Это семена первого запуска: дальше список карточек живёт в браузере, а
+// удалённая карточка обратно не возвращается.
 const EFFORT_DEFAULTS = {
   fast:     { name: 'Быстро',    note: 'первые 20 организаций с города', pages: 1, candidates: 20,  vk: false },
   normal:   { name: 'Обычный',   note: 'две страницы с города',          pages: 2, candidates: 200, vk: false },
   thorough: { name: 'Тщательно', note: 'все страницы и полные карточки', pages: 5, candidates: 600, vk: true },
-  custom:   { name: 'Своё',      note: 'ваши настройки — откройте шестерёнку', pages: 2, candidates: 200, vk: false },
+  custom:   { name: 'Своё',      note: 'ваши настройки',                 pages: 2, candidates: 200, vk: false },
 };
 const EFFORT_ORDER = ['fast', 'normal', 'thorough', 'custom'];
-const EFFORT_STORE = 'effort-presets';
+const EFFORT_STORE = 'effort-cards';
+const EFFORT_LEGACY_STORE = 'effort-presets';
 let _editingEffort = null;
 
+function _effortClamp(value, min, max, fallback) {
+  const num = Math.round(Number(value));
+  if (!Number.isFinite(num) || num <= 0) return fallback;
+  return Math.min(max, Math.max(min, num));
+}
+
+// Список карточек — данные: добавили, переименовали, удалили — так и осталось.
+// Старый формат (четыре пресета в effort-presets) читается один раз.
+function loadEffortCards() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(EFFORT_STORE) || 'null'); } catch (e) { saved = null; }
+  if (!Array.isArray(saved) || !saved.length) {
+    let legacy = {};
+    try { legacy = JSON.parse(localStorage.getItem(EFFORT_LEGACY_STORE) || '{}') || {}; } catch (e) { legacy = {}; }
+    saved = EFFORT_ORDER.map(key => Object.assign({ key }, EFFORT_DEFAULTS[key], legacy[key] || {}));
+  }
+  return saved.map(card => ({
+    key: String(card.key || ''),
+    name: String(card.name || 'Вариант').slice(0, 24),
+    note: String(card.note || '').slice(0, 90),
+    pages: _effortClamp(card.pages, 1, 20, 2),
+    candidates: _effortClamp(card.candidates, 1, 10000, 200),
+    vk: !!card.vk,
+  })).filter(card => card.key);
+}
+
+function saveEffortCards(cards) {
+  try { localStorage.setItem(EFFORT_STORE, JSON.stringify(cards)); } catch (e) {}
+}
+
+function effortCard(key) {
+  const cards = loadEffortCards();
+  return cards.find(card => card.key === key) || cards[0] || null;
+}
+
 function currentEffort() {
-  try {
-    const saved = localStorage.getItem('search-effort');
-    return EFFORT_ORDER.includes(saved) ? saved : 'normal';
-  } catch (e) { return 'normal'; }
-}
-
-function loadEffortPresets() {
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(EFFORT_STORE) || '{}') || {}; }
-  catch (e) { saved = {}; }
-  const map = {};
-  EFFORT_ORDER.forEach(key => {
-    map[key] = Object.assign({}, EFFORT_DEFAULTS[key], saved[key] || {});
-  });
-  return map;
-}
-
-function saveEffortPresets(map) {
-  try { localStorage.setItem(EFFORT_STORE, JSON.stringify(map)); } catch (e) {}
-}
-
-function effortPreset(key) {
-  const map = loadEffortPresets();
-  return map[key] || map.normal;
+  let saved = '';
+  try { saved = localStorage.getItem('search-effort') || ''; } catch (e) { saved = ''; }
+  const cards = loadEffortCards();
+  return cards.some(card => card.key === saved) ? saved : (cards[0] || {}).key;
 }
 
 function effortOrgWord(n) {
@@ -53,56 +71,39 @@ function effortOrgWord(n) {
   return 'организаций';
 }
 
-// Сколько получится: города × запросы × страницы × 50, но не больше лимита.
-// Цифра приблизительная — так и подписана, зато честно реагирует на правку
-// городов, ключей и варианта объёма.
-function estimateRun() {
-  const qEl = document.getElementById('f-queries');
-  const queries = Math.max(1, qEl
-    ? qEl.value.split('\n').map(s => s.trim()).filter(Boolean).length
-    : 1);
-  const cities = Math.max(1, (typeof selectedCities !== 'undefined' && selectedCities.length)
-    ? selectedCities.length : 1);
-  const num = (id, fallback) => {
-    const el = document.getElementById(id);
-    const value = Number(el && el.value);
-    return Number.isFinite(value) && value > 0 ? value : fallback;
-  };
-  const pages = num('f-pages', 1);
-  const cap = num('f-max-candidates', 200);
-  const workers = num('f-workers', 20);
-  const orgs = Math.min(cap, cities * queries * pages * 50);
-  // 3,6 карточки в минуту на поток — темп браузерного сбора карточек.
-  const minutes = Math.max(1, Math.round(orgs / (workers * 3.6)));
-  return { orgs, minutes };
-}
-
+// Счётчик под карточками: та же модель, что у сводки (searchVolumeEstimate).
 function updateEffortEstimate() {
   const el = document.getElementById('effort-estimate');
   if (!el) return;
-  const est = estimateRun();
-  el.textContent = `≈ ${est.orgs} ${effortOrgWord(est.orgs)}, ~${est.minutes} мин`;
+  const est = searchVolumeEstimate();
+  el.textContent = est.total
+    ? `до ${est.total.toLocaleString('ru-RU')} ${effortOrgWord(est.total)}, ~${est.minutes} мин`
+    : 'Выберите город и запрос — посчитаю объём';
 }
 
-// Карточки живут данными: переименовали — сразу видно, перезагрузили — осталось.
+// Карточки рисуются из списка: количество, названия и состав — всё данные.
 function renderEffortCards() {
-  const presets = loadEffortPresets();
+  const host = document.getElementById('effort-choices');
+  if (!host) return;
   const active = currentEffort();
-  document.querySelectorAll('[data-effort-item]').forEach(item => {
-    const key = item.dataset.effortItem;
-    const preset = presets[key];
-    if (!preset) return;
-    const name = item.querySelector('[data-effort-name]');
-    const note = item.querySelector('[data-effort-note]');
-    if (name) name.textContent = preset.name;
-    if (note) note.textContent = preset.note;
-    const on = key === active;
-    item.classList.toggle('active', on);
-    const btn = item.querySelector('.effort-opt');
-    if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    const gear = item.querySelector('.effort-edit');
-    if (gear) gear.setAttribute('aria-label', `Настроить вариант «${preset.name}»`);
-  });
+  host.innerHTML = loadEffortCards().map(card => {
+    const on = card.key === active;
+    const key = escapeHtml(card.key);
+    return `<div class="effort-item${on ? ' active' : ''}" data-effort-item="${key}">
+      <button type="button" class="effort-opt" data-effort="${key}"
+              onclick="setSearchEffort('${key}')" aria-pressed="${on ? 'true' : 'false'}">
+        <span class="effort-name" data-effort-name>${escapeHtml(card.name)}</span>
+        <span class="effort-note" data-effort-note>${escapeHtml(card.note)}</span>
+      </button>
+      <button type="button" class="effort-edit" data-effort-edit="${key}"
+              onclick="openEffortVariant('${key}')"
+              aria-label="Настроить вариант «${escapeHtml(card.name)}»"
+              title="Название, описание и состав прогона">
+        <svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg>
+      </button>
+    </div>`;
+  }).join('');
+  updateEffortEstimate();
 }
 
 function syncEffortButtons() {
@@ -112,100 +113,117 @@ function syncEffortButtons() {
 // Выбор варианта выставляет те же поля формы, что и раньше: варианты не
 // заменяют настройки, а заполняют их — поправить руками по-прежнему можно.
 function setSearchEffort(name) {
-  const key = EFFORT_ORDER.includes(name) ? name : 'normal';
-  const preset = effortPreset(key);
-  try { localStorage.setItem('search-effort', key); } catch (e) {}
+  const card = effortCard(name);
+  if (!card) return;
+  try { localStorage.setItem('search-effort', card.key); } catch (e) {}
   const pages = document.getElementById('f-pages');
-  if (pages) pages.value = preset.pages;
+  if (pages) pages.value = card.pages;
   const cap = document.getElementById('f-max-candidates');
-  if (cap) cap.value = preset.candidates;
+  if (cap) cap.value = card.candidates;
   const vk = document.getElementById('f-vk-check');
-  if (vk && vk.checked !== !!preset.vk) {
-    vk.checked = !!preset.vk;
+  if (vk && vk.checked !== !!card.vk) {
+    vk.checked = !!card.vk;
     if (typeof onVkCheckChange === 'function') onVkCheckChange();
   }
   renderEffortCards();
-  updateEffortEstimate();
 }
 
-// ── Редактор карточки ─────────────────────────────────────────
+// ── Вариант в общем окне настроек ────────────────────────────
+// Шестерёнка открывает то же окно, что и чипы сводки: одна геометрия, одна
+// шапка, один подвал. Отдельного маленького диалога больше нет.
 function updateEditorEstimate() {
   const el = document.getElementById('ee-estimate');
   if (!el) return;
-  const num = (id, fallback) => {
-    const node = document.getElementById(id);
-    const value = Number(node && node.value);
-    return Number.isFinite(value) && value > 0 ? value : fallback;
-  };
-  const pages = num('ee-pages', 1);
-  const cap = num('ee-candidates', 200);
-  const orgs = Math.min(cap, pages * 50);
-  el.textContent = `За один город и один запрос: до ${orgs} ${effortOrgWord(orgs)}.`;
+  const est = searchVolumeEstimate({
+    pages: _effortClamp((document.getElementById('ee-pages') || {}).value, 1, 20, 2),
+    cap: _effortClamp((document.getElementById('ee-candidates') || {}).value, 1, 10000, 200),
+  });
+  el.textContent = est.total
+    ? `Этот вариант: до ${est.total.toLocaleString('ru-RU')} ${effortOrgWord(est.total)}, ~${est.minutes} мин`
+    : 'Выберите город и запрос в сайдборе — покажу, сколько получится';
 }
 
-function openEffortEditor(key) {
-  const modal = document.getElementById('effort-editor');
-  if (!modal) return;
-  const preset = effortPreset(key);
-  _editingEffort = key;
+function fillEffortEditor(key) {
+  const card = effortCard(key);
+  if (!card) return;
+  _editingEffort = card.key;
   const set = (id, value) => {
     const el = document.getElementById(id);
     if (el) el.value = value;
   };
-  set('ee-name', preset.name);
-  set('ee-note', preset.note);
-  set('ee-pages', preset.pages);
-  set('ee-candidates', preset.candidates);
+  set('ee-name', card.name);
+  set('ee-note', card.note);
+  set('ee-pages', card.pages);
+  set('ee-candidates', card.candidates);
   const vk = document.getElementById('ee-vk');
-  if (vk) vk.checked = !!preset.vk;
-  const title = document.getElementById('ee-title');
-  if (title) title.textContent = `Настроить вариант «${preset.name}»`;
+  if (vk) vk.checked = !!card.vk;
+  const del = document.getElementById('ee-delete');
+  if (del) del.disabled = loadEffortCards().length <= 1;
   updateEditorEstimate();
-  lockPageScroll();
-  modal.hidden = false;
-  const name = document.getElementById('ee-name');
-  if (name) { name.focus(); name.select(); }
 }
 
-function closeEffortEditor() {
-  const modal = document.getElementById('effort-editor');
-  if (!modal || modal.hidden) return;
-  modal.hidden = true;
-  const key = _editingEffort;
-  _editingEffort = null;
-  unlockPageScroll();
-  const gear = key ? document.querySelector(`[data-effort-edit="${key}"]`) : null;
-  if (gear) gear.focus();
+function openEffortVariant(key) {
+  _editingEffort = key;
+  openMoreSettings('effort');
 }
 
-function saveEffortEditor() {
-  if (!_editingEffort) return;
-  const key = _editingEffort;
+function readEffortEditor() {
   const text = id => {
     const el = document.getElementById(id);
     return el ? el.value.trim() : '';
   };
-  const clamp = (id, min, max, fallback) => {
-    const el = document.getElementById(id);
-    const value = Number(el && el.value);
-    if (!Number.isFinite(value) || value <= 0) return fallback;
-    return Math.min(max, Math.max(min, Math.round(value)));
+  return {
+    name: text('ee-name').slice(0, 24) || 'Вариант',
+    note: text('ee-note').slice(0, 90),
+    pages: _effortClamp((document.getElementById('ee-pages') || {}).value, 1, 20, 2),
+    candidates: _effortClamp((document.getElementById('ee-candidates') || {}).value, 1, 10000, 200),
+    vk: !!(document.getElementById('ee-vk') || {}).checked,
   };
-  const vk = document.getElementById('ee-vk');
-  const map = loadEffortPresets();
-  map[key] = {
-    name: text('ee-name').slice(0, 24) || EFFORT_DEFAULTS[key].name,
-    note: text('ee-note').slice(0, 90) || EFFORT_DEFAULTS[key].note,
-    pages: clamp('ee-pages', 1, 20, EFFORT_DEFAULTS[key].pages),
-    candidates: clamp('ee-candidates', 1, 10000, EFFORT_DEFAULTS[key].candidates),
-    vk: !!(vk && vk.checked),
-  };
-  saveEffortPresets(map);
-  closeEffortEditor();
+}
+
+// Сохраняем по ходу правки: отдельной кнопки «Сохранить» нет, иначе «Готово»
+// закрывало бы окно с потерянными правками.
+function saveEffortEditor() {
+  if (!_editingEffort) return;
+  const cards = loadEffortCards();
+  const card = cards.find(item => item.key === _editingEffort);
+  if (!card) return;
+  Object.assign(card, readEffortEditor());
+  saveEffortCards(cards);
+  const active = currentEffort() === card.key;
   renderEffortCards();
-  // Правили выбранный вариант — сразу применяем новые значения к форме.
-  if (currentEffort() === key) setSearchEffort(key);
-  if (typeof showToast === 'function') showToast('Вариант сохранён', 'success');
+  if (active) setSearchEffort(card.key);
+}
+
+function addEffortCard() {
+  const cards = loadEffortCards();
+  const base = effortCard(_editingEffort) || cards[0] || { pages: 2, candidates: 200, vk: false };
+  const key = 'card-' + Date.now().toString(36);
+  cards.push({
+    key, name: 'Свой вариант', note: 'мои настройки',
+    pages: base.pages, candidates: base.candidates, vk: !!base.vk,
+  });
+  saveEffortCards(cards);
+  renderEffortCards();
+  fillEffortEditor(key);
+  if (typeof showToast === 'function') showToast('Карточка добавлена', 'success');
+}
+
+function deleteEffortCard() {
+  const cards = loadEffortCards();
+  if (cards.length <= 1) {
+    if (typeof showToast === 'function') showToast('Последнюю карточку удалить нельзя', 'warning');
+    return;
+  }
+  const key = _editingEffort || currentEffort();
+  const wasActive = currentEffort() === key;
+  const rest = cards.filter(card => card.key !== key);
+  saveEffortCards(rest);
+  const next = rest[0].key;
+  if (wasActive) setSearchEffort(next);
+  renderEffortCards();
+  fillEffortEditor(next);
+  if (typeof showToast === 'function') showToast('Карточка удалена', 'success');
 }
 
 // ── Блокировка прокрутки страницы под окном ──────────────────
@@ -242,9 +260,14 @@ function setMoreSettingsTab(name) {
   });
 }
 
-function openMoreSettings(tab) {
+function openMoreSettings(tab, effortKey) {
   const modal = document.getElementById('more-settings');
   if (!modal) return;
+  // Шестерёнка открывает вкладку «Вариант» с этой карточкой; чипы сводки —
+  // свои разделы, там вариант не трогаем.
+  if (tab === 'effort' || effortKey) {
+    fillEffortEditor(effortKey || _editingEffort || currentEffort());
+  }
   lockPageScroll();
   modal.hidden = false;
   setMoreSettingsTab(tab || 'data');
@@ -258,14 +281,13 @@ function closeMoreSettings() {
   if (!modal || modal.hidden) return;
   modal.hidden = true;
   unlockPageScroll();
-  const link = document.getElementById('btn-more-settings');
-  if (link) link.focus();
+  // Возвращаем фокус на шестерёнку того варианта, который правили.
+  const gear = document.querySelector(`[data-effort-edit="${currentEffort()}"]`);
+  if (gear) gear.focus();
 }
 
 document.addEventListener('keydown', event => {
   if (event.key !== 'Escape') return;
-  const editor = document.getElementById('effort-editor');
-  if (editor && !editor.hidden) { closeEffortEditor(); return; }
   closeMoreSettings();
 });
 
@@ -281,6 +303,14 @@ document.addEventListener('keydown', event => {
     if (box && window.MutationObserver) {
       new MutationObserver(updateEffortEstimate).observe(box, { childList: true, subtree: true });
     }
+    // Правка варианта сохраняется сразу — слушаем сами поля.
+    ['ee-name', 'ee-note', 'ee-pages', 'ee-candidates', 'ee-vk'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const onEdit = () => { saveEffortEditor(); updateEditorEstimate(); };
+      el.addEventListener('input', onEdit);
+      el.addEventListener('change', onEdit);
+    });
     syncEffortButtons();
     updateEffortEstimate();
   };
