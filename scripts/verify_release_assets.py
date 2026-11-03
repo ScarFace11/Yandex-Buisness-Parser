@@ -23,14 +23,9 @@ try:  # requests есть в requirements.txt
 except ImportError:  # pragma: no cover
     requests = None
 
-# Обязательные ассеты релиза — ровно то, что собирают build-exe.yml и build-macos.yml.
-REQUIRED_ASSETS = (
-    "YandexBusinessParser-windows-x64.zip",
-    "YandexBusinessParser-windows-x64-setup.exe",
-    "YandexBusinessParser-macos-arm64.dmg",
-    "YandexBusinessParser-macos-x64.dmg",
-    "CHANGELOG.md",
-)
+# Обязательные ассеты — один список на всю релизную логику (сборка, черновик,
+# проверка целостности), чтобы требования не разъезжались.
+from release_tag import REQUIRED_ASSETS  # noqa: E402  (скрипт запускают из scripts/)
 
 # Ожидаемые файлы внутри архива приложения.
 APP_EXE = "YandexBusinessParser.exe"

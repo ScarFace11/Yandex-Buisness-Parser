@@ -550,8 +550,10 @@ class TestVerifyWorkflow:
         """Регресс: релиз 2.3.4.1 опубликовался без .dmg — macOS-установщика
         не было, а публикация прошла. Значит, .dmg обязателен."""
         text = read_workflow("publish-release.yml")
-        assert "YandexBusinessParser-macos-arm64.dmg" in text
-        assert "YandexBusinessParser-macos-x64.dmg" in text
+        # Шаг проверки зовёт release_tag.py draft — там и живёт список файлов.
+        assert "release_tag.py draft" in text
+        assert "YandexBusinessParser-macos-arm64.dmg" in vra.REQUIRED_ASSETS
+        assert "YandexBusinessParser-macos-x64.dmg" in vra.REQUIRED_ASSETS
 
 
 class TestBuildsVerifyBeforeUpload:

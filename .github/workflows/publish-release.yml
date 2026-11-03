@@ -53,12 +53,6 @@ jobs:
       INPUT_TAG: ${{ inputs.tag }}
       # Все файлы, которые обязаны лежать на релизе до публикации.
       # .dmg обязателен: без него на macOS нечего ставить.
-      REQUIRED_ASSETS: >-
-        YandexBusinessParser-windows-x64.zip
-        YandexBusinessParser-windows-x64-setup.exe
-        YandexBusinessParser-macos-arm64.dmg
-        YandexBusinessParser-macos-x64.dmg
-        CHANGELOG.md
     steps:
       - name: Check the tag — публикуем только стабильные релизы
         id: tag
@@ -76,30 +70,13 @@ jobs:
       - name: Check the draft — файлы на месте, релиз ещё черновик
         id: draft
         if: steps.builds.outputs.ok == 'true'
-        run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          if ! gh release view "$TAG" --repo "$REPO" --json isDraft >/dev/null 2>&1; then
-            echo "Черновика $TAG нет (его создаёт job release-draft) — публиковать нечего."
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          draft="$(gh release view "$TAG" --repo "$REPO" --json isDraft --jq '.isDraft')"
-          if [ "$draft" != "true" ]; then
-            echo "Релиз $TAG уже опубликован — ничего не делаем."
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          names="$(gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name')"
-          echo "На релизе: $(echo "$names" | tr '\n' ' ')"
-          missing=""
-          for need in $REQUIRED_ASSETS; do
-            echo "$names" | grep -qx "$need" || missing="$missing $need"
-          done
-          if [ -n "$missing" ]; then
-            echo "::error::на черновике $TAG нет файлов:$missing — публикация отложена."
-            exit 1
-          fi
-          echo "ok=true" >> "$GITHUB_OUTPUT"
+        # Проверка списка файлов — в scripts/release_tag.py (draft_decision):
+        # те же функции проверяют тесты, без bash и grep.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: python3 scripts/release_tag.py draft
 
       - name: Publish the release
         if: steps.draft.outputs.ok == 'true'

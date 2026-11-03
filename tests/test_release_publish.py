@@ -118,7 +118,7 @@ class TestGates:
         assert wait_builds.ATTEMPTS * wait_builds.PAUSE <= 30 * 60, \
             "суммарное ожидание больше получаса"
     def test_required_assets_match_what_the_builds_produce(self):
-        required = wf()["jobs"]["publish"]["env"]["REQUIRED_ASSETS"].split()
+        required = list(release_tag.REQUIRED_ASSETS)
         assert required == [
             "YandexBusinessParser-windows-x64.zip",
             # Установщик с ярлыком и удалением: именно его скачивают
@@ -140,15 +140,34 @@ class TestGates:
         assert 'asset_arch: arm64' in macos and 'asset_arch: x64' in macos
 
     def test_missing_assets_block_the_publication(self):
-        body = code()
-        assert "REQUIRED_ASSETS" in body
-        assert "missing" in body
-        assert 'grep -qx "$need"' in body
+        verdict, missing = release_tag.draft_decision({
+            "isDraft": True,
+            "assets": [{"name": "CHANGELOG.md"},
+                       {"name": "YandexBusinessParser-windows-x64.zip"}],
+        })
+        assert verdict == "missing"
+        assert "YandexBusinessParser-windows-x64-setup.exe" in missing
+        assert "CHANGELOG.md" not in missing
+        assert "release_tag.py draft" in code(), "шаг обязан звать Python-скрипт"
+
+    def test_all_assets_present_lets_the_publication_pass(self):
+        payload = {"isDraft": True,
+                   "assets": [{"name": n} for n in release_tag.REQUIRED_ASSETS]}
+        assert release_tag.draft_decision(payload) == ("ok", ())
+
+    def test_extra_and_repeated_assets_do_not_break_the_check(self):
+        names = list(release_tag.REQUIRED_ASSETS)
+        payload = {"isDraft": True,
+                   "assets": [{"name": n} for n in names + names + ["notes.txt"]]}
+        assert release_tag.draft_decision(payload) == ("ok", ())
 
     def test_already_published_release_is_a_noop(self):
-        body = code()
-        assert ".isDraft" in body
-        assert '"$draft" != "true"' in body
+        verdict, _missing = release_tag.draft_decision({"isDraft": False, "assets": []})
+        assert verdict == "published"
+
+    def test_absent_draft_is_a_quiet_noop(self):
+        """Черновик создаёт отдельный job: его отсутствие — не красный конвейер."""
+        assert release_tag.draft_decision(None) == ("absent", ())
 
     def test_publishes_by_flipping_the_draft_flag(self):
         body = code()

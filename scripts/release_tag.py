@@ -4,8 +4,10 @@
 тесты не могли проверить логику иначе как через подпроцесс. Теперь воркфлоу
 зовёт этот скрипт, а тесты — его функции.
 """
+import json
 import os
 import re
+import subprocess
 import sys
 
 # Стабильный релиз: v2.3.4 или v2.2.1.1. Суффиксы -dev/-rc не публикуются сами.
@@ -15,6 +17,16 @@ ANNOUNCE_RE = re.compile(r"^v\d+(?:\.\d+){2,}$")
 
 # Чего ждём на релизе, чтобы объявить версию.
 WINDOWS_ASSET = "YandexBusinessParser-windows-x64.zip"
+
+# Чего ждём на черновике, чтобы публиковать: ровно то, что собирают build-*.
+# Список здесь один на всех — его же берёт scripts/verify_release_assets.py.
+REQUIRED_ASSETS = (
+    "YandexBusinessParser-windows-x64.zip",
+    "YandexBusinessParser-windows-x64-setup.exe",
+    "YandexBusinessParser-macos-arm64.dmg",
+    "YandexBusinessParser-macos-x64.dmg",
+    "CHANGELOG.md",
+)
 
 
 def normalize_tag(raw: str) -> str:
@@ -61,6 +73,23 @@ def publish_decision(raw_tag: str = "", input_tag: str = "") -> tuple[str, bool,
     return tag, False, ""
 
 
+def draft_decision(payload, required=REQUIRED_ASSETS) -> tuple[str, tuple[str, ...]]:
+    """Публиковать ли черновик: «ok», «absent», «published» или «missing» + файлы.
+
+    `payload` — ответ `gh release view --json isDraft,assets`; None — релиза нет
+    (черновик создаёт отдельный job, и это не ошибка).
+    """
+    if payload is None:
+        return "absent", ()
+    if not payload.get("isDraft"):
+        return "published", ()
+    names = {a.get("name", "") for a in (payload.get("assets") or [])}
+    missing = tuple(name for name in required if name not in names)
+    if missing:
+        return "missing", missing
+    return "ok", ()
+
+
 def should_skip(announced: str, tag: str) -> bool:
     """Версия уже объявлена в version.json — объявлять нечего."""
     if not announced or not tag:
@@ -74,6 +103,19 @@ def _write(path_var: str, lines: list[str]) -> None:
         return
     with open(path, "a", encoding="utf-8") as fh:
         fh.writelines(line + "\n" for line in lines)
+
+
+def _gh_release(tag: str, repo: str) -> dict | None:
+    """Черновик с ассетами; None — черновика нет."""
+    res = subprocess.run(
+        ["gh", "release", "view", tag, "--repo", repo, "--json", "isDraft,assets"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if res.returncode != 0:
+        return None
+    try:
+        return json.loads(res.stdout or "{}")
+    except ValueError:
+        return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -108,6 +150,27 @@ def main(argv: list[str] | None = None) -> int:
         _write("GITHUB_OUTPUT", [f"tag={tag}", "publish=true"])
         print(f"tag={tag}")
         print("publish=true")
+        return 0
+
+    if mode == "draft":
+        tag = os.environ.get("TAG", "")
+        payload = _gh_release(tag, os.environ.get("REPO", ""))
+        verdict, missing = draft_decision(payload)
+        if verdict == "absent":
+            print(f"Черновика {tag} нет (его создаёт job release-draft) — "
+                  "публиковать нечего.")
+            _write("GITHUB_OUTPUT", ["ok=false"])
+            return 0
+        if verdict == "published":
+            print(f"Релиз {tag} уже опубликован — ничего не делаем.")
+            _write("GITHUB_OUTPUT", ["ok=false"])
+            return 0
+        if verdict == "missing":
+            print(f"::error::на черновике {tag} нет файлов: {', '.join(missing)} — "
+                  "публикация отложена.")
+            return 1
+        print(f"Черновик {tag} готов к публикации: все файлы на месте.")
+        _write("GITHUB_OUTPUT", ["ok=true"])
         return 0
 
     print(f"::error::неизвестный режим '{mode}'")
