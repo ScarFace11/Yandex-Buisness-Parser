@@ -9,7 +9,7 @@ from console_io import enable_utf8, say
 enable_utf8()
 
 # Версия приложения.
-APP_VERSION = "2.3.5"
+APP_VERSION = "2.4"
 
 
 # ── Минимально допустимая версия ──────────────────────────────

@@ -57,7 +57,7 @@ def test_changelog_list_shows_summary_and_opens_full_text(browser_cdp, live_app_
         # 2. Нажатие на версию открывает полный текст.
         assert tab.click("#changelog-overlay .cl-entry")
         assert _wait(tab, "!!document.querySelector('#changelog-overlay .cl-detail')"), "полный текст не открылся"
-        # Заголовок — как у релиза на GitHub: «v2.3.5 — Установщик Windows, …»,
+        # Заголовок — как у релиза на GitHub: «v2.4 — Настройки, журнал, …»,
         # а текст разбит на разделы с пунктами, а не идёт одной простынёй.
         detail = json.loads(tab.evaluate("""(() => {
           const secs = [...document.querySelectorAll('#changelog-overlay .cl-sec')];
@@ -86,7 +86,7 @@ def test_changelog_list_shows_summary_and_opens_full_text(browser_cdp, live_app_
         assert _wait(tab, "!!document.querySelector('#changelog-overlay .cl-entry')")
         old_rows = tab.evaluate("""(() => [...document.querySelectorAll('#changelog-overlay .cl-entry')]
             .map(r => r.querySelector('.cl-ver').textContent.trim()))()""")
-        older = [v.lstrip("v") for v in old_rows if not v.endswith("2.3.5")]
+        older = [v.lstrip("v") for v in old_rows if not v.endswith("2.4")]
         assert older, old_rows
         # Открываем напрямую: клик по списку перерисовывает окно, и второй
         # клик пришёлся бы на уже удалённую кнопку.

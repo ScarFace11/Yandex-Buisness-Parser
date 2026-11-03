@@ -265,7 +265,7 @@ jobs:
 
       - name: Verify the .dmg before uploading it
         # Проверка образа до загрузки на релиз. Отдельный .zip для macOS с
-        # 2.3.5 не собирается: приложение ставится из .dmg.
+        # 2.4 не собирается: приложение ставится из .dmg.
         run: |
           set -uo pipefail
           ARCH="${{ matrix.asset_arch }}"

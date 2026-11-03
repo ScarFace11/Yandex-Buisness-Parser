@@ -107,11 +107,11 @@ class TestChangelogEndpoint:
         remote = {"version": "2.3.4.2", "changelog": "старое",
                   "history": [{"version": "2.3.4.2", "changelog": "старое"}]}
         data = _client(monkeypatch, remote).get("/update/changelog").get_json()
-        assert data["version"] == "2.3.5", data["version"]
-        assert data["history"][0]["version"] == "2.3.5"
+        assert data["version"] == "2.4", data["version"]
+        assert data["history"][0]["version"] == "2.4"
         top = data["history"][0]
         assert top["items"] or top["sections"], "у верхней версии нет полного текста"
-        assert update_notes.summary("2.3.5") == data["changelog"]
+        assert update_notes.summary("2.4") == data["changelog"]
 
     def test_texts_for_the_modal_come_from_the_package(self, monkeypatch):
         data = _client(monkeypatch, RuntimeError("нет сети")).get("/update/changelog").get_json()
@@ -142,21 +142,21 @@ class TestStampVersion:
         path.write_text(json.dumps({"version": "2.3.4.2", "history": [
             {"version": "2.3.4.2", "changelog": "старое"}]}), encoding="utf-8")
         data = stamp_version.apply_version(
-            path, "2.3.5", changelog_file=ROOT / "CHANGELOG.md",
+            path, "2.4", changelog_file=ROOT / "CHANGELOG.md",
             repo="owner/name", bump_history=True)
         top = data["history"][0]
-        assert top["version"] == "2.3.5"
+        assert top["version"] == "2.4"
         assert top["title"] and top["date"]
-        assert top["summary"] == update_notes.summary("2.3.5")
+        assert top["summary"] == update_notes.summary("2.4")
         assert len(top["sections"] or top["items"]) >= 1, "у версии нет полного текста"
-        assert data["changelog"] == update_notes.summary("2.3.5")
-        assert data["download_url"].endswith("v2.3.5/YandexBusinessParser-windows-x64.zip")
+        assert data["changelog"] == update_notes.summary("2.4")
+        assert data["download_url"].endswith("v2.4/YandexBusinessParser-windows-x64.zip")
         assert len(data["history"]) <= stamp_version.HISTORY_LIMIT
 
     def test_stamped_file_is_readable_by_the_app(self, tmp_path):
         """version.json после штамповки — тот же формат, что читает фронтенд."""
         path = tmp_path / "version.json"
-        stamp_version.apply_version(path, "2.3.5", repo="owner/name")
+        stamp_version.apply_version(path, "2.4", repo="owner/name")
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data["history"][0]["summary"]
         assert isinstance(data["history"][0]["items"], list)

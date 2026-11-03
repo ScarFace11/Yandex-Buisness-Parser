@@ -1,7 +1,7 @@
 ﻿; Установщик Windows для Яндекс Бизнес Парсера.
 ;
 ; Сборка (из корня репозитория, после pyinstaller parser.spec):
-;   iscc /DMyAppVersion=2.3.5 installer\windows.iss
+;   iscc /DMyAppVersion=2.4 installer\windows.iss
 ;
 ; Установка — per-user, без запроса администратора:
 ;   программа  → %LOCALAPPDATA%\Programs\YandexBusinessParser
@@ -12,7 +12,7 @@
 ; по-прежнему хранит данные рядом с exe. Если рядом с exe лежит .portable,
 ; даже установленная копия работает как portable (см. paths.data_dir).
 #ifndef MyAppVersion
-  #define MyAppVersion "2.3.5"
+  #define MyAppVersion "2.4"
 #endif
 #define MyAppName "Яндекс Бизнес Парсер"
 #define MyAppShortName "YandexBusinessParser"
