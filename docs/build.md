@@ -236,7 +236,7 @@ git commit -am "chore(release): минимальная версия 2.3.4" && gi
 ```bash
 pip install -r requirements-dev.txt
 python -m pytest tests -q          # backend: пайплайн, фильтры, пауза, API
-node --test tests/ui/               # UI: лог, таблица, пресеты, история файлов
+node --test tests/ui/               # UI: лог, таблица, история файлов
 ruff check .                        # синтаксис, pyflakes, дубли и мёртвые переменные
 python -m pytest tests -q --cov    # покрытие (настройки — в pyproject.toml)
 ```

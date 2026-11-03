@@ -35,7 +35,7 @@ def test_sidebar_offers_volume_choices_and_a_counter():
 def test_more_settings_window_has_four_tabs():
     assert 'id="more-settings"' in TEMPLATE
     assert 'role="dialog" aria-modal="true"' in TEMPLATE
-    for pane in ("effort", "data", "filters", "files"):
+    for pane in ("effort", "work", "result"):
         assert f'data-ms-pane="{pane}"' in TEMPLATE, pane
     assert "function openMoreSettings" in JS
     assert "function setMoreSettingsTab" in JS
@@ -69,8 +69,8 @@ def test_setup_chips_open_the_window_on_the_right_tab():
     """Чип сводки «Объём»/«Тип»/«Форматы» ведёт в окно, а не в невидимую секцию."""
     setup = (ROOT / "static/js/12-setup-summary.js").read_text(encoding="utf-8")
     assert "openMoreSettings(tab)" in setup
-    for section, tab in (("acc-tech", "data"), ("acc-filters", "filters"),
-                         ("acc-formats", "files")):
+    for section, tab in (("acc-tech", "work"), ("acc-filters", "result"),
+                         ("acc-formats", "result")):
         assert f"'{section}': '{tab}'" in setup, section
 
 

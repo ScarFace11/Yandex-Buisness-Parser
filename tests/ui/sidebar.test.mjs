@@ -70,8 +70,7 @@ for (const id of ['f-queries', 'queries-count', 'city-count', 'clear-all-btn',
   'status-badge',
   'api-status-badge', 'api-keys-body', 'api-keys-toggle',
   'key-dot-vk',
-  'preset-block', 'preset-dd-wrap', 'preset-dd-btn', 'preset-dd-list',
-  'preset-dd-current', 'preset-block-hint', 'preset-new-btn', 'run-hint']) {
+  'run-hint']) {
   els[id] = mkEl(id);
 }
 // Fake city chips for the fade-out assertion in clearAllInputs.
@@ -90,7 +89,7 @@ const fns = ['_pluralRu', '_countQueries', 'updateQueriesCounter', 'updateCityCo
   'updateClearAllBtn', 'clearAllInputs', 'updateBasicSummary', 'renderCityTags',
   'isRunReady', 'updateRunBtnState', 'setRunBtnActive', 'resetBtn',
   'updateApiKeysStatus', 'setGridMode', 'onGridSlider', 'gridCellsEstimate',
-  'pauseRun', 'enterPausedState', 'resumeRun', 'togglePresetDropdown',
+  'pauseRun', 'enterPausedState', 'resumeRun',
   'setRunIndicator', '_logNorm', '_isDup'];
 // stopRunWithConfirm is `async function` — grab() strips the modifier, so
 // slice it manually and keep the await valid.

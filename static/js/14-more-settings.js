@@ -270,7 +270,7 @@ function openMoreSettings(tab, effortKey) {
   }
   lockPageScroll();
   modal.hidden = false;
-  setMoreSettingsTab(tab || 'data');
+  setMoreSettingsTab(tab || 'effort');
   updateEffortEstimate();
   const close = modal.querySelector('.ms-close');
   if (close) close.focus();

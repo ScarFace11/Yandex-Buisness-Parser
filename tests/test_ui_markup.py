@@ -1680,14 +1680,6 @@ class TestDailyDynamics:
         # Фильтр соцсетей также исчезает, когда их не собирали (socials-off).
         assert ".tbl-social-row.socials-off{display:none}" in STYLE
 
-    def test_data_export_import_is_in_ui(self):
-        """Экспорт/импорт отметок и настроек — в аккордеоне «Форматы результата»
-        (бывшая вкладка «Форматы вывода» удалена: выбор полей живёт в «Что парсить»)."""
-        assert 'id="data-import-file"' in TEMPLATE
-        assert "exportAppData" in APP_JS and "importAppData" in APP_JS
-        assert '@bp.route("/data/export")' in API_PY
-        assert '@bp.route("/data/import", methods=["POST"])' in API_PY
-        assert "_backup_reviewed" in API_PY
 
     def test_issue_api_send_and_screenshot_copy_are_in_ui(self):
         """Окно «Сообщить о проблеме»: отправка через API и копирование скриншота.
@@ -1765,21 +1757,6 @@ class TestDailyDynamics:
         assert ".rep-label-menu{" in STYLE
         assert ".gh-pill{" in STYLE
 
-    def test_settings_export_button_sits_next_to_reset(self):
-        """«Экспорт настроек» — ровно перед «Сбросить настройки» (зеркало справа)."""
-        assert 'id="btn-export-settings"' in TEMPLATE
-        assert "exportAppSettings()" in TEMPLATE
-        assert "Экспорт настроек" in TEMPLATE
-        assert TEMPLATE.index('id="btn-export-settings"') \
-            < TEMPLATE.index('id="btn-reset-settings"'), "экспорт стоит перед сбросом"
-        assert "function exportAppSettings" in APP_JS
-        # И обратный путь: импорт принимает browser.json из архива.
-        assert "browser.json" in API_PY
-        assert "applyImportedBrowserSettings" in APP_JS
-        # Кнопка копирования скриншота живёт вне rep-shot (там роль button —
-        # кнопка внутри была бы вложенным элементом управления).
-        assert ".rep-shot-actions{display:flex" in STYLE
-        assert 'id="rep-shot-actions"' in APP_JS
 
     def test_hidden_attribute_always_wins(self):
         """Оверлеи задают display:flex — без глобального правила для [hidden]
@@ -1821,7 +1798,7 @@ class TestParseFieldsAccordion:
         # Нумерация «01…05» ушла вместе с переездом: разделы называются словами.
         assert 'acc-num' not in TEMPLATE
         modal = TEMPLATE[TEMPLATE.index('id="more-settings"'):]
-        for pane in ('data', 'filters', 'files'):
+        for pane in ('effort', 'work', 'result'):
             assert f'data-ms-pane="{pane}"' in modal, pane
         assert modal.index('id="acc-parse"') < modal.index('id="acc-tech"')
         assert modal.index('id="acc-filters"') < modal.index('id="acc-formats"')
@@ -2246,13 +2223,6 @@ class TestFirstScreenCopy:
         # Пояснение остаётся в подсказке: что именно теряется без ключа.
         assert 'Поиск работает и без ключей.' in APP_JS
 
-    def test_preset_hints_are_one_short_line(self):
-        line = 'Сохраните текущий поиск кнопкой «+ Новый» — вернётесь к нему одним кликом.'
-        assert line in TEMPLATE
-        assert line in APP_JS
-        assert 'Выберите пресет — настройки подставятся автоматически.' in APP_JS
-        # Запуск без интерфейса — не первый экран для новичка.
-        assert 'Тот же пресет запускается без интерфейса' not in APP_JS
 
 
 class TestDockSurface:
@@ -2532,10 +2502,9 @@ class TestSectionHierarchy:
                      "Старые файлы удаляются",
                      "Что попадает в историю",
                      "Вежливый режим",
-                     "Журнал источников",
-                     "Где хранятся отметки"):
+                     "Журнал источников",):
             assert lead in TEMPLATE, lead
-        assert TEMPLATE.count('<details class="hint-more') >= 6
+        assert TEMPLATE.count('<details class="hint-more') >= 5
 
     def test_collapsible_hint_needs_no_javascript(self):
         assert 'class="hm-more"' in TEMPLATE and 'class="hm-less"' in TEMPLATE

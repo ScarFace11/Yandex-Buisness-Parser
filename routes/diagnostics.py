@@ -212,7 +212,7 @@ def check_storage() -> list[dict]:
         out.append(_res("settings", "files", "warn", "Файл настроек повреждён",
                         f"settings.json не читается ({_exception_note(exc)}).",
                         "Приложение работает на значениях по умолчанию; "
-                        "пресеты и шаблоны, сохранённые в файле, не подхватятся."))
+                        "шаблоны и настройки, сохранённые в файле, не подхватятся."))
     return out
 
 
@@ -777,18 +777,6 @@ def report_context():
             parts.append("\n".join(lines))
     except Exception as exc:
         parts.append(f"## Проверки\r\n(не выполнились: {_exception_note(exc)})")
-
-    # Пресеты — только имена: содержимое пресета может содержать личные формулировки запросов, а issue бывает публичным.
-    try:
-        import paths
-        presets = paths.load_settings().get("presets") or []
-        names = [str(p.get("name") or "").strip() for p in presets
-                 if isinstance(p, dict)]
-        names = [n for n in names if n]
-        parts.append("## Сохранённые пресеты\r\n"
-                     + ("\n".join(f"- {n}" for n in names) if names else "(пресетов нет)"))
-    except Exception:
-        parts.append("## Сохранённые пресеты\r\n(не прочитаны)")
 
     parts.append("## Последние строки лога\r\n```\r\n" + _report_log_tail() + "\r\n```")
     # Признаки булевы, токен в ответ не попадает никогда. can_device — есть ли в сборке client_id: без него окно не показывает кнопку входа, чтобы пользователю не предлагали создавать OAuth-приложение.

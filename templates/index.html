@@ -93,7 +93,6 @@
   <symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.7" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M9.3 4v16M14.7 4v16M4 9.3h16M4 14.7h16"/></symbol>
   <symbol id="i-bug" viewBox="0 0 24 24"><rect x="8" y="8" width="8" height="12" rx="4"/><path d="M9.5 8C9.5 5.8 10.6 4.4 12 4.4s2.5 1.4 2.5 3.6"/><path d="M8 11H4.6M8 14.4H4.2M8 17.8H5M16 11h3.4M16 14.4h3.8M16 17.8h3"/></symbol>
-  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M4.5 9h9.8a5.5 5.5 0 1 1 0 11H8.5"/><polyline points="8 5.2 4.5 9 8 12.6"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9"/><path d="M17 7h3"/><path d="M4 17h3"/><path d="M11 17h9"/><path d="M15 4.5v5"/><path d="M9 14.5v5"/></symbol>
   <symbol id="i-skip" viewBox="0 0 24 24"><path d="M6 5l7 7-7 7"/><path d="M17 5v14"/></symbol>
   <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></symbol>
@@ -336,29 +335,6 @@
           </div>
         </div>
 
-        <!-- ══ Пресеты ══ -->
-        <div class="preset-block" id="preset-block">
-          <div class="preset-block-head">
-            <span class="preset-block-title">Мои пресеты</span>
-            <span class="preset-head-actions">
-              <button type="button" class="preset-act-btn" id="preset-reset-btn" onclick="resetToDefaults()"
-                      title="Сбросить все настройки формы к значениям по умолчанию">
-                <svg class="ico" aria-hidden="true"><use href="#i-refresh"/></svg>Сброс</button>
-              <button type="button" class="preset-new-btn" id="preset-new-btn" onclick="openPresetModal()"
-                      title="Сохранить текущие настройки как новый пресет">+ Новый</button>
-            </span>
-          </div>
-          <div class="preset-dd-wrap" id="preset-dd-wrap" hidden>
-            <button type="button" class="preset-dd-btn" id="preset-dd-btn"
-                    aria-haspopup="listbox" aria-expanded="false" aria-controls="preset-dd-list">
-              <span class="preset-dd-current" id="preset-dd-current">Выберите пресет…</span>
-              <span class="preset-dd-chev" aria-hidden="true"></span>
-            </button>
-            <div class="preset-dd-list" id="preset-dd-list" role="listbox" hidden></div>
-          </div>
-          <div class="preset-block-hint" id="preset-block-hint">Сохраните текущий поиск кнопкой «+ Новый» — вернётесь к нему одним кликом.</div>
-        </div>
-
         <!-- 01 · Основные параметры -->
         <section class="acc open" id="acc-basic" aria-labelledby="acc-basic-hdr">
           <button type="button" class="acc-hdr" id="acc-basic-hdr"
@@ -438,7 +414,6 @@
                   <div class="hint">Подойдёт любой браузер на Chromium: Chrome, Edge, Яндекс Браузер, Brave, Vivaldi, Chromium. Safari и Firefox не умеют CDP.</div>
                 </div>
               </div>
-
             </div>
           </div>
         </section>
@@ -474,22 +449,13 @@
 
 
 
-        <!-- Sticky footer: «Сохранить пресет» + «Найти компании» -->
+        <!-- Sticky footer: одна управляющая кнопка «Найти компании» -->
         <div id="run-dock" class="sidebar-footer">
           <!-- Подсказка у самой кнопки: чего не хватает и куда нажать. Кнопка, а
                не текст: неактивную «Найти компании» нельзя сфокусировать, а эту
                — можно, поэтому клавиатура и скринридер её видят. -->
           <button type="button" class="run-hint" id="run-hint" hidden onclick="runHintJump()"></button>
           <div class="run-dock-row">
-          <button type="button" class="btn-save-preset" onclick="openPresetModal()"
-                  title="Сохранить все настройки поиска как пресет" aria-label="Сохранить пресет">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-          </button>
           <!-- ОДНА управляющая кнопка: 🚀 Найти → ⏸ Пауза → ▶ Продолжить. -->
           <button id="btn-run" aria-describedby="run-hint" onclick="startRun()">
             <span id="btn-icon"><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg></span>
@@ -1626,14 +1592,12 @@
       </button>
     </div>
     <div class="ms-tabs" role="tablist" aria-label="Разделы настроек">
-      <button type="button" class="ms-tab" role="tab" data-ms-tab="effort"
-              aria-selected="false" onclick="setMoreSettingsTab('effort')">Вариант</button>
-      <button type="button" class="ms-tab active" role="tab" data-ms-tab="data"
-              aria-selected="true" onclick="setMoreSettingsTab('data')">Данные</button>
-      <button type="button" class="ms-tab" role="tab" data-ms-tab="filters"
-              aria-selected="false" onclick="setMoreSettingsTab('filters')">Фильтры</button>
-      <button type="button" class="ms-tab" role="tab" data-ms-tab="files"
-              aria-selected="false" onclick="setMoreSettingsTab('files')">Файлы</button>
+      <button type="button" class="ms-tab active" role="tab" data-ms-tab="effort"
+              aria-selected="true" onclick="setMoreSettingsTab('effort')">Вариант</button>
+      <button type="button" class="ms-tab" role="tab" data-ms-tab="work"
+              aria-selected="false" onclick="setMoreSettingsTab('work')">Сбор</button>
+      <button type="button" class="ms-tab" role="tab" data-ms-tab="result"
+              aria-selected="false" onclick="setMoreSettingsTab('result')">Результат</button>
     </div>
     <div class="ms-body">
       <div class="ms-pane" data-ms-pane="effort" hidden>
@@ -1687,7 +1651,7 @@
           </div>
         </section>
       </div>
-      <div class="ms-pane" data-ms-pane="data">
+      <div class="ms-pane" data-ms-pane="work" hidden>
         <!-- 02 · Что парсить: обычные и персональные данные -->
         <section class="acc" id="acc-parse" aria-labelledby="acc-parse-hdr">
           <button type="button" class="acc-hdr" id="acc-parse-hdr"
@@ -1721,7 +1685,6 @@
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </section>
@@ -1845,12 +1808,11 @@
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </section>
       </div>
-      <div class="ms-pane" data-ms-pane="filters" hidden>
+      <div class="ms-pane" data-ms-pane="result" hidden>
         <!-- 04 · Фильтрация результата -->
         <section class="acc open" id="acc-filters" aria-labelledby="acc-filters-hdr">
           <button type="button" class="acc-hdr" id="acc-filters-hdr"
@@ -2129,8 +2091,9 @@
             </div>
           </div>
         </section>
-      </div>
-      <div class="ms-pane" data-ms-pane="files" hidden>
+      
+
+              <!-- Результат: форматы, куда сохранять и как долго хранить. -->
         <!-- 05 · Форматы результата -->
         <section class="acc" id="acc-formats" aria-labelledby="acc-formats-hdr">
           <button type="button" class="acc-hdr" id="acc-formats-hdr"
@@ -2215,29 +2178,6 @@
                   <div class="hm-body">Excel, JSON, CSV и карта старше выбранного срока удаляются при запуске приложения. Максимум — 30 дней.</div>
                 </details>
                 <div class="hint" id="retention-status" role="status" aria-live="polite"></div>
-              </div>
-
-              <div class="data-block" id="data-block">
-                <div class="sec">Данные</div>
-                <details class="hint-more">
-                  <summary>Где хранятся отметки<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
-                  <div class="hm-body">Отметки «Просмотрено» и настройки хранятся рядом с результатами. Экспорт — запасная копия или перенос на другую машину; импорт добавляет отметки из архива, не стирая сделанные после экспорта.</div>
-                </details>
-                <div class="history-actions" style="align-items:center;margin-top:8px">
-                  <button class="btn-sm" onclick="exportAppData()">
-                    <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>Экспорт данных</button>
-                  <label class="btn-sm data-import-btn">
-                    <svg class="ico" aria-hidden="true"><use href="#i-save"/></svg>Импорт данных
-                    <input type="file" id="data-import-file" accept=".zip" hidden onchange="importAppData(this)" aria-hidden="true" tabindex="-1">
-                  </label>
-                  <button class="btn-sm" id="btn-export-settings" onclick="exportAppSettings()"
-                          title="Скачать все настройки одним архивом: папки, браузер, хранение, пресеты, шаблоны и фильтры этого окна — перенос на другую машину. Делайте до сброса">
-                    <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>Экспорт настроек</button>
-                  <button class="btn-sm" id="btn-reset-settings" onclick="openResetSettingsModal()"
-                          title="Вернуть папки, браузер, хранение и настройки вкладок к стандартным. Пресеты, шаблоны писем и ключи API не трогаются">
-                    <svg class="ico" aria-hidden="true"><use href="#i-undo"/></svg>Сбросить настройки</button>
-                  <span id="data-backup-note" class="panel-note">Автокопия отметок пишется ежедневно в output/_backup/ (хранятся 7 дней).</span>
-                </div>
               </div>
             </div>
           </div>

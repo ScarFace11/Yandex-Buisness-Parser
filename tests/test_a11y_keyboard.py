@@ -129,7 +129,6 @@ DYNAMIC_BOX = ".ui-modal-overlay:not([hidden]) .ui-modal"
 MODALS = (
     dict(name="confirm", js="uiConfirm('Проверка клавиатуры', 'Проверка', 'Понятно', false)",
          box=DYNAMIC_BOX),
-    dict(name="preset-save", js="openPresetModal()", box=".preset-modal"),
     # Список слов должен быть непустым: пустой список окно не открывает,
     # а показывает подсказку — это его работа, а не наша проверка.
     dict(name="blacklist-list",

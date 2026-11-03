@@ -571,12 +571,11 @@ function toggleDailyCustom() {
 //  localStorage settings
 // ═══════════════════════════════════════════
 const SETTINGS_KEY = 'yp_settings_v1';
-const PRESETS_KEY  = 'yp_presets_v1';
 
 function getCurrentSettings() {
   return {
     queries:  document.getElementById('f-queries').value,
-    // Полный пресет: города и всё, что видно в форме.
+    // Полный снимок формы: города и всё, что видно на экране.
     cities:   [...selectedCities],
     excel:    document.getElementById('f-excel').checked,
     json:     document.getElementById('f-json').checked,
@@ -601,11 +600,11 @@ function getCurrentSettings() {
     vkMinFollowers: (document.getElementById('f-vk-min-followers')||{}).value || 0,
     sortScore: (document.getElementById('f-sort-score')||{}).checked !== false,
     minScore: (document.getElementById('f-min-score')||{}).value || 0,
-    // Пресет забирает и чёрный список слов — иначе он «терял» половину
-    // настроек этапа 2.
+    // Чёрный список слов — часть настроек этапа 2, поэтому он входит
+    // в снимок формы.
     blacklist: [...blacklistWords],
     // «🎯 Тип компании»: и галочка, и выбранный период (галочка выключена —
-    // период всё равно помним, чтобы пресет возвращал настройку целиком).
+    // период всё равно помним, чтобы снимок возвращал настройку целиком).
     onlySingle: onlySingleChecked(),
     onlyNew: !!newMonthsValue(),
     onlyNewPeriod: newMonthsPeriod(),
@@ -625,8 +624,8 @@ function applySettings(s) {
     updateBasicSummary();
     updateRunBtnState();
   }
-  // Cities: presets restore them, localStorage keeps the old behaviour
-  // (fresh start each reload) — the caller passes {cities:null} there.
+  // Города: снимок формы их восстанавливает, а при перезапуске
+  // приложение начинает с пустого списка — вызывающий передаёт {cities:null}.
   if (s.cities != null && Array.isArray(s.cities)) {
     selectedCities = s.cities.filter(c => typeof c === 'string' && c.trim()).slice(0, 50);
     renderCityTags();

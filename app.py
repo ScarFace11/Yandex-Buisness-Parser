@@ -225,7 +225,7 @@ def _maybe_run_selfcheck() -> None:
 
 
 def _maybe_run_headless() -> None:
-    """`--run`: сбор по сохранённому пресету без интерфейса (см. headless.py)."""
+    """`--run`: сбор без интерфейса по флагам (см. headless.py)."""
     if "--run" not in sys.argv:
         return
     try:
@@ -358,7 +358,7 @@ if __name__ == "__main__":
     _maybe_run_browser_probe()
     # --check: те же проверки, что и в окне «Диагностика», но без сервера.
     _maybe_run_selfcheck()
-    # --run: сбор по сохранённому пресету без интерфейса.
+    # --run: сбор без интерфейса по запросам и городам.
     _maybe_run_headless()
     _set_windows_console_icon()
     _port = _available_port(_startup_port())

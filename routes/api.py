@@ -2456,23 +2456,6 @@ def spheres_reset():
         return _fail(exc)
     return jsonify({"ok": True, "spheres": _spheres.catalog()})
 
-@bp.route("/presets", methods=["GET", "POST"])
-def presets_store_api():
-    """Серверная копия пресетов поиска."""
-    import presets_store
-
-    if request.method == "GET":
-        presets = presets_store.load_presets()
-        return jsonify({"ok": True, "presets": presets, "count": len(presets)})
-
-    data = _json_body()
-    if "presets" not in data:
-        return jsonify({"ok": False, "presets": [],
-                        "error": 'Ожидался JSON {"presets": [...]}'}), 400
-    presets = presets_store.save_presets(data.get("presets"))
-    return jsonify({"ok": True, "presets": presets, "count": len(presets)})
-
-
 @bp.route("/folder-picker", methods=["POST"])
 def folder_picker():
     """Открыть системный диалог выбора папки и вернуть выбранный путь."""

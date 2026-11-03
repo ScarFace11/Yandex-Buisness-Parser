@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Сбор из консоли по сохранённому пресету: `app.py --run`."""
+"""Сбор из консоли без интерфейса: `app.py --run --queries … --cities …`."""
 import argparse
 import re
 import sys
 import time
-
-import presets_store
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 # Уровни, которые в консоли не нужны: sys/tech — отладка, progress — пинги квоты (их десятки на город).
@@ -58,29 +56,58 @@ def describe(params: dict) -> str:
     return "\n".join(lines)
 
 
+def _as_int(value, default: int) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_list(value) -> list[str]:
+    """Строка «кафе, кофейня» / переносы строк → список строк."""
+    parts = str(value or "").replace(chr(13), chr(10)).replace(",", chr(10)).split(chr(10))
+    return [part.strip() for part in parts if part.strip()]
+
+
+def build_params(args) -> dict:
+    """Параметры run_web из флагов командной строки (значения — как в форме)."""
+    formats = {f.strip().lower() for f in
+               str(args.formats or "").replace(";", ",").split(",") if f.strip()}
+    return {
+        "queries": _as_list(args.queries),
+        "cities": _as_list(args.cities),
+        "output_excel": not formats or bool(formats & {"excel", "xlsx"}),
+        "output_json": not formats or "json" in formats,
+        "output_csv": "csv" in formats,
+        "output_map": bool(formats & {"map", "html"}),
+        "max_pages": max(1, _as_int(args.pages, 1)),
+        "max_workers": max(1, _as_int(args.workers, 20)),
+        "max_candidates": max(0, _as_int(args.max_candidates, 200)),
+        # Двухэтапный сбор — как в интерфейсе: сначала raw, потом фильтры.
+        "pipeline": "raw",
+        "parse_mode": "without_website",
+        "social_mode": "all",
+        "fetch_detail": True,
+    }
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="app.py --run",
-        description="Сбор по сохранённому пресету без запуска интерфейса.",
+        description="Сбор без запуска интерфейса: запросы и города — флагами.",
     )
     parser.add_argument("--run", action="store_true",
                         help="выполнить сбор и выйти (флаг для app.py)")
-    parser.add_argument("--preset", default="",
-                        help="имя сохранённого пресета или путь к JSON-файлу")
-    parser.add_argument("--list-presets", action="store_true",
-                        help="показать сохранённые пресеты и выйти")
-    parser.add_argument("--queries", default="",
-                        help="запросы через запятую (без пресета)")
-    parser.add_argument("--cities", default="",
-                        help="города через запятую (без пресета)")
+    parser.add_argument("--queries", required=True,
+                        help="запросы через запятую")
+    parser.add_argument("--cities", required=True,
+                        help="города через запятую")
     parser.add_argument("--pages", type=int, default=None, help="страниц на точку")
     parser.add_argument("--workers", type=int, default=None, help="потоков на карточки")
     parser.add_argument("--max", dest="max_candidates", type=int, default=None,
                         help="максимум организаций на город")
     parser.add_argument("--formats", default="",
                         help="форматы выгрузки через запятую: excel,json,csv,map")
-    parser.add_argument("--no-continue", action="store_true",
-                        help="выключить непрерывный режим, даже если он в пресете")
     parser.add_argument("--dry-run", action="store_true",
                         help="только показать, что будет запущено")
     parser.add_argument("--verbose", action="store_true",
@@ -94,62 +121,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Незнакомые аргументы: {' '.join(unknown)}", file=sys.stderr)
         return 2
 
-    if args.list_presets:
-        presets = presets_store.load_presets()
-        if not presets:
-            print("Сохранённых пресетов нет. Сохраните пресет в интерфейсе "
-                  "(кнопка «+ Новый») или передайте JSON-файл через --preset.")
-            return 0
-        print("Сохранённые пресеты:")
-        for preset in presets:
-            settings = preset.get("settings") or {}
-            queries = presets_store._as_list(settings.get("queries"))
-            cities = presets_store._as_list(settings.get("cities"))
-            print(f"  • {preset['name']}: {len(queries)} запросов, "
-                  f"{len(cities)} городов" + (f" ({', '.join(cities[:3])}…)" if len(cities) > 3 else ""))
-        return 0
-
-    overrides = {
-        "pages": args.pages,
-        "workers": args.workers,
-        "max_candidates": args.max_candidates,
-        "formats": [f for f in args.formats.replace(";", ",").split(",") if f.strip()],
-        "no_continue": args.no_continue,
-    }
-    if args.queries:
-        overrides["queries"] = args.queries
-    if args.cities:
-        overrides["cities"] = args.cities
-
-    if not args.preset and not args.queries:
-        print("Нужен пресет (--preset «Имя» или файл.json) либо --queries с городами. "
-              "Список пресетов: --list-presets.", file=sys.stderr)
-        return 2
-
-    try:
-        if args.preset:
-            preset = presets_store.load_preset_source(args.preset)
-            settings = preset["settings"]
-            source = preset["name"]
-        else:
-            settings = {}
-            source = "параметры командной строки"
-    except (KeyError, ValueError, OSError) as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
-
-    params = presets_store.preset_to_params(settings, overrides)
-    if not params["queries"]:
-        print("В пресете нет запросов — добавьте их в интерфейсе или флагом --queries.",
-              file=sys.stderr)
-        return 2
-    if not params["cities"]:
-        print("В пресете нет городов — добавьте их в интерфейсе или флагом --cities.",
-              file=sys.stderr)
+    params = build_params(args)
+    if not params["queries"] or not params["cities"]:
+        print("Нужны запросы и города: --queries «кафе» --cities «Уфа».", file=sys.stderr)
         return 2
 
     print("═" * 62)
-    print(f"  Сбор без интерфейса — {source}")
+    print("  Сбор без интерфейса — параметры командной строки")
     print("═" * 62)
     print(describe(params))
     print("─" * 62)
@@ -163,8 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         from yandex_maps_parser import runner
         files = runner.run_web(params, make_logger(args.verbose))
     except KeyboardInterrupt:
-        print("\nОстановлено пользователем — собранное сохранено, "
-              "продолжить можно тем же пресетом.", file=sys.stderr)
+        print("\nОстановлено пользователем — собранное сохранено.", file=sys.stderr)
         return 130
     except Exception as exc:
         print(f"\nСбор не выполнился: {type(exc).__name__}: {exc}", file=sys.stderr)

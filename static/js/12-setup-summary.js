@@ -163,8 +163,8 @@ function _setupJump(target, key) {
   // Разделы, уехавшие в окно «Ещё настройки», сначала открывают его на нужной
   // вкладке: иначе чип уводил фокус в невидимую секцию и выглядел сломанным.
   // Карта внутри функции — её одну и выдёргивают тесты.
-  const tab = { 'acc-parse': 'data', 'acc-tech': 'data',
-                'acc-filters': 'filters', 'acc-formats': 'files' }[target];
+  const tab = { 'acc-parse': 'work', 'acc-tech': 'work',
+                'acc-filters': 'result', 'acc-formats': 'result' }[target];
   if (tab && typeof openMoreSettings === 'function') openMoreSettings(tab);
   if (!sec.classList.contains('open')) {
     const hdr = sec.querySelector('.acc-hdr');

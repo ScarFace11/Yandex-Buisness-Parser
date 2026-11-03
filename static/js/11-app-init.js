@@ -888,7 +888,6 @@ function initTermsGate() {
   updateClearAllBtn();
   updateBasicSummary();
   updateRunBtnState();
-  renderPresets();
   loadParseFields();
   initResultsPanel();
   loadReviewed();
