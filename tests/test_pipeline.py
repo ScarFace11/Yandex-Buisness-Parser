@@ -185,9 +185,9 @@ class TestApplyFilters:
         res = processing.apply_filters([self._raw_for_scoring(tmp_path)], {})
         by_name = {r["name"]: r for r in res["groups"]["кафе"]["Уфа"]}
         # 30 (нет сайта) + 15 (рейтинг 4.8) + 15 (120 отзывов)
-        # + 10 (телефон) + 10 (ссылка на ВК = есть соцсети).
-        # The VK bonus is absent because activity was never checked.
-        assert by_name["Горячий"]["lead_score"] == 80
+        # + 10 (телефон) + 15 (ссылка на ВК = есть соцсети).
+        # Бонус за активность ВК не начислен: активность ещё не проверяли.
+        assert by_name["Горячий"]["lead_score"] == 85
         assert by_name["Тёплый"]["lead_score"] == 10    # phone only
 
     def test_min_lead_score_drops_cold_leads(self, tmp_path):

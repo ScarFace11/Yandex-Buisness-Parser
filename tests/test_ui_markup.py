@@ -590,7 +590,7 @@ class TestFilterAccordionGroups:
         box = box[: box.index("</details>")]
         for needle in ('id="f-chain-key"', 'id="f-raw-mode"'):
             assert needle in box, f"{needle} должен жить в «⚙️ Дополнительно»"
-        # Значения селектов — контракт для refilterNow/preset-ов.
+        # Значения селектов — контракт для запуска поиска и пресетов.
         assert '<option value="name_city" selected>' in box
         assert '<option value="keep" selected>' in box
         rule = self._rule(".flt-extra-body{")
@@ -980,7 +980,7 @@ class TestBulkCrawlOrder:
         # 6 — оценка лида, 2..5 — название/категория/адрес/телефон (sortTable).
         assert '_VIEW_SORT_KEYS = {2: "name", 3: "category", 4: "address", 5: "phone"}' in api
 
-    def test_refiltering_drops_a_stale_column_sort(self):
+    def test_filtering_drops_a_stale_column_sort(self):
         body = APP_JS[APP_JS.index('function filterTable('):]
         body = body[: body.index('function minScoreThreshold(')]
         assert 'sortCol = -1;' in body, 'стрелка в шапке разошлась бы с порядком строк'

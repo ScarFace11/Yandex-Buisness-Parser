@@ -196,14 +196,14 @@ class TestResultsView:
         # Явный показ всей папки остаётся доступен
         assert client.get("/results-view?view=raw&scope=all").get_json()["count"] == 4
 
-    def test_scope_applies_to_processed_and_to_refiltering(self, client):
+    def test_scope_applies_to_processed_and_to_a_fresh_pass(self, client):
         p_old = _make_processed(client, "old_filtered.xlsx", SAMPLE[:1])
         p_new = _make_processed(client, "new_filtered.xlsx", SAMPLE[1:])
         os.utime(p_old, (1_000, 1_000))
         os.utime(p_new, (2_000, 2_000))
         _mark_current_search(client, started_at=1_500)
         assert client.get("/results-view?view=processed").get_json()["count"] == 3
-        # «Применить фильтры заново» пишет свежий файл — он входит в текущий поиск
+        # Повторная обработка пишет свежий файл — он тоже входит в текущий поиск
         again = _make_processed(client, "new_filtered_again.xlsx", SAMPLE[1:2])
         os.utime(again, (3_000, 3_000))
         assert client.get("/results-view?view=processed").get_json()["count"] == 4

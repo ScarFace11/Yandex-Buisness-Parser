@@ -1,8 +1,7 @@
-"""История поисков: поиск по категориям, режим сетки и убранная кнопка.
+"""История поисков: поиск по категориям и общий для двух вкладок вид списка.
 
-Пользователь не понимал, что делает «Применить фильтры заново», поэтому кнопки
-и её кода больше нет, а список истории научился фильтроваться и раскладываться
-сеткой.
+Отсутствие кнопки «Применить фильтры заново» проверяет tests/test_ui_markup.py
+рядом с остальной разметкой «Фильтрации результата» — здесь этот дубль не нужен.
 """
 from pathlib import Path
 
@@ -10,16 +9,6 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = (ROOT / "templates/index.html").read_text(encoding="utf-8")
 HISTORY_JS = (ROOT / "static/js/11-app-init.js").read_text(encoding="utf-8")
 STYLE = (ROOT / "static/css/12-socials-empty.css").read_text(encoding="utf-8")
-
-
-def _all_js() -> str:
-    return "".join(p.read_text(encoding="utf-8")
-                   for p in sorted((ROOT / "static/js").glob("*.js")))
-
-
-def _all_css() -> str:
-    return "".join(p.read_text(encoding="utf-8")
-                   for p in sorted((ROOT / "static/css").glob("*.css")))
 
 
 def test_history_searches_by_category():
@@ -66,11 +55,3 @@ def test_map_follows_the_dark_theme():
     assert '[data-theme="dark"] .leaflet-tile-pane{' in map_css
     assert "filter:invert(1) hue-rotate(180deg)" in map_css
 
-
-def test_refilter_button_and_its_code_are_gone():
-    assert "btn-refilter" not in TEMPLATE
-    assert "Применить фильтры заново" not in TEMPLATE
-    js = _all_js()
-    assert "refilterNow" not in js
-    assert "Применить фильтры заново" not in js
-    assert "btn-refilter" not in _all_css()
