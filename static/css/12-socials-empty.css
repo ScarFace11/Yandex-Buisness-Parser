@@ -6,7 +6,9 @@
    ══════════════════════════════════════════════════════════ */
 /* Tiles sit in the stage-2 «Фильтрация результата» accordion and are revealed
    only for «С соцсетями» — leaving the mode clears the selection. */
-#social-network-filter{margin-top:2px}
+#social-network-filter{margin-top:2px;display:none}
+#social-network-filter.open{display:block;animation:socialsIn .22s ease-out}
+@keyframes socialsIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 .tiles-reveal{
   display:grid;grid-template-rows:0fr;overflow:hidden;
   transition:grid-template-rows .26s cubic-bezier(.4,0,.2,1);

@@ -1789,25 +1789,6 @@ def preview_blacklist():
 # ═══════════════════════════════════════════════════════════════
 #  Шаблоны сообщений («📝 Шаблоны»)
 
-@bp.route("/preview-company-type", methods=["POST"])
-def preview_company_type():
-    """Сколько компаний подойдёт под «🎯 Тип компании» — без запуска этапа 2. Body: {only_single_branch: bool, only_new_months: 1|3|6|12|24|null} Reply: {ok, total, single, new, both, with_date, months} Считаем по СЫРЫМ данным текущего поиска той же функцией (processing.company_type_breakdown), что и сам фильтр, — иначе цифра в подсказке разошлась бы с результатом повторной обработки. `with_date` — у скольких записей есть дата добавления: без неё видно, что «только новые» не отсеивает не потому, что все компании новые."""
-    from yandex_maps_parser.processing import (
-        annotate_branch_counts,
-        company_type_breakdown,
-    )
-
-    data = _json_body()
-    try:
-        recs = _collect_records("raw", None, "current")
-    except Exception as exc:
-        return _fail(exc)
-    # Старые сборы не знают branch_count — досчитываем филиалы по названию и городу, как это делает apply_filters (цифры обязаны совпадать).
-    annotate_branch_counts(recs)
-    info = company_type_breakdown(recs, data.get("only_new_months"))
-    return jsonify({"ok": True, **info})
-
-
 @bp.route("/templates", methods=["GET"])
 def get_templates():
     """Шаблоны, активные по категориям, режимы выбора и флаг «показывать {var}»."""
@@ -2377,20 +2358,21 @@ def picker_command(platform: str = "") -> list[str] | None:
     if platform.startswith("win"):
         script = (
             "Add-Type -AssemblyName System.Windows.Forms;"
-            "$d = New-Object System.Windows.Forms.OpenFileDialog;"
-            "$d.Title = 'Папка для сохранения результатов';"
-            "$d.FileName = 'Выбор папки';"
-            "$d.CheckFileExists = $false;"
-            "$d.CheckPathExists = $true;"
-            "$d.ValidateNames = $false;"
-            "$d.InitialDirectory = [Environment]::GetFolderPath('Desktop');"
+            "$d = New-Object System.Windows.Forms.FolderBrowserDialog;"
+            "$d.Description = 'Папка для сохранения результатов';"
+            "$d.ShowNewFolderButton = $true;"
+            "$d.SelectedPath = [Environment]::GetFolderPath('Desktop');"
             "$owner = New-Object System.Windows.Forms.Form;"
+            "$owner.Text = 'Выбор папки';"
             "$owner.TopMost = $true; $owner.ShowInTaskbar = $false;"
             "$owner.Width = 1; $owner.Height = 1; $owner.StartPosition = 'Manual';"
+            "$owner.Opacity = 0;"
+            "$owner.Show(); $owner.Activate();"
             "if ($d.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK)"
-            " { [Console]::Out.Write([System.IO.Path]::GetDirectoryName($d.FileName)) }"
+            " { [Console]::Out.Write($d.SelectedPath) }"
+            "$owner.Close()"
         )
-        return ["powershell", "-NoProfile", "-STA", "-Command", script]
+        return ["powershell", "-NoProfile", "-STA", "-WindowStyle", "Hidden", "-Command", script]
     if platform == "darwin":
         return ["osascript", "-e",
                 'POSIX path of (choose folder with prompt "Папка для сохранения результатов")']
@@ -2455,6 +2437,84 @@ def spheres_reset():
     except Exception as exc:
         return _fail(exc)
     return jsonify({"ok": True, "spheres": _spheres.catalog()})
+
+# ── Карточки объёма («Сколько собирать») ─────────────────────
+# Список живёт в settings.json, а не только в localStorage: вариант поиска —
+# общая настройка приложения, и после очистки браузера он не должен исчезать.
+EFFORT_CARDS_KEY = "effort_cards"
+EFFORT_ACTIVE_KEY = "effort_active"
+EFFORT_MAX_CARDS = 20
+
+_EFFORT_KEY_RE = re.compile(r"[^A-Za-z0-9_-]+")
+
+
+def _clean_effort_cards(raw) -> list[dict]:
+    """Нормализовать карточки объёма: без дублей ключей и мусора из запроса."""
+    out: list[dict] = []
+    seen: set[str] = set()
+    for item in raw if isinstance(raw, list) else []:
+        if not isinstance(item, dict):
+            continue
+        key = _EFFORT_KEY_RE.sub("", str(item.get("key") or "").strip())[:40]
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        try:
+            pages = int(item.get("pages", 2))
+        except (TypeError, ValueError):
+            pages = 2
+        try:
+            candidates = int(item.get("candidates", 200))
+        except (TypeError, ValueError):
+            candidates = 200
+        out.append({
+            "key": key,
+            "name": str(item.get("name") or "Вариант").strip()[:24] or "Вариант",
+            "note": str(item.get("note") or "").strip()[:90],
+            "pages": max(1, min(20, pages)),
+            "candidates": max(1, min(10000, candidates)),
+            "vk": bool(item.get("vk")),
+        })
+        if len(out) >= EFFORT_MAX_CARDS:
+            break
+    return out
+
+
+@bp.route("/effort/cards", methods=["GET"])
+def effort_cards_get():
+    """Карточки объёма и выбранный вариант из settings.json."""
+    p = _paths_module()
+    if p is None:
+        return jsonify({"ok": False, "error": "Настройки недоступны в этой сборке"}), 500
+    settings = p.load_settings()
+    cards = _clean_effort_cards(settings.get(EFFORT_CARDS_KEY))
+    active = str(settings.get(EFFORT_ACTIVE_KEY) or "").strip()
+    if active not in {c["key"] for c in cards}:
+        active = cards[0]["key"] if cards else ""
+    return jsonify({"ok": True, "cards": cards, "active": active})
+
+
+@bp.route("/effort/cards", methods=["POST"])
+def effort_cards_save():
+    """Сохранить карточки объёма целиком (их немного — проще заменить список)."""
+    p = _paths_module()
+    if p is None:
+        return jsonify({"ok": False, "error": "Настройки недоступны в этой сборке"}), 500
+    data = _json_body()
+    if not isinstance(data.get("cards"), list):
+        return jsonify({"ok": False, "error": "ожидался список cards"}), 400
+    cards = _clean_effort_cards(data.get("cards"))
+    if not cards:
+        return jsonify({"ok": False, "error": "Нужна хотя бы одна карточка"}), 400
+    active = str(data.get("active") or "").strip()
+    if active not in {c["key"] for c in cards}:
+        active = cards[0]["key"]
+    try:
+        p.save_settings({EFFORT_CARDS_KEY: cards, EFFORT_ACTIVE_KEY: active})
+    except Exception as exc:
+        return _fail(exc)
+    return jsonify({"ok": True, "cards": cards, "active": active})
+
 
 @bp.route("/folder-picker", methods=["POST"])
 def folder_picker():

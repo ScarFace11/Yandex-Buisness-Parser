@@ -894,12 +894,8 @@ function previewBlacklist() {
 // Оба фильтра применяет сервер (этап 2), но счётчик «сколько подойдёт» живёт
 // здесь и читает сырые данные текущего поиска — той же функцией, что и фильтр.
 // Периоды и дефолт совпадают с processing.COMPANY_TYPE_MONTHS.
-const COMPANY_TYPE_PREVIEW_MS = 500;   // пересчёт счётчика (debounce)
 const COMPANY_TYPE_PERIODS = {1: '1 мес', 3: '3 мес', 6: '6 мес', 12: '1 год', 24: '2 года'};
 const COMPANY_TYPE_DEFAULT_MONTHS = 6;
-
-let _ctPreviewTimer = null;
-let _ctPreviewSeq = 0;                 // ответы приходят не по порядку — берём последний
 
 function onlySingleChecked() {
   return !!(document.getElementById('f-only-single') || {}).checked;
@@ -938,87 +934,12 @@ function syncCompanyTypeUi() {
     const lbl = box && box.closest ? box.closest('.chk') : null;
     if (lbl && lbl.classList) lbl.classList.toggle('on', !!box.checked);
   });
-  const cnt = document.getElementById('company-type-count');
-  if (cnt && cnt.classList) cnt.classList.toggle('on', companyTypeOn());
 }
 
 function onCompanyTypeChange() {
   syncCompanyTypeUi();
-  scheduleCompanyTypePreview();
 }
 
-function updateCompanyTypeCount(html) {
-  const el = document.getElementById('company-type-count');
-  if (el) el.innerHTML = html;
-}
-
-function scheduleCompanyTypePreview() {
-  if (_ctPreviewTimer) clearTimeout(_ctPreviewTimer);
-  // Любое изменение фильтров отменяет ответы в пути: иначе «подойдёт N» от
-  // старой настройки воскресало бы поверх новой.
-  _ctPreviewSeq++;
-  if (!companyTypeOn()) {
-    updateCompanyTypeCount('Отметьте фильтры — посчитаю, сколько компаний подойдёт');
-    return;
-  }
-  updateCompanyTypeCount('Считаю, сколько компаний подойдёт…');
-  _ctPreviewTimer = setTimeout(
-    () => { _ctPreviewTimer = null; previewCompanyType(); },
-    COMPANY_TYPE_PREVIEW_MS,
-  );
-}
-
-// POST /preview-company-type: сервер считает по сырым данным текущего поиска
-// теми же функциями, что и сам фильтр, — цифра не может разойтись с результатом.
-function previewCompanyType() {
-  if (!companyTypeOn()) return Promise.resolve();
-  const single = onlySingleChecked();
-  const months = newMonthsValue();
-  const seq = ++_ctPreviewSeq;
-  return fetch('/preview-company-type', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({only_single_branch: single, only_new_months: months}),
-  })
-    .then(r => r.json())
-    .then(j => {
-      if (seq !== _ctPreviewSeq) return;      // настройка уже изменилась — ответ устарел
-      if (!j || !j.ok) { updateCompanyTypeCount('Не удалось посчитать компании'); return; }
-      if (!j.total) { updateCompanyTypeCount('Нет сырых данных текущего поиска — сначала запустите сбор'); return; }
-      updateCompanyTypeCount(companyTypeCountHTML(j));
-    })
-    .catch(() => { if (seq === _ctPreviewSeq) updateCompanyTypeCount('Не удалось посчитать компании'); });
-}
-
-// «Подойдёт 138 из 500: одиночек 213 + новых 147, обоим условиям — 22».
-// Фильтры работают по И, поэтому при обоих включённых в отчёте останутся `both`.
-// Большая выгрузка показывается приблизительно («~5000»), чтобы не обещать
-// точность, которой нет: цифра — ориентир перед обработкой.
-function companyTypeCountHTML(j) {
-  const single = onlySingleChecked();
-  const months = newMonthsValue();
-  const pass = (single && months) ? j.both : (single ? j.single : j.new);
-  const total = j.total > 5000 ? '~' + Math.floor(j.total / 1000) * 1000 : String(j.total);
-  const plural = _pluralRu(j.total, 'компании', 'компаний', 'компаний');
-  const parts = [];
-  if (single) parts.push(`одиночек <b>${j.single}</b>`);
-  if (months) {
-    parts.push(`новых за ${COMPANY_TYPE_PERIODS[j.months || months] || ''} — <b>${j.new}</b>`);
-  }
-  let html = `🎯 Подойдёт <b>${pass}</b> из ${total} ${plural}: ${parts.join(' + ')}`;
-  if (single && months && j.both) html += `, обоим условиям — <b>${j.both}</b>`;
-  const notes = [];
-  const noDate = Math.max(0, j.total - (j.with_date || 0));
-  if (months && !j.with_date) {
-    notes.push('у этой выгрузки нет дат добавления — фильтр «новые» ничего не отсеивает');
-  } else if (months && noDate) {
-    notes.push(`у ${noDate} ${_pluralRu(noDate, 'компании', 'компаний', 'компаний')} даты нет — они остаются в отчёте`);
-  }
-  if (notes.length) html += `<span class="ct-note">${notes.join('. ')}.</span>`;
-  return html;
-}
-
-// ═══════════════════════════════════════════
 //  Tabs
 
 // ── Меню служебных действий в шапке ─────────────────────────────

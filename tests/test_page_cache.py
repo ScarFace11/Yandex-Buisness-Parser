@@ -186,6 +186,20 @@ class TestFetchHtmlUsesTheCache:
         assert len(calls) == 2, "заглушка не должна жить в кэше сутки"
         assert not (cache_dir / "123.html").exists()
 
+    def test_empty_page_is_retried_before_reporting(self, cache_dir, fake_cdp, monkeypatch):
+        """Одна неудача — ещё не ошибка: карточку пробуют открыть заново."""
+        from yandex_maps_parser import state
+
+        calls, page = fake_cdp
+        page["html"] = ""
+        monkeypatch.setattr(extractors.time, "sleep", lambda *_: None)
+        state.reset_read_failures()
+        url = "https://yandex.ru/maps/org/123"
+        assert extractors.fetch_html(url, biz_id="123") == ""
+        assert len(calls) == 2, "после пустой страницы была вторая попытка"
+        assert state.read_failure_summary()["total"] == 1
+        state.reset_read_failures()
+
     def test_without_biz_id_nothing_is_cached(self, cache_dir, fake_cdp):
         calls, _ = fake_cdp
         url = "https://taplink.cc/salon"

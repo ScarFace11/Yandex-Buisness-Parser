@@ -172,7 +172,6 @@ function toggleAccordion(hdr) {
   // реально открыли, а не на каждой загрузке страницы.
   if (open && sec.id === 'acc-filters') {
     scheduleBlacklistPreview();
-    scheduleCompanyTypePreview();
   }
 }
 
@@ -243,7 +242,8 @@ function modalA11y(overlay) {
   // Диалог на странице у каждого окна свой (ui-modal / tpl-modal / logs-modal
   // и т. д.) — роль и имя ставим на него, а не на подложку.
   const box = overlay.querySelector(
-    '.ui-modal, .tpl-modal, .logs-modal, .skip-modal, .changelog-modal') || overlay;
+    '.ui-modal, .tpl-modal, .logs-modal, .skip-modal, .changelog-modal, ' +
+    '.ms-box, .app-modal-box') || overlay;
   if (!box.getAttribute('role')) box.setAttribute('role', 'dialog');
   box.setAttribute('aria-modal', 'true');
   // Имя диалога обязано пережить перерисовку содержимого. Окна со списком
@@ -384,7 +384,7 @@ function uiConfirm(message, title = 'Подтвердите действие', o
 // ═══════════════════════════════════════════
 //  Toast notifications (stacked, top-right)
 // ═══════════════════════════════════════════
-function showToast(message, type) {
+function showToast(message, type, opts) {
   const cont = document.getElementById('toast-container');
   if (!cont) { console.log('[' + (type || 'info') + ']', message); return; }
   const toast = document.createElement('div');
@@ -398,6 +398,21 @@ function showToast(message, type) {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 350);
   };
+  // Действие в тосте — для отмены только что сделанного (удалённая карточка
+  // объёма). Кнопка ловит мышь, остальной тост по-прежнему прозрачен для
+  // кликов, чтобы не перекрывать интерфейс.
+  const action = opts && opts.action;
+  if (action) {
+    const act = document.createElement('button');
+    act.type = 'button';
+    act.className = 'toast-action';
+    act.textContent = action.label || 'Отменить';
+    act.addEventListener('click', () => {
+      hide();
+      if (typeof action.onClick === 'function') action.onClick();
+    });
+    toast.appendChild(act);
+  }
   // Крестик: уведомление можно убрать руками, не дожидаясь таймера. Мышь
   // ловит только он (pointer-events в .toast-x), сам тост остаётся
   // прозрачным для кликов и не отнимает нажатия у интерфейса под ним.
@@ -409,7 +424,7 @@ function showToast(message, type) {
   close.setAttribute('aria-label', 'Закрыть уведомление');
   close.addEventListener('click', hide);
   toast.appendChild(close);
-  toast._autoHide = setTimeout(hide, 3500);
+  toast._autoHide = setTimeout(hide, (opts && opts.duration) || 3500);
 }
 
 // ═══════════════════════════════════════════
@@ -428,6 +443,12 @@ function setSocialMode(mode) {
   // the selection so a hidden filter can never stay active.
   const netFilter = document.getElementById('social-network-filter');
   if (netFilter) netFilter.classList.toggle('open', mode === 'with_socials');
+  // Плитки рисуются при старте; если грид пуст — дорисовываем, иначе
+  // «С соцсетями» раскрывает пустую рамку.
+  const grid = document.getElementById('social-net-chk-grid');
+  if (netFilter && mode === 'with_socials' && grid && !grid.children.length) {
+    initSocialNetCheckboxes();
+  }
   if (mode !== 'with_socials' && requiredSocials.size) {
     requiredSocials.clear();
     document.querySelectorAll('#social-net-chk-grid .soc-tile.on').forEach(t => {

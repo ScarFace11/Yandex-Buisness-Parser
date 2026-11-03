@@ -14,17 +14,16 @@
 from .constants import EXPENSIVE_CATEGORY_KEYWORDS
 
 # Веса подобраны под вопрос «кому нужен сайт и кто за него заплатит».
-NO_WEBSITE = 30          # главный сигнал: своего сайта нет
+NO_WEBSITE = 35          # главный сигнал: своего сайта нет
 RATING_GOOD = 15         # бизнес реальный, клиенты им довольны
 REVIEWS_MANY = 15        # есть поток клиентов
 HAS_PHONE = 10           # до него можно дозвониться
 EXPENSIVE_CATEGORY = 10  # услуги дорогие — бюджет на сайт есть
 SOCIALS_PRESENT = 15     # уже ведёт маркетинг: соцсети или мессенджер
-CARD_COMPLETE = 5        # адрес и категория заполнены — бизнес можно проверить
 
-# Сумма базовых сигналов = 100: идеальный лид добирает шкалу без ВК.
+# Сумма шести критериев = 100: идеальный лид добирает шкалу без ВК.
 BASE_MAX = (NO_WEBSITE + RATING_GOOD + REVIEWS_MANY + HAS_PHONE
-            + EXPENSIVE_CATEGORY + SOCIALS_PRESENT + CARD_COMPLETE)
+            + EXPENSIVE_CATEGORY + SOCIALS_PRESENT)
 MAX_SCORE = 100
 
 SOCIAL_FIELDS = ("vk", "telegram", "instagram", "whatsapp")
@@ -50,12 +49,6 @@ def _num(value, default=0.0) -> float:
 
 def _has_socials(record: dict) -> bool:
     return any(str(record.get(field) or "").strip() for field in SOCIAL_FIELDS)
-
-
-def _card_is_complete(record: dict) -> bool:
-    """Адрес и категория — минимум, по которому бизнес можно проверить."""
-    return bool(str(record.get("address") or "").strip()
-                and str(record.get("category") or "").strip())
 
 
 def is_expensive_category(category: str) -> bool:
@@ -100,9 +93,6 @@ def compute_score(record: dict) -> tuple[int, list[str]]:
         score += SOCIALS_PRESENT
         reasons.append(f"есть соцсети или мессенджер +{SOCIALS_PRESENT}")
 
-    if _card_is_complete(record):
-        score += CARD_COMPLETE
-        reasons.append(f"адрес и категория заполнены +{CARD_COMPLETE}")
 
     # ВК баллы больше не добавляет: шкала набирается без него. Строка в
     # разборе остаётся справочной, чтобы видеть, проверяли сообщество или нет.

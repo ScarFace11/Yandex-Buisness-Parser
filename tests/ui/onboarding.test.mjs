@@ -233,12 +233,14 @@ test('после старта поиска инструкция открывае
   assert.equal(help.className, 'onboarding');
   assert.equal(help.innerHTML, '<div class="onboarding-inner">шаги</div>');
   assert.equal(help.getAttribute('role'), 'region');
+  assert.equal(log.hidden, true, 'журнал спрятан, пока открыта инструкция');
   assert.equal(help.children.length, 1, 'у карточки есть крестик');
   assert.equal(help.children[0].className, 'onb-close');
   assert.equal(els['btn-log-howto'].getAttribute('aria-expanded'), 'true');
 
   globalThis.toggleOnboardingHelp();
   assert.equal(help._removed, true);
+  assert.equal(log.hidden, false, 'журнал вернулся');
   assert.equal(els['btn-log-howto'].getAttribute('aria-expanded'), 'false');
   delete els['log-output'];
 });

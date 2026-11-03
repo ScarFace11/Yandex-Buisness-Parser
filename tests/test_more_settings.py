@@ -1,4 +1,4 @@
-"""Два шага в сайдборе и окно «Ещё настройки».
+"""Два шага в сайдборе и окно «Настройки поиска».
 
 Пользователь видел пять разделов и десятки полей, не понимая, что обязательно,
 а что «по вкусу». Теперь на первом экране только «Что и где ищем» и «Сколько
@@ -36,15 +36,18 @@ def test_sidebar_offers_volume_choices_and_a_counter():
 
 def test_more_settings_window_has_four_tabs():
     assert 'id="more-settings"' in TEMPLATE
+    assert '<h2 id="ms-title">Настройки поиска</h2>' in TEMPLATE
     assert 'role="dialog" aria-modal="true"' in TEMPLATE
     for pane in ("effort", "work", "result"):
         assert f'data-ms-pane="{pane}"' in TEMPLATE, pane
     assert "function openMoreSettings" in JS
     assert "function setMoreSettingsTab" in JS
     assert "function closeMoreSettings" in JS
-    # Окно закрывается и мышью по подложке, и клавишей Escape.
+    # Окно закрывается и мышью по подложке, и клавишей Escape — общей
+    # механикой модалок, вместе с ловушкой Tab и возвратом фокуса.
     assert 'onclick="closeMoreSettings()"' in TEMPLATE
-    assert "event.key !== 'Escape'" in JS
+    assert 'data-modal-close' in TEMPLATE
+    assert "modalA11y(modal)" in JS
     # Отдельной ссылки «Ещё настройки» больше нет: окно открывают шестерёнки.
     assert 'id="btn-more-settings"' not in TEMPLATE
     assert "openEffortVariant" in JS
@@ -86,9 +89,14 @@ def test_volume_cards_can_be_added_renamed_and_deleted():
     assert 'id="ee-name"' in TEMPLATE and 'id="ee-note"' in TEMPLATE
     assert 'id="ee-pages"' in TEMPLATE and 'id="ee-candidates"' in TEMPLATE
     assert 'id="ee-delete"' in TEMPLATE
-    # Свои варианты живут в браузере пользователя.
+    # Свои варианты живут в settings.json: браузер — только запасной вариант.
     assert "effort-cards" in JS
+    assert "EFFORT_SERVER" in JS and "settings.json" in JS
+    assert "fetch(EFFORT_SERVER" in JS
     assert "localStorage" in JS
+    # Удаление обратимо: тост предлагает вернуть карточку.
+    assert "function undoDeleteEffortCard" in JS
+    assert "action: { label: 'Отменить'" in JS
     # Правка сохраняется сразу: отдельного диалога и кнопки «Сохранить» нет.
     assert "function saveEffortEditor" in JS
     assert 'id="effort-editor"' not in TEMPLATE

@@ -325,7 +325,7 @@ test('every log line carries an absolute [HH:MM:SS] stamp (delta in title)', () 
   globalThis.appendLog('info', 'строка');
   // Absolute wall-clock time [HH:MM:SS], run-start delta moved to the title.
   // Second repeats are hidden by CSS («same»), the text is always rendered.
-  assert.match(logEl.children[0].innerHTML, /class="ll-time(?: same)?">\[\d\d:\d\d:\d\d\]</);
+  assert.match(logEl.children[0].innerHTML, /class="ll-time(?: same)?">\d\d:\d\d:\d\d</);
   assert.match(logEl.children[0].title, /^\+\d+:\d\d$/, 'elapsed delta in hover title');
   // Elapsed helper: 90 seconds in → +1:30.
   globalThis.startTime = Date.now() - 90000;
@@ -585,10 +585,10 @@ test('the stamp column is dimmed when the second has not changed', () => {
   resetLog();
   globalThis.appendLog('info', 'a');
   globalThis.appendLog('info', 'b');
-  const first = /\[(\d\d:\d\d:\d\d)\]/.exec(logEl.children[0].innerHTML);
+  const first = />(\d\d:\d\d:\d\d)</.exec(logEl.children[0].innerHTML);
   assert.ok(first, 'the first line always carries a time');
   const second = logEl.children[1].innerHTML;
-  const m = /\[(\d\d:\d\d:\d\d)\]/.exec(second);
+  const m = />(\d\d:\d\d:\d\d)</.exec(second);
   if (m && m[1] === first[1]) assert.match(second, /ll-time same/, 'repeated second is dimmed');
   else assert.match(second, /ll-time"/, 'a new second is printed');
 });

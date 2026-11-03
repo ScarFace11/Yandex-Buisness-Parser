@@ -1145,7 +1145,7 @@ class TestHelpers:
         recs = [{"name": "A", "category": "кафе"},
                 {"name": "B", "lead_score": 77}]
         out = _fill_lead_scores(recs)
-        assert out[0]["lead_score"] == 30            # нет сайта +30
+        assert out[0]["lead_score"] == 35            # нет сайта +35
         assert out[1]["lead_score"] == 77            # stored score wins
 
     def test_view_records_carry_lead_scores(self, client):

@@ -1,6 +1,7 @@
 """HTML / text extraction: social links, emails, descriptions, reviews."""
 import json
 import re
+import time
 from html import unescape as _html_unescape
 
 from .constants import (
@@ -188,7 +189,7 @@ def fetch_html(url: str, session=None, biz_id: str = "") -> str:
         text = cdp_client.fetch_page(url, biz_id=biz_id) or ""
     except Exception as exc:
         state.syslog(f"fetch_html: browser error: {type(exc).__name__}: {exc}")
-        return ""
+        text = ""
 
     if not text:
         # Остановка/пропуск города — это не потерянная карточка: считать её в счётчике значило бы показать в итоге «не прочитано N» там, где пользователь сам прервал прогон.
@@ -196,6 +197,18 @@ def fetch_html(url: str, session=None, biz_id: str = "") -> str:
                        or state.is_skip_city())
         if aborted:
             return ""
+        # Первая неудача — не повод ругаться в лог: даём карточке второй шанс
+        # со свежей вкладкой. Пользователь видит ошибку, только если не вышло
+        # и со второй попытки, и не думает, что причина в нём.
+        state.syslog(f"fetch_html: retry after empty page: {url}")
+        time.sleep(1.0)
+        try:
+            text = cdp_client.fetch_page(url, biz_id=biz_id) or ""
+        except Exception as exc:
+            state.syslog(f"fetch_html: retry error: {type(exc).__name__}: {exc}")
+            text = ""
+
+    if not text:
         reason = ""
         try:
             reason = cdp_client.take_failure_reason()
@@ -203,8 +216,9 @@ def fetch_html(url: str, session=None, biz_id: str = "") -> str:
             reason = ""
         if reason not in state.READ_FAILURE_LABELS:
             reason = "no_page"
-        state.warn(f"Карточка не открылась в браузере ({state.READ_FAILURE_LABELS[reason]}) "
-                   "— детали этой организации пропущены.")
+        state.syslog(f"fetch_html: gave up ({reason}): {url}")
+        state.warn("Не удалось открыть карточку организации даже со второй попытки — "
+                   "пропустили её и продолжили. На остальные записи это не влияет.")
         # Счётчик потерь: запись всё равно попадёт в выгрузку, и без этой цифры её «пустые контакты» выглядят как «так и есть».
         state.inc_read_failure(reason, key=biz_id or url)
         return ""

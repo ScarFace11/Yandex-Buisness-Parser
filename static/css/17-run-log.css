@@ -110,6 +110,15 @@
 }
 #log-filter-empty[hidden]{display:none}
 
+/* ── Дружелюбнее: журнал — текст для человека ─────────────────────── */
+#log-output{font-family:var(--font-ui)}
+#log-output .ll{
+  padding:4px 10px;border-radius:7px;font-size:12.5px;line-height:1.55;
+  font-variant-numeric:tabular-nums;
+}
+#log-output .ll-time{min-width:52px;font-size:12px;opacity:.75}
+#log-output .ll-msg{white-space:pre-wrap}
+
 /* ── Уровни: вес и цвет ─────────────────────────────────────────────── */
 #log-output .ll.ok{font-weight:700}
 #log-output .ll.error{font-weight:700}

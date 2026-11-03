@@ -1576,10 +1576,9 @@ test('score breakdown lists only the criteria that fired', () => {
   const { total, lines } = globalThis.scoreBreakdown(r);
   assert.equal(total, 100, 'все базовые сигналы вместе = 100, ВК не нужен');
   for (const line of [
-    '✅ Нет сайта +30', '✅ Рейтинг 4.7 +15',
+    '✅ Нет сайта +35', '✅ Рейтинг 4.7 +15',
     '✅ Отзывов 128 +15', '✅ Есть телефон +10', '✅ Дорогая категория +10',
     '✅ Есть соцсети или мессенджер +15',
-    '✅ Адрес и категория заполнены +5',
   ]) {
     assert.ok(lines.includes(line), line);
   }
@@ -1604,8 +1603,8 @@ test('score breakdown marks the criteria that did not fire', () => {
 
 test('scoreBreakdown sums exactly what the tooltip shows', () => {
   const { sum, total, lines } = globalThis.scoreBreakdown({ phone: '+7 1', category: 'Кафе', lead_score: 0 });
-  assert.equal(sum, 40, 'нет сайта 30 + телефон 10');
-  assert.equal(total, 40);
+  assert.equal(sum, 45, 'нет сайта 35 + телефон 10');
+  assert.equal(total, 45);
   assert.equal(lines.filter(l => l.startsWith('✅')).length, 2);
 });
 
@@ -1624,9 +1623,9 @@ test('score breakdown counts socials and ignores the removed date criterion', ()
 
 test('score breakdown treats a taplink page as «нет сайта»', () => {
   const { total, lines } = globalThis.scoreBreakdown(
-    { aggregator_url: 'https://taplink.cc/x', website: '', lead_score: 30 });
-  assert.ok(lines.includes('✅ Нет сайта +30'));
-  assert.equal(total, 30);
+    { aggregator_url: 'https://taplink.cc/x', website: '', lead_score: 35 });
+  assert.ok(lines.includes('✅ Нет сайта +35'));
+  assert.equal(total, 35);
 });
 
 test('score breakdown normalises a 0..50 rating', () => {
@@ -1666,7 +1665,7 @@ test('score popup admits when the stored score differs from the data', () => {
   assert.equal(globalThis.scoreDeltaNote(40, 40), '');
   assert.equal(globalThis.scoreDeltaNote(20, 0), ' · по текущим данным 0');
   const { total } = globalThis.scoreBreakdown({ phone: '+7 1', category: 'Кафе', lead_score: 40 });
-  assert.equal(total, 40);
+  assert.equal(total, 45);
 });
 
 test('scoreHTML shows a dash when the score was never computed', () => {

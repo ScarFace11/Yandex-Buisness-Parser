@@ -208,6 +208,15 @@ input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;b
 }
 .toast-x:hover{background:rgba(255,255,255,.38)}
 .toast-x:focus-visible{outline:2px solid var(--on-accent);outline-offset:1px}
+/* Отмена сделанного — единственная кнопка в тосте, кроме крестика. */
+.toast-action{
+  pointer-events:auto;flex-shrink:0;margin-left:2px;padding:4px 9px;
+  border:1px solid rgba(255,255,255,.5);border-radius:7px;cursor:pointer;
+  background:rgba(255,255,255,.2);color:inherit;font:inherit;font-size:12px;
+  font-weight:800;white-space:nowrap;
+}
+.toast-action:hover{background:rgba(255,255,255,.36)}
+.toast-action:focus-visible{outline:2px solid var(--on-accent);outline-offset:1px}
 .toast .t-ico{
   width:20px;height:20px;border-radius:50%;flex-shrink:0;
   display:grid;place-items:center;font-size:12px;font-weight:800;

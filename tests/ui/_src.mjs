@@ -24,6 +24,7 @@ export const JS_MODULES = [
   '11-app-init.js',
   '12-setup-summary.js',
   '13-spheres.js',
+  '14-more-settings.js',
 ];
 
 export function readAppSrc(r = root) {

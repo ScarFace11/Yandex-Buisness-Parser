@@ -151,6 +151,8 @@ MODALS = (
          js="loadTemplates().then(() => openVarModal(null))",
          box="#tpl-var-modal:not([hidden]) .tpl-modal"),
     dict(name="logs", js="showLogsModal()", box=".logs-modal"),
+    dict(name="more-settings", js="openMoreSettings('effort')",
+         box="#more-settings:not([hidden]) .ms-box"),
     dict(name="terms", js="showOverlay('terms-overlay')",
          box="#terms-overlay:not([hidden]) .ui-modal"),
     # Экран «версия ниже минимальной» намеренно НЕ закрывается: на такой сборке

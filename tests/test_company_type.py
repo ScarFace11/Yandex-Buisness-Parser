@@ -279,81 +279,9 @@ class TestRawRoundTrip:
         assert "added_at" not in CSV_FIELDS
 
 
-# ── POST /preview-company-type ────────────────────────────────
-
-_ROWS = [
-    {"name": "Одиночка новая", "branch_count": 1, "added_at": _days_ago(5)},
-    {"name": "Одиночка старая", "branch_count": 1, "added_at": _days_ago(900)},
-    {"name": "Сеть новая", "branch_count": 4, "added_at": _days_ago(20)},
-    {"name": "Без данных"},
-]
-
-
-@pytest.fixture()
-def client(monkeypatch):
-    from routes import api as api_mod
-
-    monkeypatch.setattr(api_mod, "_collect_records",
-                        lambda view, rel_file=None, scope="current":
-                        [dict(r) for r in _ROWS])
-    app = Flask(__name__)
-    app.register_blueprint(api_mod.bp)
-    return app.test_client()
-
-
-class TestPreviewCompanyType:
-    def test_counts_single_new_and_their_intersection(self, client):
-        data = client.post("/preview-company-type",
-                           json={"only_single_branch": True, "only_new_months": 6}).get_json()
-        assert data["ok"] is True
-        assert data["total"] == 4
-        assert data["single"] == 3          # две одиночки + запись без данных
-        assert data["new"] == 3             # две новые + запись без данных
-        assert data["both"] == 2
-        assert data["with_date"] == 3
-        assert data["months"] == 6
-
-    def test_thin_body_is_safe(self, client):
-        data = client.post("/preview-company-type", json={}).get_json()
-        assert data["ok"] is True
-        assert data["months"] is None, "без фильтра период не выдумывается"
-        assert data["single"] == 3
-
-    def test_period_is_normalized_like_the_filter(self, client):
-        assert client.post("/preview-company-type",
-                           json={"only_new_months": 7}).get_json()["months"] == 6
-        assert client.post("/preview-company-type",
-                           json={"only_new_months": 0}).get_json()["months"] is None
-
-    def test_counter_matches_the_stage_2_result(self, client, tmp_path):
-        """Цифра в подсказке и результат «Применить фильтры заново» — одно и то же."""
-        data = client.post("/preview-company-type",
-                           json={"only_single_branch": True, "only_new_months": 6}).get_json()
-        raw = _raw(tmp_path, [dict(r, city="Уфа", query="кафе") for r in _ROWS],
-                   name="raw_preview.xlsx")
-        res = processing.apply_filters([raw], {"only_single_branch": True,
-                                               "only_new_months": 6})
-        assert res["count"] == data["both"]
-
-    def test_old_records_get_their_branch_count_annotated(self, client, monkeypatch):
-        """Файл без поля branch_count: превью считает филиалы само."""
-        from routes import api as api_mod
-        monkeypatch.setattr(api_mod, "_collect_records", lambda *a, **kw: [
-            {"name": "Сеть", "city": "Уфа"},
-            {"name": "Сеть", "city": "Уфа"},
-            {"name": "Один", "city": "Уфа"},
-        ])
-        data = client.post("/preview-company-type",
-                           json={"only_single_branch": True}).get_json()
-        assert data["single"] == 1, "сеть из двух строк не должна считаться одиночкой"
-
-    def test_records_are_not_mutated_between_calls(self, client):
-        first = client.post("/preview-company-type", json={"only_new_months": 6}).get_json()
-        second = client.post("/preview-company-type", json={"only_new_months": 6}).get_json()
-        assert first == second
-
+# ── Реестр периодов ───────────────────────────────────────────
+class TestPeriods:
     def test_client_and_server_agree_on_periods(self):
-        """Реестр месяцев и дефолт в браузере — те же, что на сервере."""
         import re
         from tests._appjs import read_app_js
         app_js = read_app_js()
@@ -363,16 +291,3 @@ class TestPreviewCompanyType:
             list(processing.COMPANY_TYPE_MONTHS)
         default = re.search(r"const COMPANY_TYPE_DEFAULT_MONTHS = (\d+);", app_js)
         assert default and int(default.group(1)) == processing.NEW_COMPANY_DEFAULT_MONTHS
-
-    def test_broken_source_reports_instead_of_failing(self, monkeypatch):
-        from routes import api as api_mod
-
-        def _boom(*a, **kw):
-            raise OSError("сырые файлы недоступны")
-
-        monkeypatch.setattr(api_mod, "_collect_records", _boom)
-        app = Flask(__name__)
-        app.register_blueprint(api_mod.bp)
-        resp = app.test_client().post("/preview-company-type", json={})
-        assert resp.status_code == 500
-        assert resp.get_json()["ok"] is False

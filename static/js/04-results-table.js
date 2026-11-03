@@ -479,6 +479,9 @@ function loadOutputDir() {
 function pickOutputDir() {
   const btn = document.getElementById('btn-output-browse');
   if (btn) { btn.disabled = true; btn.innerHTML = UI_ICONS.busy + 'Открываю…'; }
+  // Системный диалог открывает сервер: на Windows он может появиться не
+  // поверх браузера. Через пару секунд подсказываем, где искать.
+  const slowHint = setTimeout(() => showToast('Диалог открыт — если не видите, проверьте панель задач', 'info'), 2000);
   postJSON('/folder-picker', {})
     .then(d => {
       if (d && d.ok && d.path) {
@@ -491,7 +494,10 @@ function pickOutputDir() {
       }
     })
     .catch(() => showOutputDirError('Не удалось открыть диалог выбора папки', null))
-    .finally(() => { if (btn) { btn.disabled = false; btn.innerHTML = UI_ICONS.folder + 'Обзор…'; } });
+    .finally(() => {
+      clearTimeout(slowHint);
+      if (btn) { btn.disabled = false; btn.innerHTML = UI_ICONS.folder + 'Обзор…'; }
+    });
 }
 
 // 📁 «Открыть» — показать папку результатов в файл-менеджере ОС
@@ -738,7 +744,7 @@ function scoreVkChecked(r) {
 // Каждое правило: сколько даёт, когда сработало, и что писать, когда нет.
 // `no`: null = строку вообще не показываем (альтернатива уже заняла место).
 const SCORE_RULES = [
-  { pts: 30, hit: r => !scoreOwnWebsite(r),
+  { pts: 35, hit: r => !scoreOwnWebsite(r),
     yes: () => 'Нет сайта', no: () => 'Сайт есть' },
   { pts: 15, hit: r => scoreRating(r) >= 4.5,
     yes: r => `Рейтинг ${scoreRating(r)}`,
@@ -755,8 +761,6 @@ const SCORE_RULES = [
   // давал второй балл за ту же ссылку. Пятёрка мессенджера перешла в соцсети.
   { pts: 15, hit: r => scoreHasSocials(r),
     yes: () => 'Есть соцсети или мессенджер', no: () => 'Соцсетей и мессенджеров нет' },
-  { pts: 5, hit: r => !!String(r.address || '').trim() && !!String(r.category || '').trim(),
-    yes: () => 'Адрес и категория заполнены', no: () => 'Адрес или категория — нет данных' },
 ];
 // Критерия «недавно на Картах» больше нет: дату добавления карточка не
 // отдаёт, поле никто не заполнял — критерий не срабатывал ни разу, а

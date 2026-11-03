@@ -109,11 +109,13 @@ class TestComputeScore:
         assert not any("мессенджер +5" in r for r in reasons)
         assert not hasattr(lead_score, "MESSENGER"), "отдельного критерия больше нет"
 
-    def test_complete_card_adds_points(self):
+    def test_address_and_category_are_baseline_not_bonus(self):
+        """Адрес и категория есть у всех — за них баллов не даём."""
         score, reasons = compute_score(_rec(address="ул. Ленина, 1",
                                             website="https://kafe.ru"))
-        assert score == lead_score.CARD_COMPLETE
-        assert any("адрес и категория" in r for r in reasons)
+        assert score == 0
+        assert not any("адрес и категория" in r for r in reasons)
+        assert not hasattr(lead_score, "CARD_COMPLETE")
 
     def test_vk_activity_is_not_invented_without_the_api(self):
         """Ссылка на ВК есть, активности нет (ключа не было) — только соцсети,
@@ -174,7 +176,7 @@ class TestFrontendMirror:
         assert sorted(pts) == sorted([
             lead_score.NO_WEBSITE, lead_score.RATING_GOOD, lead_score.REVIEWS_MANY,
             lead_score.HAS_PHONE, lead_score.EXPENSIVE_CATEGORY,
-            lead_score.SOCIALS_PRESENT, lead_score.CARD_COMPLETE,
+            lead_score.SOCIALS_PRESENT,
         ])
         # Таблица правил в интерфейсе тоже должна набирать ровно 100 без ВК.
         assert sum(pts) == MAX_SCORE

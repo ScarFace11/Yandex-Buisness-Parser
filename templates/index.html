@@ -313,13 +313,11 @@
           <button type="button" class="api-status-header" id="api-keys-toggle"
                   onclick="toggleApiKeys()" aria-expanded="false" aria-controls="api-keys-body">
             <span class="api-icon"><svg class="ico" aria-hidden="true"><use href="#i-key"/></svg></span>
-            <span class="api-title">API-ключи</span>
+            <span class="api-title">Ключ ВКонтакте</span>
             <span class="api-badge ok" id="api-status-badge">…</span>
             <span class="api-chev" aria-hidden="true"></span>
           </button>
           <div class="api-status-body" id="api-keys-body" hidden>
-            <div class="hint" style="margin-top:0">Поиск, координаты городов и карточки организаций читает браузер — ключи платных API Яндекса приложению не нужны.</div>
-
             <label class="lbl" for="f-vk-token" style="margin-top:10px">Ключ доступа VK
               <span class="lbl-note">для проверки активности соцсетей</span>
               <span class="key-dot" id="key-dot-vk" title="Не указан"></span>
@@ -385,7 +383,7 @@
                     <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Очистить города</button>
                 </div>
                 <div id="city-select-box"></div>
-                <div class="hint">Выберите города из списка или введите вручную. Поиск пройдёт по каждому городу последовательно</div>
+                <div class="hint">Можно выбрать несколько — поиск идёт по каждому.</div>
               </div>
 
               <div>
@@ -396,10 +394,6 @@
                     <span class="src-dot" aria-hidden="true"></span><span>Яндекс.Карты</span>
                   </label>
                 </div>
-                <details class="hint-more" id="source-hint">
-                  <summary>Ключи платных API не нужны<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
-                  <div class="hm-body">Карточки организаций открывает ваш браузер: соцсети, сайт и телефон берутся с карточки Яндекс.Карт. Платные API приложению не нужны.</div>
-                </details>
                 <div class="hint" id="engine-availability" style="display:none"></div>
 
                 <!-- Браузер для сбора: если Chrome и Яндекс Браузер стоят рядом,
@@ -435,7 +429,7 @@
               <!-- Карточки рисует JS из сохранённого списка: их можно
                    добавлять и удалять. Шестерёнка открывает общее окно
                    настроек на вкладке «Вариант» — отдельной кнопки
-                   «Ещё настройки» больше нет. -->
+                   «Настройки поиска» вместо отдельной ссылки. -->
               <div class="effort-choices" id="effort-choices" role="group"
                    aria-label="Сколько собирать"></div>
               <div class="effort-estimate" id="effort-estimate" role="status" aria-live="polite">
@@ -1579,15 +1573,14 @@
   </div>
 </div>
 
-<!-- «Ещё настройки»: всё, что нужно раз в месяц, живёт в отдельном окне, а не
-     в сайдборе. Разделы остались прежними — их id не менялись, поэтому
-     сохранение настроек, пресеты и проверки разметки работают как раньше. -->
+<!-- «Настройки поиска»: всё, что нужно раз в месяц, живёт в отдельном окне, а
+     не в сайдборе. Разделы остались прежними — их id не менялись. -->
 <div class="app-modal" id="more-settings" hidden>
   <div class="app-modal-backdrop" onclick="closeMoreSettings()"></div>
   <div class="app-modal-box ms-box" role="dialog" aria-modal="true" aria-labelledby="ms-title">
     <div class="ms-head">
-      <h2 id="ms-title">Ещё настройки</h2>
-      <button type="button" class="ms-close" onclick="closeMoreSettings()" aria-label="Закрыть настройки">
+      <h2 id="ms-title">Настройки поиска</h2>
+      <button type="button" class="ms-close" data-modal-close onclick="closeMoreSettings()" aria-label="Закрыть настройки">
         <svg class="ico" aria-hidden="true"><use href="#i-x"/></svg>
       </button>
     </div>
@@ -1645,8 +1638,7 @@
                 <button type="button" class="btn-sm" id="ee-delete" onclick="deleteEffortCard()">
                   <svg class="ico" aria-hidden="true"><use href="#i-trash"/></svg>Удалить карточку</button>
               </div>
-              <div class="hint">Изменения сохраняются сразу: карточка в сайдборе обновится,
-                а выбранный вариант применится к поиску.</div>
+              <div class="hint">Изменения сохраняются сразу.</div>
             </div>
           </div>
         </section>
@@ -1661,9 +1653,8 @@
           </button>
           <div class="acc-body" id="acc-parse-body">
             <div class="acc-inner">
-              <p class="parse-intro">Отметьте, какие данные собирать с карточек организаций. Ниже — обычные
-                 общедоступные сведения, ещё ниже — персональные данные: включая их, вы берёте на себя
-                 обязанности оператора персональных данных по 152-ФЗ.</p>
+              <p class="parse-intro">Что попадёт в отчёт. Персональные данные ниже — это обязанности
+                 оператора по 152-ФЗ.</p>
 
               <div class="flt-group">
                 <div class="flt-group-title">Обычные данные</div>
@@ -1676,7 +1667,7 @@
               <div class="flt-group parse-personal">
                 <div class="flt-group-title">Персональные данные <span class="pd-warn">· 152-ФЗ</span></div>
                 <div class="flt-group-body">
-                  <div class="hint parse-pd-note"><b>Внимание:</b> телефон индивидуального предпринимателя или активность сообщества могут касаться физических лиц. Отмечая эти поля, вы становитесь оператором персональных данных и обязаны соблюдать 152-ФЗ (уведомление Роскомнадзора, законное основание, меры защиты).</div>
+                  <div class="hint parse-pd-note">Телефон ИП и активность сообщества могут касаться физлиц — отмечая их, вы становитесь оператором персональных данных по 152-ФЗ.</div>
                   <div class="chk-grid" id="parse-personal-grid"></div>
                   <div class="pd-actions">
                     <button type="button" class="btn-sm" id="btn-no-personal" onclick="disablePersonalFields()"
@@ -1700,20 +1691,17 @@
 
               <div class="tech-box">
                 <div class="tech-box-title">Скорость и объём</div>
-                <p class="tech-box-note">Значения по умолчанию подходят для большинства задач. Увеличивайте, если готовы к более долгому поиску.</p>
                 <details class="hint-more" id="polite-note">
                   <summary>Вежливый режим<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
                   <div class="hm-body">Включён всегда: между запросами есть пауза, а на ответ «слишком много запросов» (429) сбор сам снижает скорость. Так поиск не выглядит для сервиса шквалом обращений.</div>
                 </details>
+                <!-- Страницы и лимит организаций выбираются один раз — в
+                     карточках «Сколько собирать». Здесь они скрыты: запуск и
+                     сводка читают те же id. -->
+                <input type="hidden" id="f-pages" value="1">
+                <input type="hidden" id="f-max-candidates" value="200">
+                <div class="hint" id="pages-cap-note">Страницы и лимит организаций — в «Сколько собирать».</div>
                 <div class="row2 row2-align">
-                  <div>
-                    <label class="lbl" for="f-pages" title="Сколько страниц по 50 результатов собирать с каждой точки сетки.">Страниц <span class="lbl-note">×50 результатов</span></label>
-                    <div class="stepper" data-min="1" data-max="20" data-step="1">
-                      <button type="button" class="stp-btn" onclick="stepValue(this,-1)" aria-label="Уменьшить количество страниц">−</button>
-                      <input type="number" id="f-pages" value="1" min="1" max="20" aria-label="Количество страниц">
-                      <button type="button" class="stp-btn" onclick="stepValue(this,1)" aria-label="Увеличить количество страниц">+</button>
-                    </div>
-                  </div>
                   <div>
                     <label class="lbl" for="f-workers" title="Сколько карточек организаций загружается одновременно.">Потоков</label>
                     <div class="stepper" data-min="1" data-max="50" data-step="1">
@@ -1724,14 +1712,6 @@
                   </div>
                 </div>
                 <div class="row2 row2-align">
-                  <div>
-                    <label class="lbl" for="f-max-candidates">Макс. организаций</label>
-                    <div class="stepper" data-min="1" data-max="10000" data-step="50">
-                      <button type="button" class="stp-btn" onclick="stepValue(this,-1)" aria-label="Уменьшить лимит организаций">−</button>
-                      <input type="number" id="f-max-candidates" value="200" min="1" max="10000" step="1" aria-label="Максимум организаций">
-                      <button type="button" class="stp-btn" onclick="stepValue(this,1)" aria-label="Увеличить лимит организаций">+</button>
-                    </div>
-                  </div>
                   <div>
                     <label class="lbl" for="f-query-workers" title="Сколько поисковых запросов выполняются одновременно.">Параллельных запросов</label>
                     <div class="stepper" data-min="1" data-max="5" data-step="1">
@@ -1887,7 +1867,7 @@
                       <div class="tiles-inner">
                         <div class="tiles-title">Обязательные соцсети</div>
                         <div class="tiles-grid" id="social-net-chk-grid"></div>
-                        <div class="hint" id="social-net-hint">Отметьте нужные — останутся только организации, у которых есть ВСЕ отмеченные сети</div>
+                        <div class="hint" id="social-net-hint">Останутся организации со всеми отмеченными сетями.</div>
                       </div>
                     </div>
                   </div>
@@ -1905,7 +1885,7 @@
                       <input type="checkbox" id="f-only-single" onchange="onCompanyTypeChange()">
                       Только одиночки
                     </label>
-                    <div class="hint">Компании с 1 филиалом. Решение принимает владелец — проще договориться.</div>
+                    <div class="hint">Компании с одним филиалом.</div>
                   </div>
 
                   <div>
@@ -1923,10 +1903,8 @@
                         <option value="24">2 года</option>
                       </select>
                     </div>
-                    <div class="hint">Дата появления карточки в каталоге. Где даты нет — компания остаётся: фильтр не выдумывает дату.</div>
+                    <div class="hint">Где даты нет — компания остаётся.</div>
                   </div>
-
-                  <div class="ct-count" id="company-type-count" role="status" aria-live="polite">Отметьте фильтры — посчитаю, сколько компаний подойдёт</div>
 
                 </div>
               </div>
@@ -1951,7 +1929,7 @@
                   <details class="score-formula">
                     <summary>Как считается оценка</summary>
                     <div class="score-formula-body">
-                      <div class="sf-row"><span>Нет своего сайта</span><b>+30</b></div>
+                      <div class="sf-row"><span>Нет своего сайта</span><b>+35</b></div>
                       <div class="sf-row"><span>Рейтинг ≥ 4.5</span><b>+15</b></div>
                       <div class="sf-row"><span>Отзывов ≥ 50</span><b>+15</b></div>
                       <div class="sf-row"><span>Есть телефон</span><b>+10</b></div>
@@ -1959,7 +1937,7 @@
                       <div class="sf-row"><span>Есть соцсети</span><b>+10</b></div>
                       <div class="sf-row"><span>Активный ВКонтакте</span><b>+10 бонус</b></div>
                       <div class="sf-row"><span>Полуактивный ВК</span><b>+5 бонус</b></div>
-                      <div class="sf-total">Максимум — <b>100</b> баллов: шесть базовых критериев дают 90, активность ВК добирает до 100, но выше не поднимает. Без ключа ВК этот критерий не оценивается — «ВК не активен» не выдумывается, и баллы за него не теряются.</div>
+                      <div class="sf-total">Шесть критериев дают ровно <b>100</b>. Активность ВК показана справочно и на балл не влияет: без ключа «ВК не активен» не выдумывается.</div>
                     </div>
                   </details>
                 </div>
@@ -2175,7 +2153,7 @@
                 </div>
                 <details class="hint-more">
                   <summary>Старые файлы удаляются<span class="hm-cta"><span class="hm-more">Подробнее</span><span class="hm-less">Свернуть</span></span></summary>
-                  <div class="hm-body">Excel, JSON, CSV и карта старше выбранного срока удаляются при запуске приложения. Максимум — 30 дней.</div>
+                  <div class="hm-body">Excel, JSON, CSV и карта старше выбранного срока удаляются при запуске приложения. За месяц копятся десятки файлов, и папка растёт; 30 дней — компромисс: время забрать нужное, но без бесконечного хранения. Больше 30 дней поставить нельзя, чтобы старые файлы не удалялись слишком поздно и не занимали диск.</div>
                 </details>
                 <div class="hint" id="retention-status" role="status" aria-live="polite"></div>
               </div>
@@ -2185,7 +2163,7 @@
       </div>
     </div>
     <div class="ms-foot">
-      <span class="ms-foot-note">Настройки сохраняются и применяются к следующему поиску.</span>
+      <span class="ms-foot-note">Применится к следующему поиску.</span>
       <button type="button" class="btn-sm" onclick="closeMoreSettings()">Готово</button>
     </div>
   </div>

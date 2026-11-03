@@ -514,8 +514,9 @@ class TestFilterAccordionGroups:
         sec = self._section()
         group = sec[sec.index(self._title("Тип компании")): sec.index(self._title("Оценка лида"))]
         for needle in ('id="f-only-single"', 'id="f-only-new"', 'id="f-new-months"',
-                       'id="company-type-new-row"', 'id="company-type-count"'):
+                       'id="company-type-new-row"'):
             assert needle in group, needle
+        assert 'id="company-type-count"' not in group, "счётчик «подойдёт» убран"
         assert 'onchange="onCompanyTypeChange()"' in group
         # Чекбоксы стилизованы как везде в аккордеоне (класс .chk).
         assert group.count('<label class="chk">') == 2
@@ -524,38 +525,21 @@ class TestFilterAccordionGroups:
         values = _re.findall(r'<option value="(\d+)"', group)
         assert values == ["1", "3", "6", "12", "24"], values
         assert '<option value="6" selected>' in group
-        assert 'role="status"' in group, "счётчик озвучивается скринридером"
         # Тексты объясняют, что именно фильтруется и что данные могут быть
         # неполными (даты добавления у Яндекса нет вовсе).
-        assert "Компании с 1 филиалом" in group
-        assert "Дата появления карточки в каталоге" in group and "даты нет" in group
+        assert "Компании с одним филиалом" in group
+        assert "Где даты нет" in group
 
-    def test_company_type_group_styles(self):
-        """Период гаснет без своего чекбокса, счётчик читается в обеих темах."""
-        row = self._rule(".ct-new-row{")
-        assert "opacity:.4" in row and "pointer-events:none" in row
-        assert "opacity:1" in self._rule(".ct-new-row.on{")
-        count = self._rule(".ct-count{")
-        assert "var(--bdr)" in count and "var(--row-alt)" in count
-        assert ".ct-count.on{" in STYLE
-        # Мобильная версия ≤860px: строка периода не сдвигается вправо и
-        # растягивается на всю ширину сайдбора.
-        assert ".ct-new-row{margin-left:0}" in STYLE
-        assert ".ct-new-row select{flex:1 1 100%}" in STYLE
-
-    def test_company_type_counter_is_wired(self):
-        """Счётчик ленивый, и оба фильтра уезжают в запуск поиска."""
+    def test_company_type_filters_reach_the_run(self):
+        """Оба фильтра уезжают в запуск поиска, счётчика «подойдёт» больше нет."""
         for fn in ("onlySingleChecked", "newMonthsValue", "newMonthsPeriod",
-                   "companyTypeOn", "syncCompanyTypeUi", "onCompanyTypeChange",
-                   "scheduleCompanyTypePreview", "previewCompanyType",
-                   "companyTypeCountHTML"):
+                   "companyTypeOn", "syncCompanyTypeUi", "onCompanyTypeChange"):
             assert f"function {fn}(" in APP_JS, fn
-        assert "'/preview-company-type'" in APP_JS
+        assert "'/preview-company-type'" not in APP_JS
+        assert "company-type-count" not in TEMPLATE
         # Один путь — запуск (getParams): отдельной повторной обработки нет.
         assert APP_JS.count("only_single_branch: onlySingleChecked()") == 1
         assert APP_JS.count("only_new_months:    newMonthsValue()") == 1
-        # Как и чёрный список — только при открытии раздела.
-        assert "scheduleCompanyTypePreview();" in APP_JS
         # Реестр периодов в браузере совпадает с серверным COMPANY_TYPE_MONTHS.
         import re as _re
         decl = _re.search(r"const COMPANY_TYPE_PERIODS = \{(.*?)\};\n", APP_JS, _re.S)
@@ -2498,13 +2482,12 @@ class TestSectionHierarchy:
 
     def test_long_hints_are_collapsed_by_default(self):
         for lead in ("Поиск сам пойдёт дальше",
-                     "Ключи платных API не нужны",
                      "Старые файлы удаляются",
                      "Что попадает в историю",
                      "Вежливый режим",
                      "Журнал источников",):
             assert lead in TEMPLATE, lead
-        assert TEMPLATE.count('<details class="hint-more') >= 5
+        assert TEMPLATE.count('<details class="hint-more') >= 4
 
     def test_collapsible_hint_needs_no_javascript(self):
         assert 'class="hm-more"' in TEMPLATE and 'class="hm-less"' in TEMPLATE

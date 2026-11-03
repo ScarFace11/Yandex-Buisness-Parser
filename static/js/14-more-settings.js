@@ -18,7 +18,18 @@ const EFFORT_DEFAULTS = {
 const EFFORT_ORDER = ['fast', 'normal', 'thorough', 'custom'];
 const EFFORT_STORE = 'effort-cards';
 const EFFORT_LEGACY_STORE = 'effort-presets';
+const EFFORT_SERVER = '/effort/cards';
 let _editingEffort = null;
+// Список карточек — настройка приложения, а не браузера: источник правды
+// на сервере (settings.json), localStorage остаётся запасным вариантом и
+// хранилищем для переезда со старых версий.
+let _effortCards = null;
+let _effortActive = '';
+let _effortSaveTimer = null;
+let _effortUndo = null;
+// До ответа сервера не пишем: иначе локальные семена могли бы затереть
+// уже сохранённые варианты, пока GET ещё в пути.
+let _effortServerReady = false;
 
 function _effortClamp(value, min, max, fallback) {
   const num = Math.round(Number(value));
@@ -28,15 +39,8 @@ function _effortClamp(value, min, max, fallback) {
 
 // Список карточек — данные: добавили, переименовали, удалили — так и осталось.
 // Старый формат (четыре пресета в effort-presets) читается один раз.
-function loadEffortCards() {
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(EFFORT_STORE) || 'null'); } catch (e) { saved = null; }
-  if (!Array.isArray(saved) || !saved.length) {
-    let legacy = {};
-    try { legacy = JSON.parse(localStorage.getItem(EFFORT_LEGACY_STORE) || '{}') || {}; } catch (e) { legacy = {}; }
-    saved = EFFORT_ORDER.map(key => Object.assign({ key }, EFFORT_DEFAULTS[key], legacy[key] || {}));
-  }
-  return saved.map(card => ({
+function _effortNormalize(cards) {
+  return (Array.isArray(cards) ? cards : []).map(card => ({
     key: String(card.key || ''),
     name: String(card.name || 'Вариант').slice(0, 24),
     note: String(card.note || '').slice(0, 90),
@@ -46,8 +50,72 @@ function loadEffortCards() {
   })).filter(card => card.key);
 }
 
+function _effortDefaults() {
+  let legacy = {};
+  try { legacy = JSON.parse(localStorage.getItem(EFFORT_LEGACY_STORE) || '{}') || {}; } catch (e) { legacy = {}; }
+  return EFFORT_ORDER.map(key => Object.assign({ key }, EFFORT_DEFAULTS[key], legacy[key] || {}));
+}
+
+function _effortLocalCards() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(EFFORT_STORE) || 'null'); } catch (e) { saved = null; }
+  return _effortNormalize(saved);
+}
+
+function loadEffortCards() {
+  if (_effortCards === null) {
+    const local = _effortLocalCards();
+    _effortCards = local.length ? local : _effortDefaults();
+  }
+  return _effortNormalize(_effortCards);
+}
+
+function _effortPostToServer() {
+  _effortSaveTimer = null;
+  const cards = loadEffortCards();
+  if (!cards.length) return;
+  fetch(EFFORT_SERVER, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cards, active: currentEffort() }),
+  }).catch(() => {});   // сервер недоступен — карточки остались в localStorage
+}
+
+function _effortScheduleServerSave() {
+  if (!_effortServerReady) return;
+  if (_effortSaveTimer) clearTimeout(_effortSaveTimer);
+  // Правка описания шлёт событие на каждую букву — сервер получает один
+  // запрос после паузы, а не девяносто.
+  _effortSaveTimer = setTimeout(_effortPostToServer, 250);
+}
+
 function saveEffortCards(cards) {
-  try { localStorage.setItem(EFFORT_STORE, JSON.stringify(cards)); } catch (e) {}
+  const clean = _effortNormalize(cards);
+  _effortCards = clean;
+  try { localStorage.setItem(EFFORT_STORE, JSON.stringify(clean)); } catch (e) {}
+  _effortScheduleServerSave();
+}
+
+// Сервер — источник правды: если там уже есть карточки, они заменяют локальные.
+// Пустой ответ означает первый запуск: отправляем семена (или то, что успело
+// накопиться в браузере) и дальше работаем с ними.
+function loadEffortCardsFromServer() {
+  return fetch(EFFORT_SERVER)
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      _effortServerReady = true;
+      if (!data || !data.ok) return;
+      const cards = _effortNormalize(data.cards);
+      if (cards.length) {
+        _effortCards = cards;
+        _effortActive = String(data.active || cards[0].key);
+        renderEffortCards();
+        if (_effortWindowOpen()) fillEffortEditor(currentEffort());
+      } else {
+        _effortPostToServer();
+      }
+    })
+    .catch(() => { _effortServerReady = true; });
 }
 
 function effortCard(key) {
@@ -56,8 +124,10 @@ function effortCard(key) {
 }
 
 function currentEffort() {
-  let saved = '';
-  try { saved = localStorage.getItem('search-effort') || ''; } catch (e) { saved = ''; }
+  let saved = _effortActive;
+  if (!saved) {
+    try { saved = localStorage.getItem('search-effort') || ''; } catch (e) { saved = ''; }
+  }
   const cards = loadEffortCards();
   return cards.some(card => card.key === saved) ? saved : (cards[0] || {}).key;
 }
@@ -120,7 +190,9 @@ function syncEffortButtons() {
 function setSearchEffort(name) {
   const card = effortCard(name);
   if (!card) return;
+  _effortActive = card.key;
   try { localStorage.setItem('search-effort', card.key); } catch (e) {}
+  _effortScheduleServerSave();
   const pages = document.getElementById('f-pages');
   if (pages) pages.value = card.pages;
   const cap = document.getElementById('f-max-candidates');
@@ -224,14 +296,38 @@ function deleteEffortCard() {
     return;
   }
   const key = _editingEffort || currentEffort();
+  const index = cards.findIndex(card => card.key === key);
   const wasActive = currentEffort() === key;
+  const removed = cards[index];
   const rest = cards.filter(card => card.key !== key);
+  _effortUndo = { card: Object.assign({}, removed), index, wasActive };
   saveEffortCards(rest);
   const next = rest[0].key;
   if (wasActive) setSearchEffort(next);
   renderEffortCards();
   fillEffortEditor(next);
-  if (typeof showToast === 'function') showToast('Карточка удалена', 'success');
+  if (typeof showToast === 'function') {
+    showToast('Карточка удалена', 'success', {
+      duration: 8000,
+      action: { label: 'Отменить', onClick: undoDeleteEffortCard },
+    });
+  }
+}
+
+// Удаление без подтверждения, но с отменой: карточка возвращается на своё
+// место в списке, а не в конец — порядок вариантов тоже настройка.
+function undoDeleteEffortCard() {
+  if (!_effortUndo) return;
+  const { card, index, wasActive } = _effortUndo;
+  _effortUndo = null;
+  const cards = loadEffortCards();
+  if (cards.some(item => item.key === card.key)) return;
+  cards.splice(Math.max(0, Math.min(index, cards.length)), 0, card);
+  saveEffortCards(cards);
+  if (wasActive) setSearchEffort(card.key);
+  else renderEffortCards();
+  if (_effortWindowOpen()) fillEffortEditor(card.key);
+  if (typeof showToast === 'function') showToast('Карточка возвращена', 'success');
 }
 
 // ── Блокировка прокрутки страницы под окном ──────────────────
@@ -280,8 +376,15 @@ function openMoreSettings(tab, effortKey) {
   modal.hidden = false;
   setMoreSettingsTab(tab || 'effort');
   updateEffortEstimate();
+  // Та же ловушка Tab и возврат фокуса, что у остальных окон приложения.
+  if (typeof modalA11y === 'function') modalA11y(modal);
   const close = modal.querySelector('.ms-close');
   if (close) close.focus();
+}
+
+function _effortWindowOpen() {
+  const modal = document.getElementById('more-settings');
+  return !!(modal && !modal.hidden);
 }
 
 function closeMoreSettings() {
@@ -289,15 +392,7 @@ function closeMoreSettings() {
   if (!modal || modal.hidden) return;
   modal.hidden = true;
   unlockPageScroll();
-  // Возвращаем фокус на шестерёнку того варианта, который правили.
-  const gear = document.querySelector(`[data-effort-edit="${currentEffort()}"]`);
-  if (gear) gear.focus();
 }
-
-document.addEventListener('keydown', event => {
-  if (event.key !== 'Escape') return;
-  closeMoreSettings();
-});
 
 (function initEffort() {
   const boot = () => {
@@ -320,7 +415,11 @@ document.addEventListener('keydown', event => {
       el.addEventListener('change', onEdit);
     });
     syncEffortButtons();
+    // Активный вариант — источник страниц и лимита: поля в «Глубине поиска»
+    // скрыты, поэтому значения применяем здесь, а не ждём правки формы.
+    if (currentEffort()) setSearchEffort(currentEffort());
     updateEffortEstimate();
+    loadEffortCardsFromServer();
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

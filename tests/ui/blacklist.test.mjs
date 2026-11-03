@@ -61,8 +61,7 @@ for (const name of ['BLACKLIST_KEY', 'BLACKLIST_VERSION', 'BLACKLIST_MAX_WORDS',
                     'BLACKLIST_MAX_LEN', 'BLACKLIST_SAVE_MS', 'BLACKLIST_PREVIEW_MS',
                     'BLACKLIST_LISTS_KEY', 'BLACKLIST_MAX_LISTS', 'BLACKLIST_LIST_NAME_MAX',
                     'BLACKLIST_LISTS_VERSION',
-                    // «🎯 Тип компании»: открытие аккордеона считает и его тоже
-                    'COMPANY_TYPE_PREVIEW_MS', 'COMPANY_TYPE_DEFAULT_MONTHS',
+                    'COMPANY_TYPE_DEFAULT_MONTHS',
                     'COMPANY_TYPE_PERIODS']) {
   (0, eval)('globalThis.' + name + ' = ' + grabConstValue(name) + ';');
 }
@@ -186,10 +185,6 @@ globalThis._pluralRu = (n, one, few, many) => {
   grab('newMonthsPeriod'),
   grab('companyTypeOn'),
   grab('syncCompanyTypeUi'),
-  grab('updateCompanyTypeCount'),
-  grab('scheduleCompanyTypePreview'),
-  grab('previewCompanyType'),
-  grab('companyTypeCountHTML'),
   grab('fillBlacklistTemplateSelect'),
   grab('toggleBlacklistDropdown'),
   grab('closeBlacklistDropdown'),

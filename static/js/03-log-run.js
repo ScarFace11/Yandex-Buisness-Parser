@@ -396,6 +396,8 @@ function syncOnboardingButton() {
 function closeOnboardingHelp() {
   const help = document.getElementById('onboarding-help');
   if (help) help.remove();
+  const log = document.getElementById('log-output');
+  if (log) log.hidden = false;
   syncOnboardingButton();
 }
 
@@ -428,6 +430,8 @@ function toggleOnboardingHelp() {
   close.onclick = closeOnboardingHelp;
   wrap.appendChild(close);
   host.parentElement.insertBefore(wrap, host);
+  // Одно окно за раз: либо инструкция, либо журнал.
+  host.hidden = true;
   syncOnboardingButton();
 }
 
@@ -464,6 +468,7 @@ function appendLog(level, msg) {
   blk = S.block;
   let cls = lvl + (noise ? ' noise' : '') + (sum ? ' sum' : '') + (_logIndent(clean) ? ' ind-1' : '');
   if (isCity) cls += ' city';
+  const display = clean.replace(/^\s*\[!\]\s*/, '').trim();
   const d = document.createElement('div');
   d.className = 'll ' + cls + (extraCls ? ' ' + extraCls : '');
   d._lvl = lvl;
@@ -480,7 +485,7 @@ function appendLog(level, msg) {
   S.lastSec = stamp;
   d._stamp = stamp;
   const caret = isCity ? '<span class="ll-caret">▼</span>' : '';
-  d.innerHTML = `<span class="ll-time${sameSec ? ' same' : ''}">[${stamp}]</span>${caret}${escapeHtml(clean)}`;
+  d.innerHTML = `<span class="ll-time${sameSec ? ' same' : ''}">${stamp}</span>${caret}<span class="ll-msg">${escapeHtml(display)}</span>`;
   if (isCity) {
     d._blk = blk;
     d.onclick = () => toggleLogBlock(blk);
