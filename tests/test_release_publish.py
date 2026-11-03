@@ -16,7 +16,7 @@
 """
 import os
 import re
-import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -28,6 +28,10 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 PUBLISH = WORKFLOWS / "publish-release.yml"
 WINDOWS_BUILD = WORKFLOWS / "build-exe.yml"
 MACOS_BUILD = WORKFLOWS / "build-macos.yml"
+
+sys.path.insert(0, str(ROOT / "scripts"))
+import release_tag  # noqa: E402  — та же логика, что зовёт воркфлоу
+import wait_builds  # noqa: E402
 
 
 def text(path=PUBLISH):
@@ -92,29 +96,27 @@ class TestPermissionsAndScope:
 
 class TestGates:
     def test_both_builds_must_be_green(self):
-        body = code()
-        for workflow_file in ("build-exe.yml", "build-macos.yml"):
-            assert workflow_file in body, f"не проверяется статус {workflow_file}"
-        # Успехом считается только success; всё остальное либо ждёт, либо стоп.
-        assert re.search(r"^\s*success\)", body, re.M), "success — не единственный пропуск"
+        """Успех — только success; остальное либо ждёт, либо останавливает."""
+        assert set(wait_builds.WORKFLOWS) == {"build-exe.yml", "build-macos.yml"}
         for bad in ("failure", "cancelled", "timed_out"):
-            assert bad in body
-
+            assert bad in wait_builds.FAILED_CONCLUSIONS
+        assert "wait_builds.py" in code(), "шаг ожидания обязан звать Python-скрипт"
     def test_a_failed_build_stops_the_publication(self):
-        body = code()
-        assert "exit 1" in body and "::error::" in body
-        assert body.index("exit 1") < body.index("gh release edit"), \
-            "падение сборки обязано остановить работУ до публикации"
-
+        ok, reason = wait_builds.wait_for_builds(
+            lambda wf: ("completed failure" if wf == "build-macos.yml"
+                        else "completed success"),
+            "v2.3.4", attempts=1, log=lambda *_: None, sleep=lambda _s: None)
+        assert not ok and reason == "failure"
+        names = [s.get("name", "") for s in wf()["jobs"]["publish"]["steps"]]
+        wait_at = next(i for i, n in enumerate(names) if "both builds" in n)
+        publish_at = next(i for i, n in enumerate(names) if n.startswith("Publish the release"))
+        assert wait_at < publish_at, "падение сборки обязано остановить работу до публикации"
     def test_the_wait_is_bounded(self):
         """Ожидание конечно: иначе job висел бы в очереди сутками."""
-        body = code()
-        attempts = int(re.search(r"PWAIT_ATTEMPTS:-\s*(\d+)", body).group(1))
-        pause = int(re.search(r"PWAIT_SLEEP:-\s*(\d+)", body).group(1))
-        assert 1 <= attempts <= 60
-        assert 5 <= pause <= 120
-        assert attempts * pause <= 30 * 60, "суммарное ожидание больше получаса"
-
+        assert 1 <= wait_builds.ATTEMPTS <= 60
+        assert 5 <= wait_builds.PAUSE <= 120
+        assert wait_builds.ATTEMPTS * wait_builds.PAUSE <= 30 * 60, \
+            "суммарное ожидание больше получаса"
     def test_required_assets_match_what_the_builds_produce(self):
         required = wf()["jobs"]["publish"]["env"]["REQUIRED_ASSETS"].split()
         assert required == [
@@ -156,200 +158,105 @@ class TestGates:
 
 # ── Логика ожидания: гоняем сам скрипт на заглушке gh ────────
 
-def _bash():
-    """Рабочий bash: на Windows в PATH раньше Git Bash может стоять WSL-шим."""
-    import os
-    import shutil
-    candidates = [shutil.which("bash"), os.environ.get("BASH"),
-                  r"D:\Git\usr\bin\bash.exe",
-                  r"C:\Program Files\Git\bin\bash.exe", "/bin/bash"]
-    for cand in candidates:
-        if not cand or not Path(cand).exists():
-            continue
-        try:
-            res = subprocess.run([cand, "-c", "echo ok"], capture_output=True,
-                                 text=True, timeout=30)
-        except Exception:
-            continue
-        if res.returncode == 0 and "ok" in res.stdout:
-            return cand
-    pytest.skip("нет рабочего bash, чтобы прогнать шаг воркфлоу")
-
-
-GH_STUB = """#!/usr/bin/env bash
-# Заглушка gh: отдаёт заранее заданные статусы запусков.
-# Файл $FAKE_DIR/<workflow> — очередь строк «status conclusion»;
-# последняя строка повторяется бесконечно.
-wf=""
-while [ $# -gt 0 ]; do
-  if [ "$1" = "--workflow" ]; then wf="$2"; shift 2; continue; fi
-  shift
-done
-file="$FAKE_DIR/$wf"
-[ -f "$file" ] || { echo 'missing '; exit 0; }
-line="$(head -1 "$file")"
-if [ "$(wc -l < "$file")" -gt 1 ]; then
-  tail -n +2 "$file" > "$file.next" && mv "$file.next" "$file"
-fi
-printf '%s\n' "$line"
-"""
-
-
-def _step_script(step_id: str) -> str:
-    for job in wf()["jobs"].values():
-        for step in job["steps"]:
-            if step.get("id") == step_id:
-                # Actions подставляет выражения ДО выполнения — повторяем это.
-                return (step["run"]
-                        .replace("${{ steps.tag.outputs.tag }}", "v2.3.4")
-                        .replace("${{ github.repository }}", "owner/name"))
-    raise AssertionError(f"в publish-release.yml нет шага id={step_id}")
-
-
-def _run_wait_step(tmp_path, exe_states, macos_states, attempts="2", pause="1"):
-    """Прогон шага «Wait for both builds to be green» с заглушкой gh."""
-    stub_dir = tmp_path / "bin"
-    stub_dir.mkdir()
-    gh = stub_dir / "gh"
-    gh.write_text(GH_STUB, encoding="utf-8", newline="\n")
-    gh.chmod(0o755)
-    # Файла нет → заглушка отвечает «missing» (запуска сборки ещё не было).
-    for name, states in (("build-exe.yml", exe_states),
-                         ("build-macos.yml", macos_states)):
-        if states:
-            (tmp_path / name).write_text("\n".join(states) + "\n", encoding="utf-8")
-    out = tmp_path / "gh_output.txt"
-    out.write_text("", encoding="utf-8")
-    env = dict(os.environ)
-    env.update({
-        "PATH": str(stub_dir) + os.pathsep + env.get("PATH", ""),
-        "FAKE_DIR": str(tmp_path),
-        "GITHUB_OUTPUT": str(out),
-        "REPO": "owner/name",
-        "RAW_TAG": "v2.3.4",
-        "PWAIT_ATTEMPTS": attempts,
-        "PWAIT_SLEEP": pause,
-    })
-    res = subprocess.run([_bash(), "-c", _step_script("builds")],
-                         capture_output=True, env=env, timeout=180)
-    # bash пишет UTF-8, а подпроцесс на Windows читается в системной кодировке —
-    # поэтому декодируем явно.
-    return (subprocess.CompletedProcess(
-                res.args, res.returncode,
-                res.stdout.decode("utf-8", "replace"),
-                res.stderr.decode("utf-8", "replace")),
-            out.read_text(encoding="utf-8"))
-
+# ── Ожидание и теги проверяются на функциях, без bash ──────
 
 class TestWaitLogic:
-    """Шаг ожидания прогоняется целиком — на заглушке вместо gh."""
+    """Та же функция, что исполняет воркфлоу, — без bash и заглушек gh."""
 
-    def test_both_green_lets_the_publication_pass(self, tmp_path):
-        res, out = _run_wait_step(tmp_path, ["completed success"],
-                                 ["completed success"])
-        assert res.returncode == 0, res.stderr
-        assert "ok=true" in out
-        assert "Обе сборки зелёные" in res.stdout
+    @staticmethod
+    def _run(exe_states, macos_states, attempts=2):
+        queues = {"build-exe.yml": list(exe_states),
+                  "build-macos.yml": list(macos_states)}
+        logs = []
 
-    def test_failed_build_blocks_the_publication(self, tmp_path):
-        res, out = _run_wait_step(tmp_path, ["completed success"],
-                                 ["completed failure"])
-        assert res.returncode == 1
-        assert "::error::" in res.stdout
-        assert "ok=true" not in out
+        def fetch(workflow):
+            queue = queues.get(workflow) or []
+            if not queue:
+                return "missing "
+            # Последняя строка повторяется: запуск «висит» в этом статусе.
+            return queue.pop(0) if len(queue) > 1 else queue[0]
 
-    def test_second_build_finishing_later_still_publishes(self, tmp_path):
+        ok, reason = wait_builds.wait_for_builds(
+            fetch, "v2.3.4", attempts=attempts,
+            log=logs.append, sleep=lambda _s: None)
+        return ok, reason, "\n".join(logs)
+
+    def test_both_green_lets_the_publication_pass(self):
+        ok, reason, log = self._run(["completed success"], ["completed success"])
+        assert ok and reason == "ok"
+        assert "Обе сборки зелёные" in log
+
+    def test_failed_build_blocks_the_publication(self):
+        ok, reason, log = self._run(["completed success"], ["completed failure"])
+        assert not ok and reason == "failure"
+        assert "::error::" in log
+
+    def test_second_build_finishing_later_still_publishes(self):
         """Первый билд завершился раньше — публикуем по завершению второго."""
-        res, out = _run_wait_step(tmp_path, ["completed success"],
-                                 ["in_progress", "completed success"])
-        assert res.returncode == 0, res.stdout + res.stderr
-        assert "Ждём ещё:" in res.stdout
-        assert "ok=true" in out
+        ok, _reason, log = self._run(["completed success"],
+                                     ["in_progress", "completed success"])
+        assert ok
+        assert "Ждём ещё:" in log
 
-    def test_never_green_times_out_without_publishing(self, tmp_path):
-        res, out = _run_wait_step(tmp_path, ["completed success"],
-                                 ["in_progress"], attempts="2")
-        assert res.returncode == 1
-        assert "публикация отложена" in res.stdout
-        assert "ok=true" not in out
+    def test_never_green_times_out_without_publishing(self):
+        ok, reason, log = self._run(["completed success"], ["in_progress"], attempts=2)
+        assert not ok and reason == "timeout"
+        assert "публикация отложена" in log
 
-    def test_missing_run_is_treated_as_pending(self, tmp_path):
+    def test_missing_run_is_treated_as_pending(self):
         """Сборка ещё не запускалась — это не успех и не провал."""
-        res, out = _run_wait_step(tmp_path, ["completed success"], [], attempts="1")
-        assert res.returncode == 1
-        assert "missing" in res.stdout
+        ok, reason, log = self._run(["completed success"], [], attempts=1)
+        assert not ok and reason == "timeout"
+        assert "missing" in log
 
 
 # ── Какие теги автоматика не трогает ──────────────────────────
 
 class TestOnlyStableTags:
-    def _pattern(self):
-        found = re.search(r"grep -Eq '([^']+)'", code())
-        assert found, "в workflow нет проверки формата тега"
-        return re.compile(found.group(1))
+    """Стабильные теги публикуются, dev/rc и ветки — нет."""
 
     @pytest.mark.parametrize("tag", ["v2.3.4", "v2.2.1.1", "v10.0.0"])
     def test_stable_tags_are_published(self, tag):
-        assert self._pattern().match(tag)
+        assert release_tag.is_release_tag(tag)
 
     @pytest.mark.parametrize("tag", ["v2.3.4-dev", "v2.3.4-rc1", "main",
                                      "2.3.4", "v2.3", "release-2.3.4"])
     def test_dev_and_other_tags_are_left_alone(self, tag):
-        assert not self._pattern().match(tag)
+        assert not release_tag.is_release_tag(tag)
 
     def test_dev_versions_cannot_be_auto_published(self):
         """Тег с суффиксом — не публичный релиз: автоматика его не публикует."""
         import config
-        assert not self._pattern().match("v2.3.4-dev")
-        assert not self._pattern().match("v" + str(config.APP_VERSION) + "-dev")
+        assert not release_tag.is_release_tag("v2.3.4-dev")
+        assert not release_tag.is_release_tag("v" + str(config.APP_VERSION) + "-dev")
 
 
-# ── Ручной ввод тега: шаг прогоняется целиком ────────────────
-
-def _run_tag_step(tmp_path, raw_tag, input_tag=""):
-    """Прогон шага «Check the tag» с теми же env, что даёт GitHub Actions."""
-    out = tmp_path / "gh_output.txt"
-    out.write_text("", encoding="utf-8")
-    env = dict(os.environ)
-    env.update({
-        "GITHUB_OUTPUT": str(out),
-        "REPO": "owner/name",
-        "RAW_TAG": raw_tag,
-        "INPUT_TAG": input_tag,
-    })
-    res = subprocess.run([_bash(), "-c", _step_script("tag")],
-                         capture_output=True, env=env, timeout=120)
-    return (subprocess.CompletedProcess(
-                res.args, res.returncode,
-                res.stdout.decode("utf-8", "replace"),
-                res.stderr.decode("utf-8", "replace")),
-            out.read_text(encoding="utf-8"))
-
+# ── Ручной ввод тега ─────────────────────────────────────────
 
 class TestManualTagInput:
-    """Человек называет версию без «v» — публикация всё равно должна найти тег."""
+    """Человек называет версию без «v» — публикация всё равно находит тег."""
 
     @pytest.mark.parametrize("given,expected", [
         ("2.3.4", "v2.3.4"), ("v2.3.4", "v2.3.4"),
         ("V2.3.4", "v2.3.4"), (" 2.3.4 ", "v2.3.4"), ("2.2.1.1", "v2.2.1.1"),
     ])
-    def test_manual_input_is_normalized_and_published(self, tmp_path, given, expected):
-        res, out = _run_tag_step(tmp_path, given, input_tag=given)
-        assert res.returncode == 0, res.stdout + res.stderr
-        assert f"tag={expected}" in out
-        assert "publish=true" in out
+    def test_manual_input_is_normalized_and_published(self, given, expected):
+        tag, publish, error = release_tag.publish_decision(given, input_tag=given)
+        assert error == ""
+        assert publish is True
+        assert tag == expected
 
-    def test_manual_input_with_a_bad_tag_fails_loudly(self, tmp_path):
+    def test_manual_input_with_a_bad_tag_fails_loudly(self):
         """Ручной запуск — осознанное действие: молчаливое «нечего делать» врёт."""
-        res, out = _run_tag_step(tmp_path, "2.3.4-rc1", input_tag="2.3.4-rc1")
-        assert res.returncode == 1
-        assert "::error::" in res.stdout
-        assert "publish=true" not in out
+        tag, publish, error = release_tag.publish_decision("2.3.4-rc1",
+                                                           input_tag="2.3.4-rc1")
+        assert publish is False
+        assert error, "плохой ручной тег обязан давать внятную ошибку"
+        assert "-rc" in error
 
     @pytest.mark.parametrize("branch", ["main", "v2.3.4-dev", "feature/x"])
-    def test_a_push_to_a_non_release_tag_stays_a_quiet_noop(self, tmp_path, branch):
+    def test_a_push_to_a_non_release_tag_stays_a_quiet_noop(self, branch):
         """Пуш ветки/dev-тега ничего не публикует — но и не краснит конвейер."""
-        res, out = _run_tag_step(tmp_path, branch)
-        assert res.returncode == 0, res.stdout + res.stderr
-        assert "publish=false" in out
-        assert "::error::" not in res.stdout
+        _tag, publish, error = release_tag.publish_decision(branch)
+        assert publish is False
+        assert error == ""

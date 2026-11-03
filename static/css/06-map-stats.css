@@ -47,7 +47,10 @@
    Поэтому в тёмной теме инвертируем ТОЛЬКО слой тайлов: маркеры, попапы и
    подписи остаются в своих цветах, а карта перестаёт слепить на тёмном фоне. */
 [data-theme="dark"] .leaflet-tile-pane{
-  filter:invert(1) hue-rotate(180deg) brightness(.86) contrast(1.08) saturate(.7);
+  /* Контраст и насыщенность ниже: карта — фон для меток, а не главный объект.
+     Инверсия остаётся, но без «фотографической» резкости. */
+  filter:invert(1) hue-rotate(180deg) brightness(.72) contrast(.78) saturate(.45);
+  opacity:.92;
 }
 [data-theme="dark"] .leaflet-control-attribution{
   background:var(--card);color:var(--muted);

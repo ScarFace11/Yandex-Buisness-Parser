@@ -245,11 +245,18 @@ class TestAnnounceWorkflow:
 
     def test_waits_for_the_windows_asset_before_announcing(self):
         steps = self._wf()["jobs"]["announce"]["steps"]
-        names = " | ".join(s.get("name", "") for s in steps)
-        assert "Wait for the published release" in names
+        names = [s.get("name", "") for s in steps]
+        wait_at = next(i for i, n in enumerate(names) if "Wait for the published release" in n)
+        stamp_at = next(i for i, n in enumerate(names) if "Stamp version.json" in n)
+        assert wait_at < stamp_at, "версию объявляем только после проверки релиза"
         text = (ROOT / ".github" / "workflows" / "announce-release.yml").read_text(encoding="utf-8")
-        assert "YandexBusinessParser-windows-x64.zip" in text
-        assert "isDraft" in text
+        assert "scripts/wait_release.py" in text
+        # Требование к ассету и проверка черновика — в Python-скрипте, его же
+        # проверяют tests/test_announce_tag.py.
+        waiter = (ROOT / "scripts" / "wait_release.py").read_text(encoding="utf-8")
+        assert "isDraft" in waiter
+        tags = (ROOT / "scripts" / "release_tag.py").read_text(encoding="utf-8")
+        assert "YandexBusinessParser-windows-x64.zip" in tags
 
     def test_writes_version_json_from_the_tag_and_pushes_to_main(self):
         steps = self._wf()["jobs"]["announce"]["steps"]

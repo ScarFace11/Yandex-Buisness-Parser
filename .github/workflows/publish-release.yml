@@ -62,70 +62,17 @@ jobs:
     steps:
       - name: Check the tag — публикуем только стабильные релизы
         id: tag
-        run: |
-          # Как и в announce-release.yml, тег приводим к виду «vX.Y.Z»: человек
-          # называет версию без «v» (как в CHANGELOG), и ручной запуск с «2.3.4»
-          # иначе не проходил проверку и молча ничего не делал.
-          TAG="$(printf '%s' "$RAW_TAG" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
-          case "$TAG" in v*) ;; *) TAG="v$TAG" ;; esac
-          echo "Тег из события: '$RAW_TAG' → '$TAG'"
-          # Регулярка намеренно строгая: dev- и прочие суффиксы ("v2.3.4-dev",
-          # "v2.3.4-rc1") не публикуются сами — это внутренние сборки.
-          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+(\.[0-9]+){2,3}$'; then
-            if [ -n "$INPUT_TAG" ]; then
-              # Ручной запуск — это осознанное «публикуй вон то»: молчаливое
-              # «публиковать нечего» здесь выглядит как будто автоматика сломалась.
-              echo "::error::'$INPUT_TAG' не похоже на релизный тег — нужен вид v2.3.4 (можно и без «v»), без суффиксов -dev/-rc"
-              exit 1
-            fi
-            echo "Не стабильный релизный тег — публиковать нечего, выходим."
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "publish=true" >> "$GITHUB_OUTPUT"
-
+        # Нормализация и проверка формата — в scripts/release_tag.py.
+        run: python scripts/release_tag.py publish
       - name: Wait for both builds to be green
         id: builds
         if: steps.tag.outputs.publish == 'true'
+        env:
+          REPO: ${{ github.repository }}
+          PWAIT_ATTEMPTS: '40'
+          PWAIT_SLEEP: '30'
         run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          # Ждём до 20 минут: вторую платформу мог запустить тот же пуш тега.
-          # PWAIT_* — только для тестов (tests/test_release_publish.py гоняет
-          # ту же логику на заглушке gh и не должна ждать реальные полминуты).
-          ATTEMPTS="${PWAIT_ATTEMPTS:-40}"
-          PAUSE="${PWAIT_SLEEP:-30}"
-          for attempt in $(seq 1 "$ATTEMPTS"); do
-            pending=""
-            for wf in build-exe.yml build-macos.yml; do
-              # --jq отдаёт «status conclusion» одной строкой: без python и
-              # без разбора JSON в оболочке.
-              line="$(gh run list --repo "$REPO" --workflow "$wf" --branch "$TAG" \
-                        --limit 1 --json status,conclusion \
-                        --jq '.[0] | "\(.status) \(.conclusion)"' 2>/dev/null \
-                        || echo 'missing ')"
-              status="${line%% *}"
-              concl="${line##* }"
-              echo "$wf: status=$status conclusion=${concl:-—}"
-              case "$concl" in
-                success) ;;
-                failure|cancelled|timed_out|startup_failure|action_required)
-                  echo "::error::$wf на $TAG завершился со статусом '$concl' — релиз не публикуем."
-                  exit 1 ;;
-                *) pending="$pending $wf" ;;
-              esac
-            done
-            if [ -z "$pending" ]; then
-              echo "Обе сборки зелёные: $TAG"
-              echo "ok=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "Ждём ещё:$pending (попытка $attempt/$ATTEMPTS)"
-            sleep "$PAUSE"
-          done
-          echo "::error::сборки для $TAG не позеленели за отведённое время — публикация отложена."
-          exit 1
-
+          python scripts/wait_builds.py --tag "${{ steps.tag.outputs.tag }}"
       - name: Check the draft — файлы на месте, релиз ещё черновик
         id: draft
         if: steps.builds.outputs.ok == 'true'
