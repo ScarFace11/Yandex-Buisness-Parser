@@ -5,15 +5,43 @@
 // остальное — что парсить, глубина, фильтры, форматы — живёт в отдельном окне,
 // где его ищут, а не на первом экране рядом с обязательными полями.
 
-const EFFORT_PRESETS = {
-  fast:     { pages: 1, candidates: 100, vk: false },
-  normal:   { pages: 2, candidates: 200, vk: false },
-  thorough: { pages: 5, candidates: 600, vk: true },
+// Что входит в вариант: название, описание и значения формы. Название и
+// описание можно переписать — под свою работу, а не под наши слова.
+const EFFORT_DEFAULTS = {
+  fast:     { name: 'Быстро',    note: 'первые 20 организаций с города', pages: 1, candidates: 20,  vk: false },
+  normal:   { name: 'Обычный',   note: 'две страницы с города',          pages: 2, candidates: 200, vk: false },
+  thorough: { name: 'Тщательно', note: 'все страницы и полные карточки', pages: 5, candidates: 600, vk: true },
+  custom:   { name: 'Своё',      note: 'ваши настройки — откройте шестерёнку', pages: 2, candidates: 200, vk: false },
 };
+const EFFORT_ORDER = ['fast', 'normal', 'thorough', 'custom'];
+const EFFORT_STORE = 'effort-presets';
+let _editingEffort = null;
 
 function currentEffort() {
-  try { return localStorage.getItem('search-effort') || 'normal'; }
-  catch (e) { return 'normal'; }
+  try {
+    const saved = localStorage.getItem('search-effort');
+    return EFFORT_ORDER.includes(saved) ? saved : 'normal';
+  } catch (e) { return 'normal'; }
+}
+
+function loadEffortPresets() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(EFFORT_STORE) || '{}') || {}; }
+  catch (e) { saved = {}; }
+  const map = {};
+  EFFORT_ORDER.forEach(key => {
+    map[key] = Object.assign({}, EFFORT_DEFAULTS[key], saved[key] || {});
+  });
+  return map;
+}
+
+function saveEffortPresets(map) {
+  try { localStorage.setItem(EFFORT_STORE, JSON.stringify(map)); } catch (e) {}
+}
+
+function effortPreset(key) {
+  const map = loadEffortPresets();
+  return map[key] || map.normal;
 }
 
 function effortOrgWord(n) {
@@ -56,30 +84,148 @@ function updateEffortEstimate() {
   el.textContent = `≈ ${est.orgs} ${effortOrgWord(est.orgs)}, ~${est.minutes} мин`;
 }
 
-function syncEffortButtons() {
+// Карточки живут данными: переименовали — сразу видно, перезагрузили — осталось.
+function renderEffortCards() {
+  const presets = loadEffortPresets();
   const active = currentEffort();
-  document.querySelectorAll('.effort-opt[data-effort]').forEach(btn => {
-    const on = btn.dataset.effort === active;
-    btn.classList.toggle('active', on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  document.querySelectorAll('[data-effort-item]').forEach(item => {
+    const key = item.dataset.effortItem;
+    const preset = presets[key];
+    if (!preset) return;
+    const name = item.querySelector('[data-effort-name]');
+    const note = item.querySelector('[data-effort-note]');
+    if (name) name.textContent = preset.name;
+    if (note) note.textContent = preset.note;
+    const on = key === active;
+    item.classList.toggle('active', on);
+    const btn = item.querySelector('.effort-opt');
+    if (btn) btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    const gear = item.querySelector('.effort-edit');
+    if (gear) gear.setAttribute('aria-label', `Настроить вариант «${preset.name}»`);
   });
 }
 
+function syncEffortButtons() {
+  renderEffortCards();
+}
+
+// Выбор варианта выставляет те же поля формы, что и раньше: варианты не
+// заменяют настройки, а заполняют их — поправить руками по-прежнему можно.
 function setSearchEffort(name) {
-  const key = EFFORT_PRESETS[name] ? name : 'normal';
-  const preset = EFFORT_PRESETS[key];
+  const key = EFFORT_ORDER.includes(name) ? name : 'normal';
+  const preset = effortPreset(key);
   try { localStorage.setItem('search-effort', key); } catch (e) {}
   const pages = document.getElementById('f-pages');
   if (pages) pages.value = preset.pages;
   const cap = document.getElementById('f-max-candidates');
   if (cap) cap.value = preset.candidates;
   const vk = document.getElementById('f-vk-check');
-  if (vk && vk.checked !== preset.vk) {
-    vk.checked = preset.vk;
+  if (vk && vk.checked !== !!preset.vk) {
+    vk.checked = !!preset.vk;
     if (typeof onVkCheckChange === 'function') onVkCheckChange();
   }
-  syncEffortButtons();
+  renderEffortCards();
   updateEffortEstimate();
+}
+
+// ── Редактор карточки ─────────────────────────────────────────
+function updateEditorEstimate() {
+  const el = document.getElementById('ee-estimate');
+  if (!el) return;
+  const num = (id, fallback) => {
+    const node = document.getElementById(id);
+    const value = Number(node && node.value);
+    return Number.isFinite(value) && value > 0 ? value : fallback;
+  };
+  const pages = num('ee-pages', 1);
+  const cap = num('ee-candidates', 200);
+  const orgs = Math.min(cap, pages * 50);
+  el.textContent = `За один город и один запрос: до ${orgs} ${effortOrgWord(orgs)}.`;
+}
+
+function openEffortEditor(key) {
+  const modal = document.getElementById('effort-editor');
+  if (!modal) return;
+  const preset = effortPreset(key);
+  _editingEffort = key;
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  };
+  set('ee-name', preset.name);
+  set('ee-note', preset.note);
+  set('ee-pages', preset.pages);
+  set('ee-candidates', preset.candidates);
+  const vk = document.getElementById('ee-vk');
+  if (vk) vk.checked = !!preset.vk;
+  const title = document.getElementById('ee-title');
+  if (title) title.textContent = `Настроить вариант «${preset.name}»`;
+  updateEditorEstimate();
+  lockPageScroll();
+  modal.hidden = false;
+  const name = document.getElementById('ee-name');
+  if (name) { name.focus(); name.select(); }
+}
+
+function closeEffortEditor() {
+  const modal = document.getElementById('effort-editor');
+  if (!modal || modal.hidden) return;
+  modal.hidden = true;
+  const key = _editingEffort;
+  _editingEffort = null;
+  unlockPageScroll();
+  const gear = key ? document.querySelector(`[data-effort-edit="${key}"]`) : null;
+  if (gear) gear.focus();
+}
+
+function saveEffortEditor() {
+  if (!_editingEffort) return;
+  const key = _editingEffort;
+  const text = id => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  };
+  const clamp = (id, min, max, fallback) => {
+    const el = document.getElementById(id);
+    const value = Number(el && el.value);
+    if (!Number.isFinite(value) || value <= 0) return fallback;
+    return Math.min(max, Math.max(min, Math.round(value)));
+  };
+  const vk = document.getElementById('ee-vk');
+  const map = loadEffortPresets();
+  map[key] = {
+    name: text('ee-name').slice(0, 24) || EFFORT_DEFAULTS[key].name,
+    note: text('ee-note').slice(0, 90) || EFFORT_DEFAULTS[key].note,
+    pages: clamp('ee-pages', 1, 20, EFFORT_DEFAULTS[key].pages),
+    candidates: clamp('ee-candidates', 1, 10000, EFFORT_DEFAULTS[key].candidates),
+    vk: !!(vk && vk.checked),
+  };
+  saveEffortPresets(map);
+  closeEffortEditor();
+  renderEffortCards();
+  // Правили выбранный вариант — сразу применяем новые значения к форме.
+  if (currentEffort() === key) setSearchEffort(key);
+  if (typeof showToast === 'function') showToast('Вариант сохранён', 'success');
+}
+
+// ── Блокировка прокрутки страницы под окном ──────────────────
+// Без неё колесо мыши прокручивало сайдбор под модалкой, а страница после
+// закрытия оказывалась в другом месте — окно «прыгало».
+let _openModals = 0;
+
+function lockPageScroll() {
+  _openModals += 1;
+  if (_openModals > 1) return;
+  const gap = window.innerWidth - document.documentElement.clientWidth;
+  document.body.classList.add('app-modal-open');
+  if (gap > 0) document.body.style.paddingRight = `${gap}px`;
+}
+
+function unlockPageScroll() {
+  _openModals = Math.max(0, _openModals - 1);
+  if (_openModals > 0) return;
+  document.body.classList.remove('app-modal-open');
+  document.body.style.paddingRight = '';
 }
 
 // ── Окно «Ещё настройки» ─────────────────────────────────────
@@ -99,6 +245,7 @@ function setMoreSettingsTab(name) {
 function openMoreSettings(tab) {
   const modal = document.getElementById('more-settings');
   if (!modal) return;
+  lockPageScroll();
   modal.hidden = false;
   setMoreSettingsTab(tab || 'data');
   updateEffortEstimate();
@@ -110,12 +257,16 @@ function closeMoreSettings() {
   const modal = document.getElementById('more-settings');
   if (!modal || modal.hidden) return;
   modal.hidden = true;
+  unlockPageScroll();
   const link = document.getElementById('btn-more-settings');
   if (link) link.focus();
 }
 
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') closeMoreSettings();
+  if (event.key !== 'Escape') return;
+  const editor = document.getElementById('effort-editor');
+  if (editor && !editor.hidden) { closeEffortEditor(); return; }
+  closeMoreSettings();
 });
 
 (function initEffort() {

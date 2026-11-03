@@ -457,22 +457,58 @@
           <div class="acc-summary" id="acc-effort-summary" style="display:none"></div>
           <div class="acc-body" id="acc-effort-body">
             <div class="acc-inner">
+              <!-- Карточка — это не только выбор, но и настройка: шестерёнка в
+                   углу открывает состав прогона, а название и описание можно
+                   переписать под себя. -->
               <div class="effort-choices" role="group" aria-label="Сколько собирать">
-                <button type="button" class="effort-opt" data-effort="fast"
-                        onclick="setSearchEffort('fast')" aria-pressed="false">
-                  <span class="effort-name">Быстро</span>
-                  <span class="effort-note">первые 20 организаций с города</span>
-                </button>
-                <button type="button" class="effort-opt active" data-effort="normal"
-                        onclick="setSearchEffort('normal')" aria-pressed="true">
-                  <span class="effort-name">Обычный</span>
-                  <span class="effort-note">две страницы с города, без проверки ВК</span>
-                </button>
-                <button type="button" class="effort-opt" data-effort="thorough"
-                        onclick="setSearchEffort('thorough')" aria-pressed="false">
-                  <span class="effort-name">Тщательно</span>
-                  <span class="effort-note">все страницы и проверка активности ВК</span>
-                </button>
+                <div class="effort-item" data-effort-item="fast">
+                  <button type="button" class="effort-opt" data-effort="fast"
+                          onclick="setSearchEffort('fast')" aria-pressed="false">
+                    <span class="effort-name" data-effort-name>Быстро</span>
+                    <span class="effort-note" data-effort-note>первые 20 организаций с города</span>
+                  </button>
+                  <button type="button" class="effort-edit" data-effort-edit="fast"
+                          onclick="openEffortEditor('fast')" aria-label="Настроить вариант «Быстро»"
+                          title="Настроить, что входит в прогон">
+                    <svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg>
+                  </button>
+                </div>
+                <div class="effort-item active" data-effort-item="normal">
+                  <button type="button" class="effort-opt" data-effort="normal"
+                          onclick="setSearchEffort('normal')" aria-pressed="true">
+                    <span class="effort-name" data-effort-name>Обычный</span>
+                    <span class="effort-note" data-effort-note>две страницы с города</span>
+                  </button>
+                  <button type="button" class="effort-edit" data-effort-edit="normal"
+                          onclick="openEffortEditor('normal')" aria-label="Настроить вариант «Обычный»"
+                          title="Настроить, что входит в прогон">
+                    <svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg>
+                  </button>
+                </div>
+                <div class="effort-item" data-effort-item="thorough">
+                  <button type="button" class="effort-opt" data-effort="thorough"
+                          onclick="setSearchEffort('thorough')" aria-pressed="false">
+                    <span class="effort-name" data-effort-name>Тщательно</span>
+                    <span class="effort-note" data-effort-note>все страницы и полные карточки</span>
+                  </button>
+                  <button type="button" class="effort-edit" data-effort-edit="thorough"
+                          onclick="openEffortEditor('thorough')" aria-label="Настроить вариант «Тщательно»"
+                          title="Настроить, что входит в прогон">
+                    <svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg>
+                  </button>
+                </div>
+                <div class="effort-item" data-effort-item="custom">
+                  <button type="button" class="effort-opt" data-effort="custom"
+                          onclick="setSearchEffort('custom')" aria-pressed="false">
+                    <span class="effort-name" data-effort-name>Своё</span>
+                    <span class="effort-note" data-effort-note>ваши настройки — откройте шестерёнку</span>
+                  </button>
+                  <button type="button" class="effort-edit" data-effort-edit="custom"
+                          onclick="openEffortEditor('custom')" aria-label="Настроить вариант «Своё»"
+                          title="Настроить, что входит в прогон">
+                    <svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg>
+                  </button>
+                </div>
               </div>
               <div class="effort-estimate" id="effort-estimate" role="status" aria-live="polite">
                 ≈ 200 организаций, ~3 мин
@@ -2207,6 +2243,56 @@
     <div class="ms-foot">
       <span class="ms-foot-note">Настройки сохраняются и применяются к следующему поиску.</span>
       <button type="button" class="btn-sm" onclick="closeMoreSettings()">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- Редактор карточки объёма: название, описание и состав прогона. -->
+<div class="app-modal" id="effort-editor" hidden>
+  <div class="app-modal-backdrop" onclick="closeEffortEditor()"></div>
+  <div class="app-modal-box ee-box" role="dialog" aria-modal="true" aria-labelledby="ee-title">
+    <div class="ms-head">
+      <h2 id="ee-title">Настроить вариант</h2>
+      <button type="button" class="ms-close" onclick="closeEffortEditor()" aria-label="Закрыть настройку варианта">
+        <svg class="ico" aria-hidden="true"><use href="#i-x"/></svg>
+      </button>
+    </div>
+    <div class="ee-body">
+      <div>
+        <label class="lbl" for="ee-name">Название</label>
+        <input type="text" id="ee-name" maxlength="24" autocomplete="off">
+      </div>
+      <div>
+        <label class="lbl" for="ee-note">Описание</label>
+        <input type="text" id="ee-note" maxlength="90" autocomplete="off">
+      </div>
+      <div class="row2 row2-align">
+        <div>
+          <label class="lbl" for="ee-pages">Страниц выдачи</label>
+          <div class="stepper" data-min="1" data-max="20" data-step="1">
+            <button type="button" class="stp-btn" onclick="stepValue(this,-1)" aria-label="Уменьшить количество страниц">−</button>
+            <input type="number" id="ee-pages" value="2" min="1" max="20" aria-label="Страниц выдачи">
+            <button type="button" class="stp-btn" onclick="stepValue(this,1)" aria-label="Увеличить количество страниц">+</button>
+          </div>
+        </div>
+        <div>
+          <label class="lbl" for="ee-candidates">Макс. организаций</label>
+          <div class="stepper" data-min="1" data-max="10000" data-step="50">
+            <button type="button" class="stp-btn" onclick="stepValue(this,-1)" aria-label="Уменьшить лимит организаций">−</button>
+            <input type="number" id="ee-candidates" value="200" min="1" max="10000" aria-label="Максимум организаций">
+            <button type="button" class="stp-btn" onclick="stepValue(this,1)" aria-label="Увеличить лимит организаций">+</button>
+          </div>
+        </div>
+      </div>
+      <label class="chk"><input type="checkbox" id="ee-vk"> Проверять активность ВКонтакте</label>
+      <div class="hint" id="ee-estimate"></div>
+    </div>
+    <div class="ms-foot">
+      <span class="ms-foot-note">Свои названия и состав сохраняются в этом браузере.</span>
+      <span class="ms-foot-btns">
+        <button type="button" class="btn-sm" onclick="closeEffortEditor()">Отмена</button>
+        <button type="button" class="btn-sm primary" id="ee-save" onclick="saveEffortEditor()">Сохранить</button>
+      </span>
     </div>
   </div>
 </div>
