@@ -208,8 +208,17 @@ jobs:
         run: |
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
           $version = python -c "import config; print(config.APP_VERSION)"
-          & $iscc "/DMyAppVersion=$version" 'installer\windows.iss'
-          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup завершился с ошибкой' }
+          $out = & $iscc "/DMyAppVersion=$version" 'installer\windows.iss' 2>&1
+          $code = $LASTEXITCODE
+          $out | ForEach-Object { Write-Host $_ }
+          if ($code -ne 0) {
+            # Логи job на GitHub видны только с правами админа; выносим
+            # последние строки компилятора в аннотацию, иначе причина
+            # остаётся только в закрытом логе.
+            $detail = (($out | Select-Object -Last 12) -join "`n") -replace "`n", '%0A'
+            Write-Host "::error title=Inno Setup::$detail"
+            throw 'Inno Setup завершился с ошибкой'
+          }
           $setup = 'dist/YandexBusinessParser-windows-x64-setup.exe'
           if (-not (Test-Path $setup)) { throw "установщик не создан: $setup" }
           if ((Get-Item $setup).Length -lt 10MB) { throw 'установщик подозрительно мал' }

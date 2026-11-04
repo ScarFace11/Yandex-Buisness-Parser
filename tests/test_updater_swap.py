@@ -43,7 +43,8 @@ def _host_executable(name: str) -> str:
     """
     if sys.platform.startswith("win"):
         return rf"C:\Windows\System32\{name}"
-    return "/bin/true"
+    # На macOS /bin/true может отсутствовать; интерпретатор тестов есть всегда.
+    return sys.executable
 
 
 @pytest.fixture()

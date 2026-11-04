@@ -44,7 +44,7 @@ AUDIT_JS = (ROOT / "tests" / "a11y_audit.js").read_text(encoding="utf-8")
 # шёл по самому интерфейсу.
 HIDE_OVERLAYS = """
 document.querySelectorAll('#terms-overlay, #terms-declined, #version-gate')
-  .forEach(el => { el.hidden = true; });
+  .forEach(el => { el.hidden = true; el.style.display = 'none'; });
 """
 
 # Форма заполнена как у готового к запуску пользователя: пустая форма держит
@@ -438,6 +438,14 @@ def test_modal_holds_focus_and_returns_it(browser_cdp, live_app_url, case):
     tab = new_tab(browser_cdp)
     try:
         open_page(tab, live_app_url)
+        # Эти два окна и есть предмет проверки: возвращаем им видимость,
+        # которую open_page снял вместе с прочими оверлеями первого входа.
+        if name in ("terms", "version-gate"):
+            overlay = "#terms-overlay" if name == "terms" else "#version-gate"
+            tab.evaluate(
+                "document.querySelector(%s).style.display = '';"
+                % json.dumps(overlay)
+            )
         if case.get("pre"):
             tab.evaluate(case["pre"])
         # Фокус и открытие — одним вызовом: между двумя вызовами приложение
