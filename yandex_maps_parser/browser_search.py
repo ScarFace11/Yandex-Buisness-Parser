@@ -49,8 +49,20 @@ def reset_blocked() -> None:
 
 def _set_blocked(reason: str) -> None:
     global _last_block
+    first = False
     with _block_lock:
+        first = not _last_block
         _last_block = reason
+    if not first:
+        return
+    # Раньше антибот-детектор жил только в тестах: cooldown и счётчик не
+    # включались в рабочем поиске. Теперь капча один раз на прогон включает
+    # общий backoff (следующие открытия уже не долбят Яндекс с той же силой).
+    try:
+        from .rate_limit import _anti_bot_detected
+        _anti_bot_detected()
+    except Exception:
+        pass
 
 
 # Бюджет на добирание следующих страниц внутри страницы (секунды):
@@ -155,8 +167,8 @@ _STATE_JS = """
     if (st && (st.items || []).length) break;
     await sleep(500);
   }
-  if (!st || !(st.items || []).length) return '';   // нет состояния → DOM-фолбэк
-
+  if (!st) return '';   // нет состояния → DOM-фолбэк
+  const total = Number(st.totalResultCount || 0) || 0;
   const out = new Map();
   const add = (items) => {
     for (const it of (items || [])) {
@@ -165,11 +177,12 @@ _STATE_JS = """
     }
   };
   add(st.items);
+  if (!out.size) return JSON.stringify({total: total, cards: [], complete: true});
 
-  const total = Number(st.totalResultCount || 0) || 0;
+  let complete = true;
   const startedAt = Date.now();
   for (let page = 2; page <= maxPage && out.size < want; page++) {
-    if (Date.now() - startedAt > budgetMs) break;
+    if (Date.now() - startedAt > budgetMs) { complete = false; break; }
     if (total && out.size >= total) break;
     let html = '';
     try {
@@ -178,9 +191,10 @@ _STATE_JS = """
       const pageUrl = location.origin + location.pathname + location.search
                       + (location.search ? '&' : '?') + 'page=' + page;
       const resp = await fetch(pageUrl, {credentials: 'include'});
-      if (!resp.ok) break;
+      if (!resp.ok) { complete = false; break; }
       html = await resp.text();
     } catch (e) {
+      complete = false;
       break;
     }
     const next = readState(new DOMParser().parseFromString(html, 'text/html'));
@@ -189,7 +203,7 @@ _STATE_JS = """
     add(next.items);
     if (out.size === before) break;               // страница не дала новых организаций
   }
-  return JSON.stringify({total: total, cards: [...out.values()]});
+  return JSON.stringify({total: total, cards: [...out.values()], complete: complete});
 })()
 """
 
@@ -300,8 +314,32 @@ def _items_to_cards(items: list) -> list[dict]:
     return cards
 
 
-def _harvest_from_state(url: str, want: int) -> list[dict]:
-    """Основной путь: выдача из предзагруженного состояния страницы."""
+_harvest_local = threading.local()
+
+
+def _result_info(cards: list[dict], *, total=None, complete=True,
+                 status: str = "") -> dict:
+    """Результат выдачи вместе с её состоянием.
+
+    `status`: ok / empty / partial / no_state / blocked. Пустая выдача и
+    «страница не открылась» — разные вещи: только для второй нужен повтор и
+    предупреждение пользователю.
+    """
+    if not status:
+        status = "ok" if cards else "empty"
+    try:
+        total = int(total) if total not in (None, "") else None
+    except (TypeError, ValueError):
+        total = None
+    if total is not None and total < 0:
+        total = None
+    if cards and not complete:
+        status = "partial"
+    return {"cards": cards, "total": total, "complete": bool(complete),
+            "status": status}
+
+
+def _harvest_from_state_ex(url: str, want: int) -> dict:
     raw = cdp_client.eval_in_page(
         url,
         _state_harvest_js(want),
@@ -309,25 +347,33 @@ def _harvest_from_state(url: str, want: int) -> list[dict]:
         timeout_s=90.0,
     )
     if not raw:
-        return []
+        return _result_info([], complete=False, status="no_state")
     try:
         data = json.loads(raw)
     except (ValueError, TypeError):
         state.syslog(f"browser_search: не разобрал состояние выдачи ({str(raw)[:120]!r})")
-        return []
+        return _result_info([], complete=False, status="no_state")
     if data.get("blocked"):
         _set_blocked(str(data.get("blocked")))
         state.syslog("browser_search: вместо выдачи Яндекс показал проверку «Вы не робот?»")
-        return []
+        return _result_info([], total=data.get("total"), complete=False, status="blocked")
     cards = _items_to_cards(data.get("cards") or [])
+    total = data.get("total")
     if cards:
-        state.syslog(f"browser_search: cards={len(cards)} из {data.get('total') or '?'} "
+        state.syslog(f"browser_search: cards={len(cards)} из {total or '?'} "
                      f"(состояние страницы)")
-    return cards
+    return _result_info(cards, total=total,
+                        complete=bool(data.get("complete", True)))
 
 
-def _harvest_from_dom(url: str, want: int) -> list[dict]:
-    """Запасной путь: разбор вёрстки выдачи с прокруткой списка."""
+def _harvest_from_state(url: str, want: int) -> list[dict]:
+    """Совместимый вход: карточки из состояния страницы."""
+    info = _harvest_from_state_ex(url, want)
+    _harvest_local.state_info = info
+    return info["cards"]
+
+
+def _harvest_from_dom_ex(url: str, want: int) -> dict:
     raw = cdp_client.eval_in_page(
         url,
         _harvest_js(want),
@@ -336,32 +382,59 @@ def _harvest_from_dom(url: str, want: int) -> list[dict]:
         timeout_s=90.0,
     )
     if not raw:
-        return []
+        return _result_info([], complete=False, status="no_state")
     try:
         data = json.loads(raw)
     except (ValueError, TypeError):
         state.syslog(f"browser_search: не разобрал JSON выдачи ({str(raw)[:120]!r})")
-        return []
+        return _result_info([], complete=False, status="no_state")
     if data.get("blocked"):
         _set_blocked(str(data.get("blocked")))
-        return []
-    return _items_to_cards(data.get("cards") or [])
+        return _result_info([], complete=False, status="blocked")
+    return _result_info(_items_to_cards(data.get("cards") or []),
+                        total=data.get("total"))
+
+
+def _harvest_from_dom(url: str, want: int) -> list[dict]:
+    """Совместимый вход: карточки из вёрстки выдачи."""
+    info = _harvest_from_dom_ex(url, want)
+    _harvest_local.dom_info = info
+    return info["cards"]
+
+
+def harvest_cards_ex(query: str, city: str, lat: float | None, lon: float | None,
+                     max_cards: int = 50) -> dict:
+    """Карточки и состояние выдачи: total/status/complete."""
+    want = max(1, min(int(max_cards or 50), _MAX_CARDS))
+    url = _search_url(query, city, lat, lon)
+    state.syslog(f"browser_search: {url}")
+    _harvest_local.state_info = None
+    cards = _harvest_from_state(url, want)
+    info = getattr(_harvest_local, "state_info", None)
+    if info is None:
+        # Тесты и внешние вызовы могут подменить старый вход списком.
+        info = _result_info(cards, complete=bool(cards),
+                            status="ok" if cards else "no_state")
+    if info.get("status") != "blocked" and not cards and info.get("status") != "empty":
+        state.syslog("browser_search: состояния с выдачей нет — разбираю вёрстку")
+        _harvest_local.dom_info = None
+        cards = _harvest_from_dom(url, want)
+        dom_info = getattr(_harvest_local, "dom_info", None)
+        if dom_info is None:
+            dom_info = _result_info(cards, status="ok" if cards else "empty")
+        info = dom_info
+        if cards:
+            state.syslog(f"browser_search: cards={len(cards)} (вёрстка)")
+    info = dict(info, cards=cards)
+    state.syslog(f"browser_search: cards={len(cards)} из {info.get('total') or '?'} "
+                 f"(запрошено до {want}, status={info.get('status')}), запрос={query!r}")
+    return info
 
 
 def harvest_cards(query: str, city: str, lat: float | None, lon: float | None,
                   max_cards: int = 50) -> list[dict]:
     """Карточки выдачи Яндекс.Карт по запросу (без API-ключей)."""
-    want = max(1, min(int(max_cards or 50), _MAX_CARDS))
-    url = _search_url(query, city, lat, lon)
-    state.syslog(f"browser_search: {url}")
-    cards = _harvest_from_state(url, want)
-    if not cards and not blocked_reason():
-        state.syslog("browser_search: состояния с выдачей нет — разбираю вёрстку")
-        cards = _harvest_from_dom(url, want)
-        if cards:
-            state.syslog(f"browser_search: cards={len(cards)} (вёрстка)")
-    state.syslog(f"browser_search: cards={len(cards)} (запрошено до {want}), запрос={query!r}")
-    return cards
+    return harvest_cards_ex(query, city, lat, lon, max_cards)["cards"]
 
 
 def city_center(city: str) -> tuple[float, float] | None:

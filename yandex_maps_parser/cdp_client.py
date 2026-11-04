@@ -1138,7 +1138,11 @@ def fetch_page(url: str, timeout_ms: int = 40000, biz_id: str = "") -> str | Non
     # Причина перезаписывается каждой попыткой: в счётчик потерь попадает та, из-за которой сдалась последняя.
     set_failure_reason("no_page")
 
-    for attempt in range(_MAX_RETRIES):
+    # RETRY_COUNT из настроек — единственный источник числа попыток;
+    # жёсткая двойка больше не игнорирует выбор пользователя.
+    retries = max(1, int(getattr(state, "RETRY_COUNT", _MAX_RETRIES) or _MAX_RETRIES))
+    retry_delay = max(0.0, float(getattr(state, "RETRY_DELAY", 1.0) or 0.0))
+    for attempt in range(retries):
         # Check stop before each attempt
         if state._STOP_EVENT and state._STOP_EVENT.is_set():
             return None
@@ -1192,8 +1196,10 @@ def fetch_page(url: str, timeout_ms: int = 40000, biz_id: str = "") -> str | Non
             if html:
                 return html
             # Пустая страница — не приговор: таймаут навигации или заглушка антибота часто снимаются со свежей вкладкой.
-            state.syslog(f"cdp_client: empty page (attempt {attempt + 1}/{_MAX_RETRIES}) {url}")
-            if attempt < _MAX_RETRIES - 1:
+            state.syslog(f"cdp_client: empty page (attempt {attempt + 1}/{retries}) {url}")
+            if attempt < retries - 1:
+                if retry_delay:
+                    time.sleep(min(10.0, retry_delay * (2 ** attempt)))
                 try:
                     new_ws = _create_tab()
                     if new_ws:
@@ -1215,7 +1221,7 @@ def fetch_page(url: str, timeout_ms: int = 40000, biz_id: str = "") -> str | Non
             state.syslog(f"cdp_client: error: {type(e).__name__}: {e}")
 
             # Try to recover: create a fresh tab
-            if attempt < _MAX_RETRIES - 1:
+            if attempt < retries - 1:
                 state.syslog("cdp_client: attempting recovery...")
                 try:
                     new_ws = _create_tab()

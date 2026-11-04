@@ -53,6 +53,11 @@ const PARSE_FIELD_COLS = {
   aggregator_url: ['aggregator_url'],
   socials:        ['vk', 'instagram', 'telegram', 'whatsapp'],
   phone:          ['phone'],
+  email:          ['email'],
+  hours:          ['hours'],
+  description:    ['description'],
+  services:       ['services'],
+  status:         ['status'],
   vk_activity:    ['vk_activity', 'vk_followers', 'vk_last_post_days'],
 };
 // Служебные столбцы выгружаются всегда (не пользовательские данные).
@@ -64,10 +69,15 @@ const PARSE_REGULAR = [
   { k: 'rating',          l: 'Рейтинг и отзывы' },
   { k: 'yandex_maps_url', l: 'Ссылка на карточку' },
   { k: 'aggregator_url',  l: 'Сайт / Таплинк' },
+  { k: 'hours',           l: 'Часы работы' },
+  { k: 'description',     l: 'Описание' },
+  { k: 'services',        l: 'Услуги и цены' },
+  { k: 'status',          l: 'Статус организации' },
   { k: 'socials',         l: 'Соцсети (ВК, TG, IG, WA)', master: true },
 ];
 const PARSE_PERSONAL = [
   { k: 'phone',       l: 'Телефон организации' },
+  { k: 'email',       l: 'Email организации' },
   { k: 'vk_activity', l: 'Активность ВКонтакте (подписчики, последний пост)', needsKey: true },
 ];
 // null = значения по умолчанию (все обычные + телефон); иначе — Set ключей.

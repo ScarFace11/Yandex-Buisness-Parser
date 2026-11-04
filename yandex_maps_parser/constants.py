@@ -59,6 +59,8 @@ CSV_FIELDS = [
     # Lead score is computed at stage 2 — first column after the mark so a «hot» contact is visible without scrolling.
     "lead_score",
     "name", "category", "address", "phone",
+    # Контакты и сведения, которые видит клиент на карточке организации.
+    "email", "hours", "description", "services", "status",
     # Restored: the score needs real rating/reviews values, not guesses.
     "rating", "reviews_count",
     "vk", "instagram", "telegram", "whatsapp",
@@ -103,6 +105,11 @@ HEADER_LABELS = {
     "category":      "Категория",
     "address":       "Адрес",
     "phone":         "Телефон",
+    "email":         "Email",
+    "hours":         "Часы работы",
+    "description":   "Описание",
+    "services":      "Услуги и цены",
+    "status":        "Статус",
     "lead_score":    "Оценка лида",
     "rating":        "Рейтинг",
     "reviews_count": "Отзывов",
@@ -140,7 +147,8 @@ COL_WIDTHS = {
     "reviewed": 13, "name": 28, "category": 22,
     "lead_score": 13, "rating": 10, "reviews_count": 11,
     "vk_activity": 15, "vk_followers": 13, "vk_last_post_days": 16,
-    "address": 32, "phone": 18,
+    "address": 32, "phone": 18, "email": 26, "hours": 24,
+    "description": 42, "services": 38, "status": 16,
     "vk": 30, "instagram": 30, "facebook": 30, "telegram": 30,
     "youtube": 30, "tiktok": 28, "ok": 28, "twitter": 28, "whatsapp": 28,
     "aggregator_url": 32,

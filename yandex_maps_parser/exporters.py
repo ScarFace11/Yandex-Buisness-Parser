@@ -82,15 +82,53 @@ def record_key(rec: dict) -> str:
     return f"n|{norm(rec.get('name'))}|{norm(rec.get('address'))}"
 
 
+def _uniq_values(values) -> list[str]:
+    out: list[str] = []
+    for value in values:
+        value = str(value or "").strip()
+        if value and value not in out:
+            out.append(value)
+    return out
+
+
+def _merge_missing(base: dict, extra: dict) -> dict:
+    """Дополнить запись недостающими полями из дубля."""
+    for key, value in extra.items():
+        if key.startswith("_"):
+            continue
+        if key in ("phone", "email"):
+            current = [x.strip() for x in str(base.get(key) or "").split(",") if x.strip()]
+            for x in str(value or "").split(","):
+                x = x.strip()
+                if x and x not in current:
+                    current.append(x)
+            if current:
+                base[key] = ", ".join(current)
+            continue
+        if key == "reviewed":
+            base[key] = bool(base.get(key)) or bool(value)
+            continue
+        if key == "branch_count":
+            try:
+                base[key] = max(int(float(base.get(key))), int(float(value)))
+            except (TypeError, ValueError):
+                base[key] = base.get(key) or value
+            continue
+        if not str(base.get(key) or "").strip() and str(value or "").strip():
+            base[key] = value
+    return base
+
+
 def dedupe_records(records: list[dict]) -> list[dict]:
-    """Deduplicate records using record_key()."""
-    seen: set[str] = set()
+    """Убрать дубли, не теряя поля более полной копии."""
+    index: dict[str, int] = {}
     out: list[dict] = []
     for r in records:
         key = record_key(r)
-        if key in seen:
+        if key in index:
+            out[index[key]] = _merge_missing(out[index[key]], r)
             continue
-        seen.add(key)
+        index[key] = len(out)
         out.append(r)
     return out
 
@@ -231,6 +269,10 @@ def _merge_group(group: list[dict]) -> list[dict]:
     base = dict(base)
     base["phone"] = ", ".join(phones)
     base.update(socials)
+    for r in group:
+        _merge_missing(base, r)
+    base["phone"] = ", ".join(_uniq_values(
+        p.strip() for p in str(base.get("phone") or "").split(",") if p.strip()))
     _merge_chain_size(base, group)
     return [base]
 
@@ -258,29 +300,7 @@ def collapse_chains_name_city(records: list[dict]) -> list[dict]:
 
     out: list[dict] = []
     for _key, group in by_key.items():
-        if len(group) < 2:
-            out.extend(group)
-            continue
-        base = max(
-            group,
-            key=lambda x: (len(_socials_of(x)), len(_phone_digits(x))),
-        )
-        base = dict(base)
-        phones: list[str] = []
-        socials: dict[str, str] = {}
-        for r in group:
-            for ph in str(r.get("phone") or "").split(","):
-                ph = ph.strip()
-                if ph and ph not in phones:
-                    phones.append(ph)
-            for p in KNOWN_PLATFORMS:
-                v = r.get(p)
-                if v and not socials.get(p):
-                    socials[p] = v
-        base["phone"] = ", ".join(phones)
-        base.update(socials)
-        _merge_chain_size(base, group)
-        out.append(base)
+        out.extend(_merge_group(group))
     return out
 
 

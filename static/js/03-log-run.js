@@ -901,7 +901,9 @@ function getParams() {
     pipeline:        'raw',
     raw_mode:        (document.getElementById('f-raw-mode') || {}).value || 'keep',
     continue_cities: document.getElementById('f-continue')?.checked || false,
-    continue_limit:  parseInt((document.getElementById('f-continue-limit')||{}).value, 10) || 0,    // Соцсети выключены — фильтр по соцсетям и обязательные сети бессмысленны.
+    continue_limit:  parseInt((document.getElementById('f-continue-limit')||{}).value, 10) || 0,
+    refresh_seen:    !!(document.getElementById('f-refresh')||{}).checked,
+    refresh_days:    parseInt((document.getElementById('f-refresh-days')||{}).value, 10) || 0,    // Соцсети выключены — фильтр по соцсетям и обязательные сети бессмысленны.
     social_mode:     socialsEnabled() ? socialMode : 'all',
     required_socials: socialsEnabled() ? [...requiredSocials] : [],
     // Stage-2 lead scoring / VK activity (accordion «Фильтрация результата»).
@@ -931,6 +933,12 @@ function getMaxCandidates() {
 }
 
 // ♾ Continuation mode: show the limit stepper only when enabled.
+function onRefreshToggle() {
+  const cb = document.getElementById('f-refresh');
+  const row = document.getElementById('refresh-days-row');
+  if (cb && row) row.hidden = !cb.checked;
+}
+
 function onContinueToggle() {
   const cb = document.getElementById('f-continue');
   const row = document.getElementById('continue-limit-row');

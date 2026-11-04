@@ -604,8 +604,28 @@ class TestExtractPage:
     def test_empty_page_gives_empty_values_not_errors(self):
         page = extract_page("")
         assert page == {"socials_json": {}, "socials_contacts": {},
-                        "rating": "", "reviews": "", "phone": "", "website": "",
-                        "aggregator": ""}
+                        "rating": "", "reviews": "", "phone": "", "phones": [],
+                        "website": "", "aggregator": "", "email": "",
+                        "hours": "", "description": "", "services": "",
+                        "status": ""}
+
+    def test_contact_details_are_read_from_the_card(self):
+        html = (
+            '<h3 class="card-section-header__title _wide">Контакты</h3>'
+            '<a href="mailto:hello@cafe.ru">Почта</a>'
+            '<div class="card-working-hours">ежедневно 10:00–20:00</div>'
+            '<script type="application/json">'
+            '{"description":"Уютная кофейня у парка",'
+            '"services":[{"name":"Кофе"},{"name":"Завтраки"}],'
+            '"temporarilyClosed":true}'
+            '</script>'
+        )
+        page = extract_page(html)
+        assert page["email"] == "hello@cafe.ru"
+        assert "10:00" in page["hours"]
+        assert page["description"] == "Уютная кофейня у парка"
+        assert "Кофе" in page["services"] and "Завтраки" in page["services"]
+        assert page["status"] == "Временно закрыто"
 
     def test_one_view_serves_every_step(self):
         """PageView помнит разбор: второй вызов отдаёт тот же результат без работы."""

@@ -164,3 +164,14 @@ class TestHarvestPaths:
         monkeypatch.setattr(bs.cdp_client, "eval_in_page", lambda *a, **kw: "<html>")
         monkeypatch.setattr(bs.state, "syslog", lambda *_a, **_k: None)
         assert bs._harvest_from_state("https://example.invalid", 50) == []
+
+    def test_empty_state_is_an_answer_not_a_failed_page(self, monkeypatch):
+        """total=0 и complete=true — честная пустая выдача, а не сбой."""
+        bs.reset_blocked()
+        payload = json.dumps({"total": 0, "cards": [], "complete": True})
+        monkeypatch.setattr(bs.cdp_client, "eval_in_page", lambda *a, **kw: payload)
+        monkeypatch.setattr(bs.state, "syslog", lambda *_a, **_k: None)
+        info = bs.harvest_cards_ex("кафе", "Калуга", 54.51, 36.26, 25)
+        assert info["status"] == "empty"
+        assert info["total"] == 0
+        assert info["complete"] is True

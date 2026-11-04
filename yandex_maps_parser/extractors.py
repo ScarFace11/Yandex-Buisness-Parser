@@ -608,16 +608,216 @@ def extract_phone(html: str, view=None) -> str:
     return ""
 
 
+# ── Дополнительные поля карточки ─────────────────────────────
+
+_EMAIL_RE = re.compile(r"[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+")
+_EMAIL_KEYS = ("email", "emails", "mail", "contactemail", "emailaddress")
+_HOURS_KEYS = ("hours", "workinghours", "openinghours", "schedule", "timetable")
+_DESCRIPTION_KEYS = ("description", "shortdescription", "about", "summary")
+_SERVICES_KEYS = ("services", "goods", "products", "features", "offers")
+_STATUS_KEYS = ("closed", "isclosed", "temporarilyclosed", "temporaryclosed")
+
+
+def _plain_text(fragment: str) -> str:
+    """HTML-фрагмент → одна читаемая строка."""
+    text = re.sub(r"<br\s*/?>", ", ", fragment or "", flags=re.I)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = _html_unescape(text)
+    return re.sub(r"\s+", " ", text).strip(" ,;")
+
+
+def _json_strings(value, keys, depth: int = 0) -> list[str]:
+    """Строки/списки под ключами `keys`, кроме чужих организаций."""
+    if depth > 12 or value is None:
+        return []
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, sub in value.items():
+            if _is_foreign_key(key):
+                continue
+            if str(key).lower() in keys:
+                if isinstance(sub, str) and sub.strip():
+                    found.append(sub.strip())
+                elif isinstance(sub, (list, tuple)):
+                    for item in sub:
+                        if isinstance(item, str) and item.strip():
+                            found.append(item.strip())
+                        elif isinstance(item, dict):
+                            for k in ("name", "title", "text", "value"):
+                                if isinstance(item.get(k), str) and item[k].strip():
+                                    found.append(item[k].strip())
+                                    break
+                elif isinstance(sub, dict):
+                    for k in ("text", "name", "value", "title"):
+                        if isinstance(sub.get(k), str) and sub[k].strip():
+                            found.append(sub[k].strip())
+                            break
+            found.extend(_json_strings(sub, keys, depth + 1))
+    elif isinstance(value, (list, tuple)):
+        for sub in value:
+            found.extend(_json_strings(sub, keys, depth + 1))
+    return found
+
+
+def _uniq(values) -> list[str]:
+    out: list[str] = []
+    for value in values:
+        value = str(value or "").strip()
+        if value and value not in out:
+            out.append(value)
+    return out
+
+
+def extract_phones(html: str, view=None) -> list[str]:
+    """Все телефоны организации со страницы, в порядке появления."""
+    if not html:
+        return []
+    v = view_of(html, view)
+    section = v.contacts()
+    text = section or v.head
+    phones: list[str] = []
+    for m in _TEL_ITEMPROP_RE.finditer(text):
+        phone = _format_phone(_phone_digits(m.group(1)))
+        if phone:
+            phones.append(phone)
+    for m in _TEL_LINK_RE.finditer(text):
+        phone = _format_phone(_phone_digits(m.group(1)))
+        if phone:
+            phones.append(phone)
+    # Блобы страницы уже разобраны один раз в PageView: повторный
+    # _blobs_in(section) ломал обещание extract_page «один разбор на карточку».
+    for obj in v.blobs():
+        for key in _PHONE_KEYS:
+            for raw in _json_strings(obj, {key}):
+                phone = _format_phone(_phone_digits(raw))
+                if phone:
+                    phones.append(phone)
+    for m in _PHONE_TEXT_RE.finditer(_SCRIPT_BLOCK_RE.sub(" ", text)):
+        phone = _format_phone(_phone_digits(m.group(0)))
+        if phone:
+            phones.append(phone)
+    return _uniq(phones)
+
+
+def extract_email(html: str, view=None) -> str:
+    """Email организации; чужие адреса и служебные ящики не берём."""
+    if not html:
+        return ""
+    v = view_of(html, view)
+    section = v.contacts()
+    text = section or v.head
+    emails: list[str] = []
+    for m in re.finditer(r'mailto:([^"\'<>?\s]+)', text, re.I):
+        emails.append(_html_unescape(m.group(1)).strip())
+    emails.extend(_EMAIL_RE.findall(_plain_text(text)))
+    for obj in v.blobs():
+        emails.extend(_json_strings(obj, _EMAIL_KEYS))
+    clean: list[str] = []
+    for email in emails:
+        email = email.lower().strip(".,;")
+        if not _EMAIL_RE.fullmatch(email):
+            continue
+        # Поддержка площадки/франшизы — не контакт владельца.
+        if any(x in email for x in ("yandex", "support", "example.", "noreply", "no-reply")):
+            continue
+        if email not in clean:
+            clean.append(email)
+    return ", ".join(clean)
+
+
+def extract_hours(html: str, view=None) -> str:
+    """Режим работы карточки, если он есть в разметке или данных страницы."""
+    if not html:
+        return ""
+    v = view_of(html, view)
+    for m in re.finditer(r'itemprop=["\']openingHours["\'][^>]*(?:content=["\']([^"\']+)["\']|>([^<]{2,120})<)', v.html, re.I):
+        value = _plain_text(m.group(1) or m.group(2) or "")
+        if value:
+            return value
+    for m in re.finditer(r'<[^>]+class="[^"]*(?:working|hours|schedule)[^"]*"[^>]*>(.*?)</(?:div|span|p)>', v.html, re.I | re.S):
+        value = _plain_text(m.group(1))
+        if 3 <= len(value) <= 300:
+            return value
+    for obj in v.blobs():
+        for value in _json_strings(obj, _HOURS_KEYS):
+            value = _plain_text(value)
+            if 3 <= len(value) <= 300:
+                return value
+    text = _plain_text(_SCRIPT_BLOCK_RE.sub(" ", v.html))
+    m = re.search(r"(?:Время|Режим) работы\s*[:—-]?\s*([^|]{3,120})", text, re.I)
+    return m.group(1).strip(" ,;") if m else ""
+
+
+def extract_description(html: str, view=None) -> str:
+    """Короткое описание организации (до 500 символов)."""
+    if not html:
+        return ""
+    for obj in view_of(html, view).blobs():
+        for value in _json_strings(obj, _DESCRIPTION_KEYS):
+            value = _plain_text(value)
+            if len(value) >= 12:
+                return value[:500]
+    return ""
+
+
+def extract_services(html: str, view=None) -> str:
+    """Услуги/товары/цены из встроенных данных — по одной строке."""
+    if not html:
+        return ""
+    values: list[str] = []
+    for obj in view_of(html, view).blobs():
+        for value in _json_strings(obj, _SERVICES_KEYS):
+            value = _plain_text(value)
+            if 2 <= len(value) <= 120:
+                values.append(value)
+    return ", ".join(_uniq(values)[:40])
+
+
+def _json_true(value, keys, depth: int = 0) -> bool:
+    """Есть ли под одним из `keys` явное true (JSON-флаг закрытия)."""
+    if depth > 12 or value is None:
+        return False
+    if isinstance(value, dict):
+        for key, sub in value.items():
+            if _is_foreign_key(key):
+                continue
+            if str(key).lower() in keys:
+                if sub is True or str(sub).strip().lower() in ("true", "1", "yes"):
+                    return True
+            if _json_true(sub, keys, depth + 1):
+                return True
+    elif isinstance(value, (list, tuple)):
+        return any(_json_true(sub, keys, depth + 1) for sub in value)
+    return False
+
+
+def extract_status(html: str, view=None) -> str:
+    """«Временно закрыто» / «Закрыто» — только явный признак со страницы."""
+    if not html:
+        return ""
+    for obj in view_of(html, view).blobs():
+        for key in _STATUS_KEYS:
+            if _json_true(obj, {key}):
+                return "Временно закрыто" if "tempor" in key or "врем" in key else "Закрыто"
+    low = view_of(html, view).head.lower()
+    if "временно закрыт" in low:
+        return "Временно закрыто"
+    if re.search(r"(?:^|>)\s*закрыто\s*(?:<|$)", low):
+        return "Закрыто"
+    return ""
+
+
 # ── Всё, что нужно от страницы, за один разбор ─────────────────
 
 def extract_page(html: str, *, socials: bool = True, rating: bool = True,
                  phone: bool = True, website: bool = True,
-                 aggregator: bool = True) -> dict:
+                 aggregator: bool = True, details: bool = True) -> dict:
     """Собрать с карточки всё сразу, разобрав страницу ОДИН раз."""
     view = PageView(html)
     out: dict = {"socials_json": {}, "socials_contacts": {},
-                 "rating": "", "reviews": "", "phone": "", "website": "",
-                 "aggregator": ""}
+                 "rating": "", "reviews": "", "phone": "", "phones": [],
+                 "website": "", "aggregator": "", "email": "", "hours": "",
+                 "description": "", "services": "", "status": ""}
     if not html:
         return out
     if socials:
@@ -626,11 +826,18 @@ def extract_page(html: str, *, socials: bool = True, rating: bool = True,
     if rating:
         out["rating"], out["reviews"] = extract_rating_reviews(html, view=view)
     if phone:
-        out["phone"] = extract_phone(html, view=view)
+        out["phones"] = extract_phones(html, view=view)
+        out["phone"] = out["phones"][0] if out["phones"] else ""
     if website:
         out["website"] = extract_website(html, view=view)
     if aggregator:
         out["aggregator"] = extract_aggregator(html, view=view)
+    if details:
+        out["email"] = extract_email(html, view=view)
+        out["hours"] = extract_hours(html, view=view)
+        out["description"] = extract_description(html, view=view)
+        out["services"] = extract_services(html, view=view)
+        out["status"] = extract_status(html, view=view)
     return out
 
 

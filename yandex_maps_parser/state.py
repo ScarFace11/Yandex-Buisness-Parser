@@ -41,6 +41,10 @@ from config import (
 
 # Pipeline mode: "raw" — collect everything unfiltered (stage 1), filters are applied afterwards by processing.apply_filters (stage 2).
 PIPELINE = ""
+# «Проверить старые»: не пропускать карточки, которым больше REFRESH_DAYS дней.
+# По умолчанию выключено — повторный запуск по-прежнему экономит время.
+REFRESH_SEEN = False
+REFRESH_DAYS = 90
 # What happens to raw files after stage 2: "keep" | "archive" | "delete".
 RAW_MODE = "keep"
 

@@ -76,9 +76,30 @@ def _poll_semaphore_acquire(semaphore, timeout: float) -> bool:
         time.sleep(min(0.5, remaining))
 
 
-def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None = None) -> list[dict]:
-    """Fetch detail pages in parallel and attach social links to each record. `pool` is the run-level executor; reusing it across grid points keeps the worker threads (and their per-thread HTTP sessions / TLS connections) alive instead of rebuilding 20 threads per point."""
+def _uid_of(record: dict) -> str:
+    """UID организации до того, как enrich снимет служебные поля."""
+    return str(
+        record.get("_biz_id")
+        or record.get("yandex_maps_url")
+        or record_key(record)
+        or ""
+    ).strip()
+
+
+def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None = None,
+           report: dict | None = None) -> list[dict]:
+    """Fetch detail pages in parallel and attach social links to each record. `pool` is the run-level executor; reusing it across grid points keeps the worker threads (and their per-thread HTTP sessions / TLS connections) alive instead of rebuilding 20 threads per point.
+
+    `report` получает два множества: `done` — карточки, которые разобраны
+    (в том числе сознательно отфильтрованы), `failed` — карточки, которые
+    не удалось прочитать. Только `done` можно записывать в глобальный seen:
+    иначе сбойная карточка навсегда считалась бы обработанной.
+    """
     results: list[dict] = []
+    if report is None:
+        report = {}
+    done = report.setdefault("done", set())
+    failed = report.setdefault("failed", set())
 
     # Initialize adaptive concurrency semaphore
     global _concurrency_semaphore, _effective_workers
@@ -91,6 +112,7 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
         state._add_candidates(len(candidates))
 
     def process(record: dict) -> dict | None:
+        uid = _uid_of(record)
         biz_id  = record.pop("_biz_id", "")
         raw     = record.pop("_raw_feature", {})
         agg_url = record.pop("_aggregator_url", "")
@@ -108,6 +130,8 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
         if crawl_skip_reason(record, words=state.BLACKLIST_WORDS) == "blacklist":
             state.inc_crawl_skip("blacklist")
             state.syslog(f"skip_prefilter[blacklist]: {biz_name}")
+            if uid:
+                done.add(uid)
             with _pbar_lock:
                 pbar.update(1)
             return None
@@ -197,6 +221,10 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
 
             # Резервный путь без браузера больше не используется: если пул вкладок не поднялся, запись уходит без соцсетей — это честнее, чем долбить Яндекс HTTP-запросами.
             _fetch_elapsed = time.monotonic() - _fetch_t0
+            if should_fetch and not html and not _stop_requested():
+                if uid:
+                    failed.add(uid)
+                state.syslog(f"fetch_detail failed: {biz_name} — карточка не открылась, повтор при следующем прогоне")
             # Extractors run on a complex JSON blob / HTML and can raise; if they did, the slot was never released and the pool silently lost a worker for the rest of the batch.
             try:
                 if html:
@@ -206,9 +234,13 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
                     need_phone = not str(record.get("phone") or "").strip()
                     need_site = not str(record.get("website") or "").strip()
                     need_agg = not str(record.get("aggregator_url") or "").strip()
+                    need_details = any(not record.get(k)
+                                       for k in ("email", "hours", "description",
+                                                 "services", "status"))
                     page = extract_page(html, rating=need_rating,
                                         phone=need_phone, website=need_site,
-                                        aggregator=need_agg)
+                                        aggregator=need_agg,
+                                        details=need_details)
                     # Порядок приоритета: выдача → встроенные данные → секция контактов карточки.
                     for k, v in page["socials_json"].items():
                         socials.setdefault(k, v)
@@ -220,10 +252,23 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
                             record["rating"] = page["rating"]
                         if page["reviews"] and not record.get("reviews_count"):
                             record["reviews_count"] = page["reviews"]
-                    # Телефон: выдача Яндекс.Карт его не показывает — на карточке организации он есть как ссылка tel:, а страница уже загружена.
-                    if need_phone and page["phone"]:
-                        record["phone"] = page["phone"]
-                        state.syslog(f"phone_from_page: {biz_name} → {page['phone']}")
+                    # Телефон: выдача Яндекс.Карт его не показывает — на карточке организации он есть как ссылка tel:. Собираем ВСЕ номера, а не первый.
+                    page_phones = page.get("phones") or ([page["phone"]] if page.get("phone") else [])
+                    if page_phones:
+                        current = [p.strip() for p in str(record.get("phone") or "").split(",") if p.strip()]
+                        for phone in page_phones:
+                            if phone and phone not in current:
+                                current.append(phone)
+                        if current:
+                            record["phone"] = ", ".join(current)
+                            state.syslog(f"phone_from_page: {biz_name} → {record['phone']}")
+                    # Новые сведения карточки: не перезаписываем то, что уже
+                    # пришло из выдачи, и не подмешиваем чужие контакты.
+                    for field in ("email", "hours", "description", "services", "status"):
+                        value = page.get(field) or ""
+                        if value and not str(record.get(field) or "").strip():
+                            record[field] = value
+                            state.syslog(f"{field}_from_page: {biz_name} → {str(value)[:80]}")
                     # Сайт организации: раньше его отдавал API вместе с выдачей, теперь — блок контактов карточки (см. extract_website).
                     site = page["website"] if need_site else ""
                     if site:
@@ -287,8 +332,15 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
             _site = (record.get("website") or record.get("aggregator_url") or "").strip()
             state.syslog(f"skip_prefilter[{_reason}]: {biz_name}"
                          + (f" — {_site[:60]}" if _site else ""))
+            if uid:
+                done.add(uid)
             return None
 
+        # Если чтение карточки уже провалилось, запись всё равно уходит в
+        # выгрузку без контактов, но НЕ становится «готовой»: иначе повторный
+        # прогон пропустит её как обработанную.
+        if uid and uid not in failed:
+            done.add(uid)
         state._inc_found()
         social_list = [f"{p}:{socials[p][:30]}" for p in KNOWN_PLATFORMS if socials.get(p)]
         # File-only: detailed trace per business
@@ -319,7 +371,11 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
                     res = fut.result(timeout=0)
                     if res is not None:
                         results.append(res)
-                except Exception:
+                except Exception as exc:
+                    failed_uid = _uid_of(futures.get(fut, {}))
+                    if failed_uid:
+                        failed.add(failed_uid)
+                    state.syslog(f"enrich_error: {type(exc).__name__}: {exc}")
                     with _pbar_lock:
                         pbar.update(1)
     finally:
@@ -340,7 +396,7 @@ def collect_candidates(
     pbar_detail: tqdm,
     seen_lock=None,
     search_session=None,
-) -> tuple[list[dict], int | None, int]:
+) -> tuple[list[dict], int | None, int, dict]:
     """Search-phase only: gather candidate records for one (query, point)."""
     from .search import search_page, parse_feature
 
@@ -348,16 +404,20 @@ def collect_candidates(
     consecutive_empty = 0
     found_total: int | None = None
     new_total: int = 0
+    search_status = "ok"
 
     for page in range(state.MAX_PAGES):
         if state._STOP_EVENT and state._STOP_EVENT.is_set():
             break
         if state.is_skip_city():
             break
-        features, found = search_page(
-            query, city, lat, lon, page * 50, session=search_session
+        features, found, info = search_page(
+            query, city, lat, lon, page * 25, session=search_session,
+            with_status=True,
         )
-        state.syslog(f"search_page: query={query}, city={city}, page={page + 1}, features={len(features)}, found={found}")
+        search_status = info.get("status") or search_status
+        state.syslog(f"search_page: query={query}, city={city}, page={page + 1}, "
+                     f"features={len(features)}, found={found}, status={search_status}")
         if found is not None and found_total is None:
             found_total = found
         if not features:
@@ -402,7 +462,11 @@ def collect_candidates(
             state.syslog(f"  candidate limit reached: {len(candidates)}/{max_cand}, stopping search")
             break
 
-        if len(features) < 50:
+        if search_status == "partial":
+            # Неполную выдачу не дочитываем вслепую: следующий запуск повторит
+            # точку, а не сохранит половину как готовую.
+            break
+        if len(features) < 25:
             break
 
         if new_this_page == 0:
@@ -426,4 +490,8 @@ def collect_candidates(
     with _pbar_lock:
         pbar_detail.total = (pbar_detail.total or 0) + len(candidates)
         pbar_detail.refresh()
-    return candidates, found_total, new_total
+    return candidates, found_total, new_total, {
+        "status": search_status,
+        "total": found_total,
+        "pages": page + 1 if "page" in locals() else 0,
+    }

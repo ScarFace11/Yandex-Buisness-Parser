@@ -25,12 +25,12 @@ if "websocket" not in sys.modules:
     _fake_ws_mod.create_connection = None  # patched per-test
     sys.modules["websocket"] = _fake_ws_mod
 
+from yandex_maps_parser import cdp_client
 from yandex_maps_parser.cdp_client import (
     _cdp_eval,
     _cdp_navigate_and_get_html,
     _href_committed,
     _navigation_target,
-    _CDP_USER_AGENT,
 )
 
 _ORG_URL = "https://yandex.ru/maps/org/4312570888"
@@ -183,7 +183,9 @@ class TestCdpFetch:
         assert methods[1] == "Network.setUserAgentOverride"
         assert "Page.navigate" in methods
         ua = fake._sent[1]["params"]["userAgent"]
-        assert ua == _CDP_USER_AGENT
+        # Сравниваем с текущим значением модуля: другой тест мог синхронизировать
+        # UA с реальной версией Chrome, и импортированная строка устарела бы.
+        assert ua == cdp_client._CDP_USER_AGENT
         assert "Headless" not in ua
         nav = next(m for m in fake._sent if m["method"] == "Page.navigate")
         assert nav["params"]["url"] == _ORG_URL

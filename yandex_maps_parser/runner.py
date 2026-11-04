@@ -6,7 +6,7 @@ import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from colorama import init as colorama_init
 from tqdm import tqdm
@@ -14,7 +14,7 @@ from tqdm import tqdm
 from yandex_maps_parser import state
 from yandex_maps_parser.checkpoint import (
     load_checkpoint, save_checkpoint, clear_checkpoint,
-    load_global_seen, save_global_seen,
+    load_global_seen, load_global_seen_dates, save_global_seen,
 )
 from yandex_maps_parser.enrichment import collect_candidates, enrich
 from yandex_maps_parser.http_client import reset_stats
@@ -132,12 +132,35 @@ def run() -> None:
     else:
         state._EXCEL_APPEND_ENABLED = False
 
-    ckpt       = load_checkpoint(ckpt_key) if state.RESUME_MODE else {"seen_urls": set(), "completed": set()}
+    ckpt       = load_checkpoint(ckpt_key) if state.RESUME_MODE else {
+        "seen_urls": set(), "completed": set(), "failed_urls": set(),
+    }
     seen_urls  = ckpt["seen_urls"]
     completed  = ckpt["completed"]
+    failed_urls = ckpt.get("failed_urls", set())
+    # Внутри прогона карточку тоже не считаем готовой, пока enrich её не разобрал.
+    seen_urls -= failed_urls
 
-    # Never re-touch businesses already parsed in ANY earlier run.
-    seen_urls |= load_global_seen()
+    seen_at = load_global_seen_dates()
+    processed_urls = set(seen_at)
+    if getattr(state, "REFRESH_SEEN", False):
+        # Режим «проверить старые» намеренно не берёт checkpoint: точка должна
+        # открыться заново. Свежие карточки (моложе REFRESH_DAYS) всё равно
+        # пропускаем, а старые и карточки без даты перепроверяем.
+        completed = set()
+        days = max(0, int(getattr(state, "REFRESH_DAYS", 90) or 0))
+        cutoff = datetime.now() - timedelta(days=days)
+        recent: set[str] = set()
+        for uid, stamp in seen_at.items():
+            try:
+                if stamp and datetime.fromisoformat(stamp) >= cutoff:
+                    recent.add(uid)
+            except (TypeError, ValueError):
+                pass
+        seen_urls = set() if days == 0 else recent
+    else:
+        # Never re-touch businesses already parsed successfully in ANY earlier run.
+        seen_urls |= processed_urls
 
     if state.APPEND_MODE:
         seen_urls |= load_existing_urls(paths["csv"])
@@ -165,6 +188,8 @@ def run() -> None:
     grid_index = build_grid_index(grid_points) if use_grid else {}
     dead_points: dict[tuple[float, float], bool] = {}
 
+    _last_progress_save = 0.0
+
     def mark_progress(query: str) -> None:
         nonlocal progress_count
         with progress_lock:
@@ -172,24 +197,60 @@ def run() -> None:
             pbar_pts.update(1)
             state._progress(progress_count, total_points, query)
 
+    def save_progress(force: bool = False) -> None:
+        """Сохранить прогресс после точки, а не только после целого запроса."""
+        nonlocal _last_progress_save
+        now = time.monotonic()
+        if not force and now - _last_progress_save < 3.0:
+            return
+        _last_progress_save = now
+        with progress_lock:
+            save_checkpoint(ckpt_key, seen_urls, completed, failed_urls)
+            save_global_seen(processed_urls, seen_at)
+
     def run_query(query: str):
         state.info(f"  ─── Запрос «{query}»: начало поиска")
         query_records: list[dict] = []
         processed_keys: list[tuple] = []
+        query_failed: set[str] = set()
         # Search-phase bookkeeping for the «всё уже спарсено ранее» verdict:
         api_hits = 0
         new_candidates_total = 0
 
         batch_results: dict = {}
+        batch_reports: dict = {}
         batch_key: tuple | None = None
         batch_thread: threading.Thread | None = None
 
         def run_enrich_batch(cands, k) -> None:
+            report = {"done": set(), "failed": set()}
             try:
-                batch_results[k] = enrich(cands, pbar_detail, pool=detail_pool)
+                batch_results[k] = enrich(cands, pbar_detail, pool=detail_pool,
+                                          report=report)
             except Exception as exc:
                 state.warn(f"Ошибка загрузки деталей: {exc}")
                 batch_results[k] = []
+            finally:
+                batch_reports[k] = report
+
+        def finish_batch(key) -> None:
+            """Записать результат точки: failed не становится completed."""
+            report = batch_reports.pop(key, {})
+            done = set(report.get("done") or ())
+            failed = set(report.get("failed") or ())
+            with progress_lock:
+                processed_urls.update(done)
+                for uid in done:
+                    seen_at[uid] = datetime.now().isoformat()
+                failed_urls.update(failed)
+                query_failed.update(failed)
+                if failed:
+                    completed.discard(key)
+                    state.syslog(f"point retry: {key}, failed={len(failed)}")
+                else:
+                    completed.add(key)
+                    processed_keys.append(key)
+            save_progress()
 
         def start_batch(key, candidates) -> None:
             nonlocal batch_key, batch_thread
@@ -222,7 +283,7 @@ def run() -> None:
                 if _join_stop_aware(batch_thread):
                     recs = batch_results.pop(batch_key, [])
                     query_records.extend(recs)
-                    processed_keys.append(batch_key)
+                    finish_batch(batch_key)
                     mark_progress(query)
                 batch_thread = None
                 batch_key = None
@@ -233,7 +294,7 @@ def run() -> None:
                 if _join_stop_aware(prev_thread):
                     recs = batch_results.pop(prev_key, [])
                     query_records.extend(recs)
-                    processed_keys.append(prev_key)
+                    finish_batch(prev_key)
                     mark_progress(query)
 
         # Drain any leftover enrichment from previous city's last query
@@ -271,11 +332,15 @@ def run() -> None:
 
             pbar_search.set_description(f"«{query}»")
 
-            candidates, found, new_candidates = collect_candidates(
+            candidates, found, new_candidates, search_meta = collect_candidates(
                 query, state.CITY, lat, lon, seen_urls,
                 pbar_search, pbar_detail, seen_lock=seen_lock,
             )
-            state.syslog(f"point result: api_found={found}, candidates={len(candidates)}, new={new_candidates}")
+            state.syslog(f"point result: api_found={found}, candidates={len(candidates)}, "
+                         f"new={new_candidates}, status={search_meta.get('status')}")
+            if found:
+                state.info(f"  📄 Яндекс: всего {found}, собрано {len(candidates)}"
+                           f" (лимит {state.MAX_CANDIDATES_PER_CITY or 'без ограничения'})")
             try:
                 api_hits = max(api_hits, int(found or 0))
                 new_candidates_total += int(new_candidates or 0)
@@ -297,9 +362,11 @@ def run() -> None:
         # Wait for the final batch.
         drain_batch()
 
-        state.info(f"  ✅ «{query}»: {len(query_records)} записей")
-        state.syslog(f"query_done: query={query}, records={len(query_records)}")
-        return processed_keys, query_records, (api_hits, new_candidates_total)
+        state.info(f"  ✅ «{query}»: {len(query_records)} записей"
+                   + (f" · {len(query_failed)} карточек будут повторены" if query_failed else ""))
+        state.syslog(f"query_done: query={query}, records={len(query_records)}, "
+                     f"failed={len(query_failed)}")
+        return processed_keys, query_records, (api_hits, new_candidates_total), query_failed
 
     pending_queries = [
         query for query in state.SEARCH_QUERIES
@@ -330,7 +397,7 @@ def run() -> None:
                 for future in as_completed(futures):
                     query = futures[future]
                     try:
-                        processed_keys, records, point_stats = future.result()
+                        processed_keys, records, point_stats, failed = future.result()
                     except Exception as exc:
                         state.warn(f"Ошибка в запросе «{query}»: {exc}")
                         continue
@@ -339,13 +406,14 @@ def run() -> None:
                     _new_candidates += point_stats[1]
                     all_results.extend(records)
                     completed.update(processed_keys)
+                    failed_urls.update(failed)
                     if records and state.OUTPUT_CSV and _legacy_exports:
                         save_csv(records, paths["csv"], append=True)
                         state.syslog(f"csv_append: +{len(records)} records")
 
-                    if processed_keys:
-                        save_checkpoint(ckpt_key, seen_urls, completed)
-                        save_global_seen(seen_urls)
+                    if processed_keys or failed:
+                        save_checkpoint(ckpt_key, seen_urls, completed, failed_urls)
+                        save_global_seen(processed_urls, seen_at)
 
                     if state._STOP_EVENT and state._STOP_EVENT.is_set():
                         break
@@ -371,8 +439,8 @@ def run() -> None:
             except Exception:
                 pass
             state._RESULT_HANDLE = None
-        save_global_seen(seen_urls)
-        save_checkpoint(ckpt_key, seen_urls, completed)
+        save_global_seen(processed_urls, seen_at)
+        save_checkpoint(ckpt_key, seen_urls, completed, failed_urls)
 
     # Rebuild the full list from the crash-safe JSONL sidecar.
     jsonl_records = load_jsonl(paths["jsonl"])
@@ -537,6 +605,13 @@ def _apply_params(params: dict) -> None:
     state.OUTPUT_FILENAME = None
     state.APPEND_MODE     = False
     state.RESUME_MODE     = bool(params.get("resume", False))
+    # «Проверить старые»: TTL для глобального seen. 0 дней — перепроверить всё.
+    state.REFRESH_SEEN    = bool(params.get("refresh_seen", False))
+    try:
+        state.REFRESH_DAYS = max(0, min(3650, int(params.get("refresh_days", 90))))
+    except (TypeError, ValueError):
+        state.REFRESH_DAYS = 90
+    state.SEARCH_PAGE_FAILED = False
     # Two-stage pipeline: "raw" — сбор применяет только те фильтры, которые известны по самой записи (чёрный список, «только без сайтов», соцсети: см. processing.crawl_skip_reason), а фильтры, которым нужен весь набор (объединение филиалов, «тип компании», оценка лида), ждут этапа 2. Unset → legacy behaviour.
     _pl = params.get("pipeline", "")
     state.PIPELINE = _pl if _pl in ("raw", "") else ""

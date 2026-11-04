@@ -94,13 +94,14 @@ class TestMessage:
 
         def blocked(*a, **kw):
             browser_search._set_blocked("captcha")
-            return []
+            return {"cards": [], "status": "blocked", "total": None, "complete": False}
 
-        monkeypatch.setattr(search, "harvest_cards", blocked)
+        monkeypatch.setattr(search, "harvest_cards_ex", blocked)
         for query in ("кафе", "бар", "столовая"):
             assert search.search_page(query, "Калуга", 54.51, 36.26, 0) == ([], None)
-        assert len(warned) == 1, warned
-        assert "Вы не робот" in warned[0]
+        hints = [w for w in warned if "Вы не робот" in w]
+        assert len(hints) == 1, warned
+        assert "проверку" in hints[0]
         assert state.SEARCH_BLOCKED == "captcha"
 
     def test_reset_clears_the_reason(self):
