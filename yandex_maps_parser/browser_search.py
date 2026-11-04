@@ -170,6 +170,7 @@ _STATE_JS = """
   if (!st) return '';   // нет состояния → DOM-фолбэк
   const total = Number(st.totalResultCount || 0) || 0;
   const out = new Map();
+  let blocked = '';
   const add = (items) => {
     for (const it of (items || [])) {
       const card = norm(it);
@@ -184,6 +185,9 @@ _STATE_JS = """
   for (let page = 2; page <= maxPage && out.size < want; page++) {
     if (Date.now() - startedAt > budgetMs) { complete = false; break; }
     if (total && out.size >= total) break;
+    // Пауза между страницами: без неё Яндекс видит серию запросов подряд и
+    // чаще включает проверку вместо продолжения выдачи.
+    await sleep(250 + Math.floor(Math.random() * 400));
     let html = '';
     try {
       // Тот же запрос, что делает сам Яндекс.Карты при прокрутке списка:
@@ -197,13 +201,29 @@ _STATE_JS = """
       complete = false;
       break;
     }
+    // Проверка «Вы не робот?» может прийти не на первой, а на следующей
+    // странице: раньше такой ответ молча обрывал пагинацию, и точка
+    // кэшировалась как неполная, но «завершённая».
+    if (/showcaptcha|вы не робот|smartcaptcha/i.test(html)) {
+      blocked = 'captcha';
+      complete = false;
+      break;
+    }
     const next = readState(new DOMParser().parseFromString(html, 'text/html'));
-    if (!next || !(next.items || []).length) break;
+    if (!next || !(next.items || []).length) {
+      if (total && out.size < total) complete = false;
+      break;
+    }
     const before = out.size;
     add(next.items);
-    if (out.size === before) break;               // страница не дала новых организаций
+    if (out.size === before) {
+      if (total && out.size < total) complete = false;
+      break;
+    }
   }
-  return JSON.stringify({total: total, cards: [...out.values()], complete: complete});
+  if (total && out.size < total) complete = false;
+  return JSON.stringify({total: total, cards: [...out.values()], complete: complete,
+                         blocked: blocked});
 })()
 """
 
