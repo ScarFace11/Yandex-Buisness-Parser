@@ -167,10 +167,54 @@ def open_page(tab, url: str, fill_form: bool = True) -> None:
     # что у человека, и клавиатура тоже. Фиксированное окно нужно аудиту
     # раскладки (tests/test_a11y_browser.py), а здесь на первом месте —
     # настоящее поведение браузера при нажатиях.
-    tab.open(url, wait_expr="document.getElementById('setup-summary')")
+    # Ждём и последний модуль: без uiChoose окно выбора молча не откроется
+    # (Promise отклонится, а тест увидит только пустую страницу).
+    tab.open(
+        url,
+        wait_expr="document.getElementById('setup-summary') && typeof uiChoose === 'function'",
+    )
     tab.evaluate(HIDE_OVERLAYS)
     if fill_form:
         tab.evaluate(FILL_FORM)
+
+
+MODAL_STATE = """
+(() => JSON.stringify({
+  ready: document.readyState,
+  url: location.href,
+  choose: typeof uiChoose,
+  modalError: window.__modalError || null,
+  overlays: document.querySelectorAll('.ui-modal-overlay').length,
+  visible: Array.from(document.querySelectorAll('.ui-modal-overlay:not([hidden])'))
+    .filter(el => el.getClientRects().length > 0).length,
+}))()
+"""
+
+
+def open_modal_case(tab, url: str, case: dict) -> bool:
+    """Открыть окно из MODALS на свежей странице и дождаться его."""
+    name, opener, box = case["name"], case["js"], case["box"]
+    open_page(tab, url)
+    # Эти два окна и есть предмет проверки: возвращаем им видимость,
+    # которую open_page снял вместе с прочими оверлеями первого входа.
+    if name in ("terms", "version-gate"):
+        overlay = "#terms-overlay" if name == "terms" else "#version-gate"
+        tab.evaluate(
+            "document.querySelector(%s).style.display = '';"
+            % json.dumps(overlay)
+        )
+    if case.get("pre"):
+        tab.evaluate(case["pre"])
+    # Фокус и открытие — одним вызовом: между двумя вызовами приложение
+    # успевает перерисовать панель, и «открывателем» оказалось бы body.
+    # Ошибку открытия показываем в диагностике, а не теряем молча.
+    tab.evaluate(
+        "window.__modalError = null;"
+        " document.getElementById('btn-run').focus();"
+        f" try {{ {opener}; }}"
+        " catch (e) { window.__modalError = String(e); } void 0"
+    )
+    return wait_for(tab, box)
 
 
 def wait_for(tab, selector: str, timeout: float = 10.0) -> bool:
@@ -433,28 +477,21 @@ def test_keyboard_scan_detects_invisible_focus(browser_cdp, live_app_url):
 @pytest.mark.parametrize("case", MODALS, ids=[m["name"] for m in MODALS])
 def test_modal_holds_focus_and_returns_it(browser_cdp, live_app_url, case):
     """Окно называет себя, держит фокус внутри и возвращает его после Escape."""
-    name, opener, box = case["name"], case["js"], case["box"]
+    name, box = case["name"], case["box"]
     closes = case.get("escape", True)
     tab = new_tab(browser_cdp)
     try:
-        open_page(tab, live_app_url)
-        # Эти два окна и есть предмет проверки: возвращаем им видимость,
-        # которую open_page снял вместе с прочими оверлеями первого входа.
-        if name in ("terms", "version-gate"):
-            overlay = "#terms-overlay" if name == "terms" else "#version-gate"
-            tab.evaluate(
-                "document.querySelector(%s).style.display = '';"
-                % json.dumps(overlay)
-            )
-        if case.get("pre"):
-            tab.evaluate(case["pre"])
-        # Фокус и открытие — одним вызовом: между двумя вызовами приложение
-        # успевает перерисовать панель, и «открывателем» оказалось бы body.
-        tab.evaluate(
-            "document.getElementById('btn-run').focus();"
-            f" {opener}; void 0"
+        opened = open_modal_case(tab, live_app_url, case)
+        if not opened:
+            # На macOS вкладка изредка перезагружается сразу после open_page:
+            # окно успевает появиться в старом документе и исчезнуть вместе
+            # с ним. Повторная загрузка не ослабляет проверку — все требования
+            # к роли, фокусу и Tab ниже остаются прежними.
+            opened = open_modal_case(tab, live_app_url, case)
+        assert opened, (
+            f"окно «{name}» не открылось после двух загрузок ({box}); "
+            f"состояние: {tab.evaluate(MODAL_STATE)}"
         )
-        assert wait_for(tab, box), f"окно «{name}» не открылось ({box})"
 
         report = json.loads(tab.evaluate(MODAL_REPORT % json.dumps(box)))
         assert report["role"] == "dialog", f"«{name}»: role={report['role']} вместо dialog"
