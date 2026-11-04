@@ -12,9 +12,10 @@ name: Publish release (auto)
 #      черновике лежат все файлы (иначе публикации не будет);
 #   4. если вторая сборка ещё идёт — выходим и ждём: её завершение запустит
 #      проверку снова (последний завершившийся видит обе готовыми);
-#   5. черновик публикуется (gh release edit --draft=false) — дальше
-#      announce-release.yml объявляет версию в static/version.json на main,
-#      и только после этого приложения видят обновление.
+#   5. черновик публикуется (gh release edit --draft=false), и этот же job
+#      запускает announce-release.yml через workflow_dispatch: GitHub не
+#      будит workflow событием release: published, если релиз опубликован
+#      его же GITHUB_TOKEN. Только после объявления приложения видят обновление.
 #
 # Ручной запуск (workflow_dispatch) — для уже СОбранных релизов: публикует
 # черновик по тегу, ничего не пересобирая. Он же — аварийный выход, если
@@ -37,7 +38,7 @@ on:
 
 permissions:
   contents: write   # публикация релиза
-  actions: read     # чтение статусов запусков
+  actions: write    # чтение статусов и запуск announce-release.yml
 
 jobs:
   publish:
@@ -54,6 +55,10 @@ jobs:
       # Все файлы, которые обязаны лежать на релизе до публикации.
       # .dmg обязателен: без него на macOS нечего ставить.
     steps:
+      # Скрипты лежат в репозитории: без checkout `python3 scripts/...`
+      # падает с «can't open file», и публикация не доходит до релиза.
+      - uses: actions/checkout@v4
+
       - name: Check the tag — публикуем только стабильные релизы
         id: tag
         # Нормализация и проверка формата — в scripts/release_tag.py.
@@ -83,4 +88,17 @@ jobs:
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
           gh release edit "$TAG" --repo "$REPO" --draft=false
-          echo "Релиз $TAG опубликован. Версию на главной объявит announce-release.yml."
+          echo "Релиз $TAG опубликован. Запускаем объявление версии."
+
+      - name: Announce the published version
+        # workflow_dispatch — исключение из правила GITHUB_TOKEN: событие
+        # release: published от собственного токена GitHub не создаёт.
+        # Запускаем объявление явно, в том числе если релиз уже был
+        # опубликован предыдущим запуском (draft_decision = published).
+        if: steps.draft.outputs.ok == 'true' || steps.draft.outputs.published == 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          gh workflow run announce-release.yml --repo "$REPO" --ref main \
+            -f tag="$TAG"
+          echo "Announce release запущен для $TAG."

@@ -275,6 +275,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          # Действие по умолчанию публикует существующий черновик после
+          # загрузки. Нам нужен только сам файл: публикует отдельный
+          # publish-release.yml, когда обе сборки уже зелёные.
+          draft: true
           # plus история изменений: релиз уезжает вместе с ней.
           # Обновлятор ищет архив по имени YandexBusinessParser-windows-x64.zip
           # (ZIP_ASSET_NAME в routes/update.py) — лишние ассеты ему не мешают.

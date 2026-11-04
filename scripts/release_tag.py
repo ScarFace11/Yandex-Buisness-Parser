@@ -159,18 +159,18 @@ def main(argv: list[str] | None = None) -> int:
         if verdict == "absent":
             print(f"Черновика {tag} нет (его создаёт job release-draft) — "
                   "публиковать нечего.")
-            _write("GITHUB_OUTPUT", ["ok=false"])
+            _write("GITHUB_OUTPUT", ["ok=false", "published=false"])
             return 0
         if verdict == "published":
-            print(f"Релиз {tag} уже опубликован — ничего не делаем.")
-            _write("GITHUB_OUTPUT", ["ok=false"])
+            print(f"Релиз {tag} уже опубликован — объявляем версию без повторной публикации.")
+            _write("GITHUB_OUTPUT", ["ok=false", "published=true"])
             return 0
         if verdict == "missing":
             print(f"::error::на черновике {tag} нет файлов: {', '.join(missing)} — "
                   "публикация отложена.")
             return 1
         print(f"Черновик {tag} готов к публикации: все файлы на месте.")
-        _write("GITHUB_OUTPUT", ["ok=true"])
+        _write("GITHUB_OUTPUT", ["ok=true", "published=false"])
         return 0
 
     print(f"::error::неизвестный режим '{mode}'")

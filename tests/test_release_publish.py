@@ -75,10 +75,13 @@ class TestTriggers:
 # ── Права и место в конвейере ─────────────────────────────────
 
 class TestPermissionsAndScope:
-    def test_can_publish_a_release_and_read_run_statuses(self):
+    def test_can_publish_a_release_and_start_the_announcement(self):
         perms = wf()["permissions"]
         assert perms["contents"] == "write"
-        assert perms["actions"] == "read"
+        # Не только читать статусы сборок: workflow_dispatch объявления
+        # версии — единственный способ разбудить announce-release после
+        # публикации, сделанной GITHUB_TOKEN.
+        assert perms["actions"] == "write"
 
     def test_publishing_is_not_scattered_across_the_builds(self):
         """Черновик публикует ровно один workflow — иначе гонка за релиз."""
@@ -88,8 +91,17 @@ class TestPermissionsAndScope:
     def test_nothing_is_rebuilt_here(self):
         body = code()
         for forbidden in ("pyinstaller", "pip install", "stamp_version",
-                          "version.json", "actions/checkout"):
+                          "version.json"):
             assert forbidden not in body, f"публикация не должна: {forbidden}"
+
+    def test_scripts_are_checked_out_before_they_run(self):
+        """Без checkout `python3 scripts/...` падает с can't open file."""
+        steps = wf()["jobs"]["publish"]["steps"]
+        checkout_at = next(i for i, s in enumerate(steps)
+                           if str(s.get("uses", "")).startswith("actions/checkout"))
+        tag_at = next(i for i, s in enumerate(steps)
+                      if "Check the tag" in s.get("name", ""))
+        assert checkout_at < tag_at
 
 
 # ── Гейты: обе сборки, файлы, статус черновика ────────────────
@@ -173,6 +185,38 @@ class TestGates:
         body = code()
         assert 'gh release edit "$TAG"' in body
         assert "--draft=false" in body
+
+    def test_asset_upload_keeps_the_release_as_a_draft(self):
+        """softprops по умолчанию публикует черновик после загрузки."""
+        steps = wf(WINDOWS_BUILD)["jobs"]["build"]["steps"]
+        upload = next(s for s in steps
+                      if str(s.get("uses", "")).startswith("softprops/action-gh-release"))
+        assert upload["with"]["draft"] is True
+
+    def test_published_release_is_announced_explicitly(self):
+        """GITHUB_TOKEN не создаёт release: published — запускаем вручную."""
+        steps = wf()["jobs"]["publish"]["steps"]
+        names = [s.get("name", "") for s in steps]
+        publish_at = next(i for i, n in enumerate(names) if n == "Publish the release")
+        announce_at = next(i for i, n in enumerate(names) if n == "Announce the published version")
+        assert announce_at > publish_at
+        step = steps[announce_at]
+        assert "gh workflow run announce-release.yml" in step["run"]
+        assert '-f tag="$TAG"' in step["run"]
+        assert "steps.draft.outputs.published == 'true'" in step["if"]
+
+    def test_published_release_is_reported_for_announcement(self, monkeypatch, tmp_path):
+        out = tmp_path / "github_output"
+        monkeypatch.setenv("GITHUB_OUTPUT", str(out))
+        monkeypatch.setenv("TAG", "v2.3.4")
+        monkeypatch.setenv("REPO", "o/r")
+        monkeypatch.setattr(release_tag, "_gh_release",
+                            lambda tag, repo: {"isDraft": False, "assets": []})
+        monkeypatch.setattr("builtins.print", lambda *a, **k: None)
+        assert release_tag.main(["draft"]) == 0
+        written = out.read_text(encoding="utf-8")
+        assert "ok=false" in written
+        assert "published=true" in written
 
 
 # ── Логика ожидания: гоняем сам скрипт на заглушке gh ────────
