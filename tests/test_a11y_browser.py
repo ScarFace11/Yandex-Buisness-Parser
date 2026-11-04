@@ -166,6 +166,10 @@ def test_header_buttons_are_clickable(browser_cdp, live_app_url):
             "deviceScaleFactor": 1, "mobile": False,
         })
         tab.open(live_app_url, wait_expr="document.getElementById('setup-summary')")
+        # Первый вход на чистом профиле блокирует страницу соглашением —
+        # оно не часть шапки, и без его закрытия все кнопки «под оверлеем».
+        tab.evaluate("document.querySelectorAll('#terms-overlay,#terms-declined,#version-gate')"
+                     ".forEach(el => { el.hidden = true; el.style.display = 'none'; })")
         # Уведомление показываем сами: оно висит в правом верхнем углу, ровно
         # над служебными кнопками. Раньше тост перехватывал клики все 3,5 с
         # своей жизни, и кнопки под ним выглядели мёртвыми.

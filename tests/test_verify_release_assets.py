@@ -481,6 +481,23 @@ class TestVerifyRelease:
         code = vra.verify_release("o/r", f"v{VERSION}", report_path=tmp_path / "r.md")
         assert code == 0, (tmp_path / "r.md").read_text(encoding="utf-8")
 
+    def test_an_asset_mask_does_not_require_the_whole_release(self, monkeypatch):
+        """--asset проверяет только выбранный файл, не весь комплект.
+
+        На старом опубликованном релизе может не быть установщика, который
+        появился позже; точечная проверка CHANGELOG не должна из-за этого
+        падать.
+        """
+        self._patch(monkeypatch, [{"name": "CHANGELOG.md"}])
+
+        def fake_download(asset, dest, token="", timeout=60):
+            dest.write_text("# Changelog\n", encoding="utf-8")
+            return dest.stat().st_size
+
+        monkeypatch.setattr(vra, "download_asset", fake_download)
+        monkeypatch.setattr(vra, "verify_asset", lambda *a, **k: ("ok", []))
+        assert vra.verify_release("o/r", f"v{VERSION}", only="CHANGELOG.md") == 0
+
 
 # ── Мелкие помощники ───────────────────────────────────────────
 

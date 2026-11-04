@@ -468,7 +468,10 @@ def verify_release(repo: str, tag: str = "", token: str = "", only: str = "",
         return 1
 
     names = [a.get("name", "") for a in assets]
-    missing = [n for n in REQUIRED_ASSETS if n not in names]
+    # --asset — точечная проверка выбранного файла. Обязательный комплект
+    # проверяет обычный запуск без маски; иначе проверка одного CHANGELOG
+    # падала бы на старых релизах, где установщика ещё не было.
+    missing = [] if only else [n for n in REQUIRED_ASSETS if n not in names]
     if missing:
         print("::error::на релизе нет: " + ", ".join(missing))
 
@@ -548,7 +551,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--repo", default=repo_slug(), help="owner/name репозитория")
     ap.add_argument("--tag", default="", help="тег релиза (пусто — последний опубликованный)")
-    ap.add_argument("--asset", default="", help="маска имени ассета, например '*.zip'")
+    ap.add_argument("--asset", default="",
+                    help="проверить только ассеты по маске, например 'CHANGELOG.md'")
     ap.add_argument("--token", default=os.environ.get("GH_TOKEN", ""),
                     help="токен GitHub (для приватного репозитория)")
     ap.add_argument("--timeout", type=int, default=30, help="таймаут запросов, с")

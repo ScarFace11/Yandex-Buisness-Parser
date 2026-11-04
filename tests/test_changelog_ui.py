@@ -11,6 +11,7 @@ Run with: python -m pytest tests/test_changelog_ui.py -v
 import json
 import time
 
+from config import APP_VERSION
 from tests._browser import new_tab
 
 
@@ -57,8 +58,9 @@ def test_changelog_list_shows_summary_and_opens_full_text(browser_cdp, live_app_
         # 2. Нажатие на версию открывает полный текст.
         assert tab.click("#changelog-overlay .cl-entry")
         assert _wait(tab, "!!document.querySelector('#changelog-overlay .cl-detail')"), "полный текст не открылся"
-        # Заголовок — как у релиза на GitHub: «v2.4 — Настройки, журнал, …»,
-        # а текст разбит на разделы с пунктами, а не идёт одной простынёй.
+        # Заголовок — версия и название: «2.4 — Настройки, журнал, …».
+        # Буква «v» не дублирует подпись «Вы на v2.4» в списке, а текст
+        # разбит на разделы с пунктами, а не идёт одной простынёй.
         detail = json.loads(tab.evaluate("""(() => {
           const secs = [...document.querySelectorAll('#changelog-overlay .cl-sec')];
           const points = [...document.querySelectorAll('#changelog-overlay .cl-points li')];
@@ -76,7 +78,8 @@ def test_changelog_list_shows_summary_and_opens_full_text(browser_cdp, live_app_
         assert all(t.strip() for t in detail["headTitles"]), detail
         assert detail["points"] >= 10, detail
         assert len(detail["first"]) > 40, detail
-        assert detail["head"].startswith("v"), detail
+        assert detail["head"].startswith(APP_VERSION), detail
+        assert not detail["head"].startswith("v"), detail
         assert " — " in detail["head"], f"в заголовке нет названия версии: {detail['head']}"
         assert detail["list"] is False, "в подробном виде список должен уступать место тексту"
         assert any("Назад" in b for b in detail["buttons"]), detail
