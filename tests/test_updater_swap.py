@@ -35,12 +35,23 @@ ROOT = Path(__file__).resolve().parent.parent
 REAL_SWAP = os.environ.get("YP_UPDATER_E2E") == "1"
 
 
+def _host_executable(name: str) -> str:
+    """Настоящий исполняемый файл хоста для «замороженной» сборки.
+
+    Windows-бинарников на Linux/macOS нет, а тесты результата обновления
+    запускаются на всех платформах: им важно лишь наличие файла exe.
+    """
+    if sys.platform.startswith("win"):
+        return rf"C:\Windows\System32\{name}"
+    return "/bin/true"
+
+
 @pytest.fixture()
 def env(tmp_path, monkeypatch):
     """A fake frozen-Windows installation: exe + _internal + user data."""
     app_root = tmp_path / "app"
     (app_root / "_internal").mkdir(parents=True)
-    shutil.copy(r"C:\Windows\System32\where.exe", app_root / "YandexBusinessParser.exe")
+    shutil.copy(_host_executable("where.exe"), app_root / "YandexBusinessParser.exe")
     (app_root / "_internal" / "core.txt").write_text("OLD", encoding="utf-8")
     (app_root / ".env").write_text("API_KEY=1", encoding="utf-8")
     (app_root / "logs").mkdir()
@@ -77,7 +88,7 @@ def _make_zip(tmp_path: Path, version: str) -> Path:
     """A release zip the way CI builds it: exe + _internal at the top level."""
     stage = tmp_path / "stage"
     (stage / "_internal" / "static").mkdir(parents=True)
-    shutil.copy(r"C:\Windows\System32\robocopy.exe", stage / "YandexBusinessParser.exe")
+    shutil.copy(_host_executable("robocopy.exe"), stage / "YandexBusinessParser.exe")
     (stage / "_internal" / "core.txt").write_text("NEW", encoding="utf-8")
     (stage / "_internal" / "static" / "version.json").write_text(
         '{"version": "%s"}' % version, encoding="utf-8")
