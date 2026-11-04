@@ -42,6 +42,24 @@ class TestInstallerScript:
         assert f'#define MyAppVersion "{APP_VERSION}"' in text
         assert f'/DMyAppVersion={APP_VERSION}' in text
 
+    def test_file_version_has_four_numeric_parts(self):
+        """Inno не принимает короткую «2.4» в VersionInfoVersion.
+
+        Для ресурса файла нужна полная числовая версия; при выпуске её
+        обновляют вместе с APP_VERSION, а тест ловит забытое обновление.
+        """
+        from config import APP_VERSION
+        text = ISS.read_text(encoding="utf-8")
+        values = [line.split("=", 1)[1].strip()
+                  for line in text.splitlines()
+                  if line.startswith(("VersionInfoVersion=", "VersionInfoProductVersion="))]
+        assert len(values) == 2, values
+        assert values[0] == values[1], values
+        parts = values[0].split(".")
+        assert len(parts) == 4 and all(p.isdigit() for p in parts), parts
+        app_parts = APP_VERSION.split(".")
+        assert parts[:len(app_parts)] == app_parts, (values[0], APP_VERSION)
+
     def test_release_builds_and_attaches_the_installer(self):
         text = WF.read_text(encoding="utf-8")
         assert "innosetup" in text.lower()

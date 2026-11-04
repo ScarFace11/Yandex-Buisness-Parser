@@ -29,9 +29,11 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}/issues
 AppUpdatesURL={#MyAppURL}/releases
-VersionInfoVersion={#MyAppVersion}
+; Для файлового ресурса Windows нужна полная числовая версия: «2.4»
+; компилятор отвергает, поэтому четыре числа (обновляются вместе с релизом).
+VersionInfoVersion=2.4.0.0
 VersionInfoProductName={#MyAppName}
-VersionInfoProductVersion={#MyAppVersion}
+VersionInfoProductVersion=2.4.0.0
 DefaultDirName={localappdata}\Programs\{#MyAppShortName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
