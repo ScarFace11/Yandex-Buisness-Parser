@@ -62,10 +62,13 @@
   filter:invert(1) hue-rotate(180deg) brightness(.72) contrast(.78) saturate(.45);
   opacity:.92;
 }
-[data-theme="dark"] .leaflet-control-attribution{
+/* Leaflet объявляет подпись как `.leaflet-container .leaflet-control-attribution`
+   — та же сила, что у `[data-theme] .leaflet-control-attribution`, но его файл
+   приходит позже и выигрывает каскадом. ID возвращает подложке цвет темы. */
+[data-theme="dark"] #map-container .leaflet-control-attribution{
   background:var(--card);color:var(--muted);
 }
-[data-theme="dark"] .leaflet-control-attribution a{color:var(--c)}
+[data-theme="dark"] #map-container .leaflet-control-attribution a{color:var(--c)}
 /* Leaflet.css подключается позже (лениво, при открытии карты), поэтому его
    `.leaflet-popup-content-wrapper{background:white}` перекрывал наши токены:
    в тёмной теме светлый текст оказывался на белой подложке. ID в селекторе

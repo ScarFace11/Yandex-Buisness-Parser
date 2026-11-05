@@ -473,7 +473,149 @@ def test_keyboard_scan_detects_invisible_focus(browser_cdp, live_app_url):
 
 
 
-# ── 3. Модальные окна ───────────────────────────────────────────
+# ── 3. Карта и «Сведения»: Escape, фокус и колонка ───────────────
+# Одна строка с координатами и полями «Сведений»: на ней проверяются и
+# попап карты, и email в таблице. Вкладку тест открывает сам — иначе она
+# запросила бы /results-view уже после renderTable и затёрла образец.
+A11Y_ROW = """
+(() => {
+  const rows = [{
+    name: 'Кафе «Проверка»', category: 'Кафе', city: 'Москва',
+    address: 'ул. Тестовая, 1', phone: '+7 999 000-00-00',
+    site: 'https://example.ru', vk: '', telegram: '', instagram: '', whatsapp: '',
+    rating: 4.5, reviews_count: 10, lead_score: 50, query: 'кафе',
+    yandex_maps_url: 'https://yandex.ru/maps/org/1', without_site: false,
+    reviewed: false, note: '', email: 'test@example.ru',
+    hours: 'Пн–Вс 09:00–22:00', services: 'Кофе, завтраки',
+    status: 'Открыто', description: 'Описание для проверки «Сведений».',
+    lat: '55.75', lon: '37.61',
+  }];
+  allResults.length = 0;
+  rows.forEach(r => allResults.push(r));
+  renderTable(rows);
+})()
+"""
+
+
+def wait_table_loaded(tab, timeout: float = 10.0) -> bool:
+    """Дождаться, пока вкладка «Результаты» закончит свой запрос /results-view."""
+    deadline = time.monotonic() + timeout
+    probe = ("(() => { const b = document.getElementById('tbl-body');"
+             " return !!b && !b.textContent.includes('Загрузка'); })()")
+    while time.monotonic() < deadline:
+        if tab.evaluate(probe):
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def wait_gone(tab, selector: str, timeout: float = 5.0) -> bool:
+    """Дождаться, пока элемент исчезнет с экрана."""
+    deadline = time.monotonic() + timeout
+    probe = ("(() => { const el = document.querySelector(%s);"
+             " return !el || el.getClientRects().length === 0; })()"
+             % json.dumps(selector))
+    while time.monotonic() < deadline:
+        if tab.evaluate(probe):
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def test_map_popup_closes_on_escape_and_returns_focus(browser_cdp, live_app_url):
+    """Escape убирает карточку, но не оставляет фокус в пустоте.
+
+    Leaflet закрывает попап своей обработкой на document, а фокус остаётся
+    на удалённом элементе и проваливается в body. Клавиатурный пользователь
+    теряет место на странице; возврат на метку это исправляет.
+    """
+    tab = new_tab(browser_cdp)
+    try:
+        open_page(tab, live_app_url)
+        tab.evaluate(A11Y_ROW)
+        tab.evaluate("showTab('map')")
+        assert wait_for(tab, "#map-container .leaflet-marker-icon", timeout=20), \
+            "метка на карте не появилась"
+        opened = tab.evaluate("""(() => {
+          let target = null;
+          leafMap.eachLayer(l => { if (!target && l.getPopup && l.getPopup()) target = l; });
+          if (!target) return false;
+          target.openPopup();
+          return true;
+        })()""")
+        assert opened, "на карте нет метки с попапом"
+        assert wait_for(tab, "#map-container .leaflet-popup .map-pop"), "попап не открылся"
+        focused = tab.evaluate("""(() => {
+          const b = document.querySelector('#map-container .leaflet-popup-close-button');
+          if (!b) return false;
+          b.focus();
+          return document.activeElement === b;
+        })()""")
+        assert focused, "фокус не попал в попап"
+        tab.press("Escape")
+        assert wait_gone(tab, "#map-container .leaflet-popup"), "Escape не закрыл попап"
+        active = json.loads(tab.evaluate("""(() => {
+          const el = document.activeElement;
+          if (!el) return JSON.stringify(null);
+          return JSON.stringify({
+            marker: el.classList.contains('leaflet-marker-icon'),
+            label: el.getAttribute('aria-label'),
+            tabindex: el.getAttribute('tabindex'),
+          });
+        })()"""))
+        assert active and active["marker"], f"фокус не вернулся на метку: {active}"
+        assert active["tabindex"] == "0", f"метка недостижима с клавиатуры: {active}"
+        assert active["label"] == "Кафе «Проверка»", f"у метки нет названия: {active}"
+    finally:
+        tab.close()
+
+
+@pytest.mark.parametrize("theme", ("light", "dark"))
+def test_details_column_email_focus_is_visible(browser_cdp, live_app_url, theme):
+    """Email в «Сведениях» достижим с клавиатуры и имеет видимую рамку.
+
+    Колонка живёт внутри прокручиваемой таблицы: без рамки непонятно, где
+    фокус, а ссылка — единственный интерактивный элемент этих сведений.
+    """
+    tab = new_tab(browser_cdp)
+    try:
+        open_page(tab, live_app_url)
+        tab.evaluate("document.documentElement.setAttribute('data-theme', %s)"
+                     % json.dumps(theme))
+        # Сначала открываем вкладку: она сама запрашивает /results-view
+        # и иначе затёрла бы образец строки уже после renderTable.
+        tab.evaluate("showTab('table')")
+        assert wait_for(tab, "#p-table.active"), "вкладка «Результаты» не открылась"
+        assert wait_table_loaded(tab), "таблица не закончила загрузку"
+        tab.evaluate(A11Y_ROW)
+        assert wait_for(tab, ".tbl-email"), "колонка «Сведения» не отрисовалась"
+        # Настоящий Tab включает модальность «клавиатура»: без неё
+        # :focus-visible не срабатывает и рамка «не находится».
+        tab.press("Tab")
+        report = json.loads(tab.evaluate("""(() => {
+          const email = document.querySelector('.tbl-email');
+          email.focus();
+          const cs = getComputedStyle(email);
+          return JSON.stringify({
+            focused: document.activeElement === email,
+            visible: email.matches(':focus-visible'),
+            outlineStyle: cs.outlineStyle,
+            outlineWidth: cs.outlineWidth,
+            outlineColor: cs.outlineColor,
+            status: !!document.querySelector('.tbl-status'),
+            hours: !!document.querySelector('.tbl-detail-hours'),
+          });
+        })()"""))
+        assert report["focused"] and report["visible"], report
+        assert report["outlineStyle"] == "solid", report
+        assert float(report["outlineWidth"].replace("px", "")) >= 2, report
+        assert report["outlineColor"] not in ("", "transparent", "rgba(0, 0, 0, 0)"), report
+        assert report["status"] and report["hours"], report
+    finally:
+        tab.close()
+
+
+# ── 4. Модальные окна ───────────────────────────────────────────
 @pytest.mark.parametrize("case", MODALS, ids=[m["name"] for m in MODALS])
 def test_modal_holds_focus_and_returns_it(browser_cdp, live_app_url, case):
     """Окно называет себя, держит фокус внутри и возвращает его после Escape."""

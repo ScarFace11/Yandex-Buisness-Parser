@@ -68,6 +68,14 @@ def browser_cdp():
         original_ua = cdp_client._CDP_USER_AGENT
         started = cdp_client.init_browser(pool_size=1)
         cdp_client._CDP_USER_AGENT = original_ua
+        if not started and not os.environ.get("YP_CHROME_FLAGS"):
+            # В ограниченном окружении (песочница вокруг процесса) Chrome
+            # выходит с 0x80000003 ещё до открытия CDP-порта. Повторяем запуск
+            # без песочницы, но только для проверок: приложение по умолчанию
+            # её не снимает (см. cdp_client._extra_chrome_flags).
+            os.environ["YP_CHROME_FLAGS"] = "--no-sandbox"
+            started = cdp_client.init_browser(pool_size=1)
+            cdp_client._CDP_USER_AGENT = original_ua
         if not started:
             pytest.skip("браузер на Chromium не запустился — проверка интерфейса пропущена")
         try:

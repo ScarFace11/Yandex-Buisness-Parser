@@ -256,6 +256,26 @@ class TestContrast:
         assert rule, "подложка попапа должна перебивать Leaflet по ID"
         assert "background:var(--card)" in rule.group(1)
 
+    def test_map_attribution_surface_beats_leaflet_default(self):
+        """Подпись карты: Leaflet задаёт фон своим `.leaflet-container …`.
+
+        Селектор приложения с [data-theme] и классом имеет ту же силу, а
+        Leaflet.css приходит позже — в тёмной теме подпись оставалась светлой
+        полосой с контрастом 2.6:1. ID в селекторе делает правило сильнее.
+        """
+        leaflet = (ROOT / "static" / "vendor" / "leaflet" / "leaflet.css").read_text(encoding="utf-8")
+        assert re.search(
+            r"\.leaflet-container\s+\.leaflet-control-attribution\s*\{[^}]*"
+            r"background:\s*rgba\(255,\s*255,\s*255",
+            leaflet,
+        )
+        rule = re.search(
+            r'\[data-theme="dark"\] #map-container \.leaflet-control-attribution\{([^}]*)\}',
+            STYLE,
+        )
+        assert rule, "подложка подписи карты должна перебивать Leaflet по ID"
+        assert "background:var(--card)" in rule.group(1)
+
     def test_dense_semantic_buttons_exist_for_both_themes(self):
         """Кнопочные роли определены и темнее «текстовых» в тёмной теме."""
         for tok in ("--grn-btn", "--blu-btn"):

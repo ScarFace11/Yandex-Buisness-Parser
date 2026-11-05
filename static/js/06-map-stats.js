@@ -335,6 +335,23 @@ function mapPopupHtml(r, color) {
     </div>`;
 }
 
+// Escape в попапе: Leaflet закрывает карточку своей обработкой на document,
+// но фокус остаётся на удалённом элементе и проваливается в body. Перехватываем
+// клавишу раньше (capture) и возвращаем фокус на метку, с которой открыли попап.
+function bindPopupEscape(marker, popup) {
+  const box = popup && popup.getElement();
+  if (!box || box.dataset.escBound) return;
+  box.dataset.escBound = '1';
+  box.addEventListener('keydown', ev => {
+    if (ev.key !== 'Escape') return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    marker.closePopup();
+    const icon = marker.getElement();
+    if (icon) icon.focus();
+  }, true);
+}
+
 function initMap() {
   const container = document.getElementById('map-container');
   if (!container) return;
@@ -382,10 +399,21 @@ function renderMapMarkers(fit) {
       const lat = parseFloat(r.lat), lon = parseFloat(r.lon);
       if (isNaN(lat) || isNaN(lon)) return;
       const color = mapCatColor(mapCatKey(r), cats);
-      L.marker([lat, lon], { icon: mapPinIcon(color), title: r.name || '' })
-        .addTo(mapLayer)
-        .bindPopup(mapPopupHtml(r, color))
+      const marker = L.marker([lat, lon], {
+        icon: mapPinIcon(color), title: r.name || '',
+      });
+      marker.bindPopup(mapPopupHtml(r, color))
         .bindTooltip(escapeHtml(r.name || ''), { direction: 'top', offset: [0, -10] });
+      // Метка — divIcon, а не картинка: alt ей не подходит, а без имени
+      // экранный диктор читает только «кнопка». aria-label ставим на сам
+      // значок, который получает фокус по Tab. Слушатель — ДО addTo: слой
+      // уже на карте, и событие add приходит синхронно внутри addTo.
+      marker.on('add', () => {
+        const icon = marker.getElement();
+        if (icon) icon.setAttribute('aria-label', r.name || 'Организация');
+      });
+      marker.on('popupopen', () => bindPopupEscape(marker, marker.getPopup()));
+      marker.addTo(mapLayer);
       latLngs.push([lat, lon]);
     });
     if (fit && latLngs.length) leafMap.fitBounds(L.latLngBounds(latLngs).pad(0.1));

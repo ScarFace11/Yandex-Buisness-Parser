@@ -90,6 +90,12 @@
         lat: 55.76, lon: 37.62, without_site: true, reviewed: false, note: '' },
     ];
     try {
+      // Карта и статистика читают allResults, а не аргумент renderTable:
+      // без этого синхронизация оставляла карту пустой.
+      if (typeof allResults === 'object' && allResults) {
+        allResults.length = 0;
+        rows.forEach(row => allResults.push(row));
+      }
       renderTable(rows);
       window.__A11Y_ROWS = rows;
       if (typeof syncMapWithResults === 'function') syncMapWithResults();
@@ -120,6 +126,24 @@
   }
 
   if (st.tab && typeof showTab === 'function') showTab(st.tab);
+
+  // Вкладка «Результаты» при первом открытии сама запрашивает /results-view
+  // и затирает образцы, положенные до переключения. Возвращаем строки после
+  // загрузки, иначе состояние table-with-rows проверяло пустую заготовку.
+  if (st.tab === 'table' && st.seedRows && typeof renderTable === 'function') {
+    for (let i = 0; i < 100; i += 1) {
+      const body = document.getElementById('tbl-body');
+      if (body && !body.textContent.includes('Загрузка')) break;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    try {
+      if (typeof allResults === 'object' && allResults && window.__A11Y_ROWS) {
+        allResults.length = 0;
+        window.__A11Y_ROWS.forEach(row => allResults.push(row));
+      }
+      renderTable(window.__A11Y_ROWS || []);
+    } catch (e) { /* см. выше */ }
+  }
 
   // Попап карты живёт в Leaflet и появляется только после загрузки карты:
   // без явного открытия аудит видел бы пустую подложку, а не новые сведения.
