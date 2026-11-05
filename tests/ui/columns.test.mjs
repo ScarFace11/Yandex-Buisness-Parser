@@ -91,7 +91,10 @@ class El {
   remove() { if (this._parent) this._parent.children = this._parent.children.filter(c => c !== this); }
 }
 
-const COL_KEYS = ['rev', 'num', 'name', 'category', 'address', 'website', 'phone', 'score', 'rating', 'socials'];
+const COL_KEYS = ['rev', 'num', 'name', 'category', 'address', 'website', 'phone', 'details', 'score', 'rating', 'socials'];
+// Старый запущенный сервер отдаёт шапку без «Сведений»: у неё по-прежнему
+// десять колонок, и проверка не должна требовать новую.
+const LEGACY_COL_KEYS = COL_KEYS.filter(k => k !== 'details');
 const headerRow = new El('tr');
 const bodyRows = [new El('tr'), new El('tr')];
 for (const key of COL_KEYS) {                       // разметка «как в шаблоне»
@@ -100,7 +103,7 @@ for (const key of COL_KEYS) {                       // разметка «как
 }
 const placeholder = new El('tr');                    // «Ничего не найдено»
 const placeholderCell = new El('td');
-placeholderCell.attrs = { colspan: '10' };
+placeholderCell.attrs = { colspan: '11' };
 placeholder.appendChild(placeholderCell);
 
 const els = {
@@ -192,7 +195,7 @@ function resetOrder() {
 // ── 1. Порядок ────────────────────────────────────────────────
 test('the default order keeps «Рейтинг» next to «Оценка», соцсети — последними', () => {
   assert.deepEqual(globalThis.COL_ORDER_DEFAULT,
-    ['rev', 'num', 'name', 'category', 'address', 'website', 'phone', 'score', 'rating', 'socials']);
+    ['rev', 'num', 'name', 'category', 'address', 'website', 'phone', 'details', 'score', 'rating', 'socials']);
   assert.notEqual(globalThis.COL_ORDER_DEFAULT.at(-1), 'rating',
     'раньше рейтинг стоял в самом конце — за краем экрана');
 });
@@ -201,7 +204,7 @@ test('a saved order is normalised: чужие ключи прочь, забыт�
   const norm = globalThis.normalizeColOrder;
   assert.deepEqual(norm(null), globalThis.COL_ORDER_DEFAULT);
   assert.deepEqual(norm(['name', 'name', 'ghost']),
-    ['name', 'rev', 'num', 'category', 'address', 'website', 'phone', 'score', 'rating', 'socials']);
+    ['name', 'rev', 'num', 'category', 'address', 'website', 'phone', 'details', 'score', 'rating', 'socials']);
   // Порядок из будущей версии не теряет колонок.
   assert.deepEqual([...norm(['socials', 'name'])].sort(),
     [...globalThis.COL_ORDER_DEFAULT].sort());
@@ -210,7 +213,7 @@ test('a saved order is normalised: чужие ключи прочь, забыт�
 test('applyColOrder moves header and body cells into the saved order', () => {
   resetOrder();
   globalThis.colOrder = ['name', 'rev', 'num', 'category', 'address', 'website',
-                         'phone', 'score', 'rating', 'socials'];
+                         'phone', 'details', 'score', 'rating', 'socials'];
   globalThis.applyColOrder();
   assert.deepEqual(colsOf(headerRow), globalThis.colOrder);
   for (const row of bodyRows) assert.deepEqual(colsOf(row), globalThis.colOrder);
@@ -271,7 +274,7 @@ test('a hidden column is hidden by class on its own cells, not by position', () 
 test('sorting maps the column key to the legacy numeric index', () => {
   assert.deepEqual(globalThis.COL_SORT_INDEX,
     { rev: null, num: null, name: 2, category: 3, address: 4, website: 10,
-      phone: null, score: 6, socials: 9, rating: 7 });
+      phone: null, details: null, score: 6, socials: 9, rating: 7 });
   // «Сайт» сортируется по факту «ссылка есть или нет» — домены сравнивать
   // бессмысленно, а обзванивают в первую очередь тех, у кого сайта нет.
   assert.equal(globalThis.COL_SORT_INDEX.website, 10);
@@ -416,7 +419,7 @@ test('a stale template without data-col still gets ordered and hidden', () => {
   const legacyRow = new El('tr');
   const legacyPlaceholder = new El('tr');
   legacyPlaceholder.appendChild(new El('td'));
-  for (const _ of COL_KEYS) {
+  for (const _ of LEGACY_COL_KEYS) {
     legacyHeader.appendChild(new El('th'));
     legacyRow.appendChild(new El('td'));
   }

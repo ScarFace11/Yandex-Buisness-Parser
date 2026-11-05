@@ -223,6 +223,7 @@ class TestProbeEnginesDeep:
         rows = self._probe(monkeypatch, cdp=self._fake_cdp(cards="12"))
         assert all(r["id"] != "tab_active" for r in rows)
 
+    @pytest.mark.live
     def test_live_search_row_reports_found_organizations(self, monkeypatch):
         """Живой сбор выдачи: главная проверка — «поиск находит организации»."""
         import yandex_maps_parser.browser_search as bs_mod
@@ -235,6 +236,7 @@ class TestProbeEnginesDeep:
         assert "2 организаций" in row["detail"]
         assert "Monkey Grinder" in row["detail"]
 
+    @pytest.mark.live
     def test_live_search_row_warns_on_empty_results(self, monkeypatch):
         import yandex_maps_parser.browser_search as bs_mod
         monkeypatch.setattr(bs_mod, "harvest_cards", lambda *a, **kw: [])
@@ -244,6 +246,7 @@ class TestProbeEnginesDeep:
         assert row["status"] == "warn"
         assert row["hint"]
 
+    @pytest.mark.live
     def test_live_search_row_names_the_check_instead_of_blaming_the_network(self, monkeypatch):
         """Проверка «Вы не робот?» — не «нет интернета» и не «Яндекс сломался»."""
         import yandex_maps_parser.browser_search as bs_mod

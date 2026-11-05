@@ -45,6 +45,7 @@ const COLS = [
   { idx: 5, key: 'address',  label: 'Адрес' },
   { idx: 10, key: 'website', label: 'Сайт' },
   { idx: 6, key: 'phone',    label: 'Телефон' },
+  { idx: 11, key: 'details', label: 'Сведения' },
   { idx: 7, key: 'score',    label: 'Оценка' },
   { idx: 8, key: 'socials',  label: 'Соцсети' },
   { idx: 9, key: 'rating',   label: 'Рейтинг' },
@@ -58,7 +59,7 @@ const COL_LABELS = Object.fromEntries(COLS.map(c => [c.key, c.label]));
 // широкая колонка (соцсети) — последней.
 const COL_ORDER_KEY = 'yp_cols_order_v1';
 const COL_ORDER_DEFAULT = ['rev', 'num', 'name', 'category', 'address', 'website',
-                           'phone', 'score', 'rating', 'socials'];
+                           'phone', 'details', 'score', 'rating', 'socials'];
 let colOrder = COL_ORDER_DEFAULT.slice();
 
 // Полный набор ключей в сохранённом порядке: чужие ключи (старая версия

@@ -655,6 +655,50 @@ function socialsCount(row) {
   return n;
 }
 
+// Email с карточки. Проверяем формат, чтобы из поля не получилась ссылка
+// с посторонней схемой; первый адрес из списка — основной контакт.
+function contactEmail(value) {
+  const raw = String(value || '').split(/[,;]/)[0].trim();
+  return /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(raw) ? raw : '';
+}
+
+function emailHref(value) {
+  const email = contactEmail(value);
+  return email ? 'mailto:' + encodeURIComponent(email).replace(/%40/gi, '@') : '';
+}
+
+// Сведения с карточки в одной ячейке: пять отдельных широких колонок
+// растянули бы таблицу так, что до оценки и соцсетей пришлось бы
+// прокручивать весь горизонт. Длинные значения обрезаются в две строки,
+// полный текст остаётся в title (см. .tbl-detail).
+function tblDetailText(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function detailsHTML(r) {
+  const row = r || {};
+  const status = tblDetailText(row.status);
+  const email = contactEmail(row.email);
+  const emailUrl = emailHref(email);
+  const hours = tblDetailText(row.hours);
+  const services = tblDetailText(row.services);
+  const description = tblDetailText(row.description);
+  if (!status && !email && !hours && !services && !description) {
+    return '<span class="tbl-details-na">—</span>';
+  }
+  const line = (label, value, cls) => value
+    ? `<span class="tbl-detail ${cls || ''}" title="${escapeHtml(label + ': ' + value)}">`
+      + `<b>${escapeHtml(label)}</b> ${escapeHtml(value)}</span>`
+    : '';
+  return `<div class="tbl-details">`
+    + (status ? `<span class="tbl-status" title="Статус: ${escapeHtml(status)}">${escapeHtml(status)}</span>` : '')
+    + (email ? `<a class="tbl-email" href="${escapeHtml(emailUrl)}" title="Написать: ${escapeHtml(email)}">${escapeHtml(email)}</a>` : '')
+    + line('Часы', hours, 'tbl-detail-hours')
+    + line('Услуги', services, 'tbl-detail-services')
+    + line('Описание', description, 'tbl-detail-desc')
+    + '</div>';
+}
+
 // Ячейка «Сайт»: ссылка на страницу клиента живёт в поле «Сайт / Таплинк»
 // (при записи туда же попадает и своя страница организации). Показываем
 // домен, полный адрес — в подсказке: длинные utm-хвосты растягивали колонку
@@ -1135,7 +1179,7 @@ const NOSORT_COLS = new Set([0, 1]);
 // 9 — «Соцсети»: сортировка по числу сетей у компании, а не по алфавиту.
 // Сервер повторяет её в _sort_like_table для «Массового обхода».
 // 10 — «Сайт»: сортировка по наличию ссылки (свой сайт или страница-визитка).
-const COL_SORT_INDEX = { rev: null, num: null, name: 2, category: 3, address: 4, website: 10, phone: null, score: 6, socials: 9, rating: 7 };
+const COL_SORT_INDEX = { rev: null, num: null, name: 2, category: 3, address: 4, website: 10, phone: null, details: null, score: 6, socials: 9, rating: 7 };
 const SORT_INDEX_COL = { 2: 'name', 3: 'category', 4: 'address', 5: 'phone', 6: 'score', 7: 'rating', 9: 'socials', 10: 'website' };
 
 // Заголовок берём по data-col, а не по позиции в строке: столбцы можно
@@ -1283,7 +1327,7 @@ function _tableColspan() {
     const ths = document.querySelectorAll('#results-table thead th');
     if (ths && ths.length) return ths.length;
   } catch (e) {}
-  return 10;
+  return 11;
 }
 
 // Полоса-заголовок группы города в таблице «Все». Со звёздочкой: город можно
@@ -1356,6 +1400,7 @@ function _resultRowHtml(r, n) {
       <td data-col="address">${escapeHtml(r.address || '—')}</td>
       <td data-col="website">${siteHTML(r)}</td>
       <td data-col="phone">${phoneHTML(r)}</td>
+      <td data-col="details">${detailsHTML(r)}</td>
       <td data-col="score">${scoreHTML(r)}</td>
       <td data-col="socials">${socialsHTML(r, rowKey, rowIsRev)}</td>
       <td data-col="rating">${ratingHTML(r)}</td>

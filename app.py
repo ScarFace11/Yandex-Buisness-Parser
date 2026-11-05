@@ -6,6 +6,7 @@ import multiprocessing
 multiprocessing.freeze_support()
 
 import os
+from urllib.parse import urlsplit
 
 # Frozen exe: chdir to a writable dir so relative paths (output/, logs/) land next to the .exe instead of the read-only extraction dir.
 import paths
@@ -44,13 +45,43 @@ _ensure_streams()
 if paths.is_frozen():
     os.chdir(paths.user_dir())
 
-from flask import Flask
+from flask import Flask, jsonify, request
 
 from routes.parser import bp as parser_bp
 from routes.api   import bp as api_bp
 from routes.public_api import bp as public_api_bp
 from routes.update  import bp as update_bp
 from routes.diagnostics import bp as diagnostics_bp
+
+
+# Приложение слушает только 127.0.0.1. Проверка Host закрывает DNS-rebinding:
+# чужая страница с именем evil.example не сможет достучаться до localhost,
+# даже если это имя временно резолвится в 127.0.0.1.
+_LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _host_name(value: str) -> str:
+    """Имя хоста без порта и квадратных скобок (IPv6)."""
+    raw = (value or "").strip().lower().rstrip(".")
+    if raw.startswith("["):
+        end = raw.find("]")
+        return raw[1:end] if end > 0 else raw
+    if raw.count(":") == 1:
+        return raw.rsplit(":", 1)[0]
+    return raw
+
+
+def _is_local_host(value: str) -> bool:
+    return _host_name(value) in _LOCAL_HOSTS
+
+
+def _is_local_origin(origin: str) -> bool:
+    """Origin локального интерфейса; `null` и мусор — не локальные."""
+    try:
+        parts = urlsplit(origin)
+    except ValueError:
+        return False
+    return parts.scheme in ("http", "https") and _is_local_host(parts.hostname or "")
 
 
 def create_app() -> Flask:
@@ -76,9 +107,33 @@ def create_app() -> Flask:
     # «🩺 Диагностика» — самопроверка по кнопке (только localhost-интерфейс).
     app.register_blueprint(diagnostics_bp)
 
+    @app.before_request
+    def _local_only_guard():
+        """Чужие Host/Origin не получают доступ к локальным данным и действиям.
+
+        Запросы без Origin (curl, n8n) разрешены: сервер и так слушает только
+        loopback. Если Origin есть, он обязан быть локальным — иначе обычная
+        форма с чужого сайта могла бы запустить поиск или изменить настройки.
+        """
+        if not _is_local_host(request.host):
+            return jsonify(ok=False, error="Приложение доступно только на этом компьютере."), 403
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            origin = request.headers.get("Origin")
+            if origin and not _is_local_origin(origin):
+                return jsonify(ok=False, error="Запрос с чужого сайта отклонён."), 403
+            if request.headers.get("Sec-Fetch-Site", "").strip().lower() == "cross-site":
+                return jsonify(ok=False, error="Запрос с чужого сайта отклонён."), 403
+        return None
+
     @app.after_request
     def _no_stale_ui(resp):
         """Интерфейс не должен отдаваться из кеша браузера."""
+        # Заголовки безопасного поведения: браузер не угадывает тип файла,
+        # не показывает страницу во фрейме и не передаёт адрес наружу.
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("Referrer-Policy", "no-referrer")
+        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), payment=()")
         ctype = (resp.headers.get("Content-Type") or "").lower()
         if "text/html" in ctype:
             resp.headers["Cache-Control"] = "no-store"

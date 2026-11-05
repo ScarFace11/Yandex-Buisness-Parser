@@ -89,3 +89,44 @@ class TestNoDevBuild:
 
     def test_the_dev_test_file_is_gone(self):
         assert not (ROOT / "tests" / "test_dev_build.py").exists()
+
+
+class TestLocalSecurity:
+    """Локальное приложение не открывает действия чужим страницам."""
+
+    @pytest.fixture()
+    def client(self):
+        import app as app_mod
+        return app_mod.create_app().test_client()
+
+    def test_security_headers_are_set(self, client):
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert resp.headers["X-Content-Type-Options"] == "nosniff"
+        assert resp.headers["X-Frame-Options"] == "DENY"
+        assert resp.headers["Referrer-Policy"] == "no-referrer"
+        assert "camera=()" in resp.headers["Permissions-Policy"]
+
+    def test_foreign_host_is_rejected(self, client):
+        """DNS-rebinding: чужое имя хоста не должно попасть в localhost."""
+        resp = client.get("/", headers={"Host": "evil.example"})
+        assert resp.status_code == 403
+        assert resp.get_json()["ok"] is False
+
+    def test_foreign_origin_cannot_change_state(self, client):
+        resp = client.post("/diagnostics/run", json={"groups": []},
+                           headers={"Origin": "https://evil.example"})
+        assert resp.status_code == 403
+        assert resp.get_json()["ok"] is False
+
+    def test_foreign_fetch_metadata_is_rejected(self, client):
+        resp = client.post("/diagnostics/run", json={"groups": []},
+                           headers={"Sec-Fetch-Site": "cross-site"})
+        assert resp.status_code == 403
+
+    def test_local_origin_and_non_browser_client_are_allowed(self, client):
+        local = client.post("/diagnostics/run", json={"groups": []},
+                            headers={"Origin": "http://127.0.0.1:5077"})
+        assert local.status_code == 200
+        cli = client.post("/diagnostics/run", json={"groups": []})
+        assert cli.status_code == 200

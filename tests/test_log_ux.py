@@ -18,7 +18,11 @@ class TestBrowserSearchFailure:
         """Страница не открылась (нет браузера, нет сети) — пользователь
         должен увидеть, что проверить, а не пустую выдачу."""
         calls = []
-        monkeypatch.setattr(search, "harvest_cards", lambda *a, **kw: [])
+        # search_page ходит через harvest_cards_ex: он несёт статус страницы.
+        # Патч старого harvest_cards ничего не менял, и тест проверял не тот путь.
+        monkeypatch.setattr(search, "harvest_cards_ex", lambda *a, **kw: {
+            "cards": [], "total": None, "complete": False, "status": "no_state",
+        })
         monkeypatch.setattr(search, "_harvest_cache", {})
         monkeypatch.setattr(state, "warn", lambda m: calls.append(("warn", m)))
         monkeypatch.setattr(state, "tech", lambda m: calls.append(("tech", m)))
@@ -26,7 +30,7 @@ class TestBrowserSearchFailure:
         feats, found = search.search_page("кафе", "Уфа", 54.7, 55.9, 0)
         assert feats == [] and found is None
         warns = [m for lv, m in calls if lv == "warn"]
-        assert len(warns) == 1 and warns[0] == search.search_failure_hint()
+        assert len(warns) == 1 and warns[0] == search.search_failure_hint("no_page")
         assert "Диагностика" in warns[0] and "интернет" in warns[0]
         assert any(lv == "tech" for lv, _ in calls), "техническая причина — в файл прогона"
 
@@ -37,19 +41,24 @@ class TestBrowserSearchFailure:
 
         def _harvest(query, city, lat, lon, max_cards=50):
             calls.append((query, city))
-            return [{"_biz_id": f"{i}", "name": f"Организация {i}",
-                     "lat": "54.7", "lon": "55.9"} for i in range(60)]
+            cards = [{"_biz_id": f"{i}", "name": f"Организация {i}",
+                      "lat": "54.7", "lon": "55.9"} for i in range(60)]
+            return {"cards": cards, "total": 60, "complete": True, "status": "ok"}
 
-        monkeypatch.setattr(search, "harvest_cards", _harvest)
+        monkeypatch.setattr(search, "harvest_cards_ex", _harvest)
         monkeypatch.setattr(search, "_harvest_cache", {})
         monkeypatch.setattr(state, "warn", lambda m: None)
 
         first, total = search.search_page("кафе", "Уфа", 54.7, 55.9, 0)
         second, _ = search.search_page("кафе", "Уфа", 54.7, 55.9, search._PAGE_SIZE)
-        assert len(first) == search._PAGE_SIZE and len(second) == 60 - search._PAGE_SIZE
+        third, _ = search.search_page("кафе", "Уфа", 54.7, 55.9, 2 * search._PAGE_SIZE)
+        # Каждая страница — ровно _PAGE_SIZE карточек; хвост (10) — последняя.
+        assert [len(first), len(second), len(third)] == [25, 25, 10]
         assert total == 60
         assert len(calls) == 1, "выдача кэшируется: страница открывается один раз"
         assert first[0]["properties"]["CompanyMetaData"]["id"] == "0"
+        assert second[0]["properties"]["CompanyMetaData"]["id"] == "25"
+        assert third[0]["properties"]["CompanyMetaData"]["id"] == "50"
 
     def test_out_of_range_center_is_dropped(self):
         assert browser_search._parse_center("https://yandex.ru/maps/?ll=55.9%2C54.7") == (54.7, 55.9)

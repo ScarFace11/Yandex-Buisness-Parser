@@ -81,6 +81,20 @@
 #results-table th[data-col="website"],#results-table td[data-col="website"]{max-width:170px}
 .site-link{display:block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .site-na{color:var(--muted)}
+/* «Сведения» с карточки: несколько коротких строк вместо пяти колонок.
+   Длинные описания обрезаются по высоте, полный текст — в title. */
+#results-table th[data-col="details"],#results-table td[data-col="details"]{min-width:180px;max-width:260px}
+.tbl-details{display:flex;flex-direction:column;gap:3px;min-width:0;max-width:250px;font-size:12px;line-height:1.35}
+.tbl-details-na{color:var(--muted)}
+.tbl-status{
+  display:inline-block;align-self:flex-start;padding:1px 7px;border-radius:var(--pill);
+  background:var(--track);color:var(--sub);font-weight:700;
+}
+.tbl-email{color:var(--c);font-weight:600;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl-email:hover{text-decoration:underline}
+.tbl-detail{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--sub);overflow-wrap:anywhere}
+.tbl-detail b{color:var(--muted);font-weight:700}
+.tbl-detail-hours{color:var(--txt);font-weight:500}
 /* Соцсети наоборот: бейджи собираются в колонку, и места им всегда
    не хватало — колонке задаём минимум, а не максимум. */
 #results-table th[data-col="socials"],#results-table td[data-col="socials"]{min-width:120px;width:120px}

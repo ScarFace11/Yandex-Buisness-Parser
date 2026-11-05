@@ -1565,6 +1565,10 @@ class TestDailyDynamics:
         assert re.search(r'#results-table td\[data-col="phone"\]\{max-width:\d+px\}', STYLE)
         assert re.search(r'#results-table th\[data-col="socials"\],#results-table td\[data-col="socials"\]\{min-width:\d+px', STYLE)
         assert ".tbl-phone{" in STYLE and ".tbl-phone span{display:block" in STYLE
+        assert 'data-col="details"' in TEMPLATE
+        assert "function detailsHTML(" in APP_JS
+        assert ".tbl-details{" in STYLE and ".tbl-detail{" in STYLE
+        assert "mailto:" in APP_JS, "email ведёт почтовой ссылкой, а не произвольной"
 
     def test_stats_breakdowns_use_donut_and_cards(self):
         """Соцсети — кольцо с долями, каждый разбор — своя карточка сеткой:

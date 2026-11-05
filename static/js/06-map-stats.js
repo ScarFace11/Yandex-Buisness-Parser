@@ -278,6 +278,10 @@ function mapPinIcon(color) {
   });
 }
 
+function mapText(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
 // Подробности метки: то, по чему решают звонить, — категория, рейтинг с
 // числом отзывов, адрес, телефоны, страница и соцсети. Значения идут
 // основным тоном текста, бледным — только подписи: в прежнем попапе адрес и
@@ -292,6 +296,12 @@ function mapPopupHtml(r, color) {
   const site = String(r.aggregator_url || r.website || '').trim();
   const phones = String(r.phone || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 3);
   const extra = mapCatExtra(r);
+  const status = mapText(r.status);
+  const email = typeof contactEmail === 'function' ? contactEmail(r.email) : '';
+  const emailUrl = email && typeof emailHref === 'function' ? emailHref(email) : '';
+  const hours = mapText(r.hours);
+  const services = mapText(r.services);
+  const description = mapText(r.description);
   const socials = typeof SOCIALS === 'object' && SOCIALS
     ? Object.entries(SOCIALS)
       .filter(([p]) => r[p])
@@ -305,8 +315,16 @@ function mapPopupHtml(r, color) {
       <div class="map-pop-name">${escapeHtml(r.name || 'Без названия')}</div>
       ${extra ? `<div class="map-pop-extra">Ещё: ${escapeHtml(extra)}</div>` : ''}
       ${meta.length ? `<div class="map-pop-meta">${escapeHtml(meta.join(' · '))}</div>` : ''}
+      ${status ? `<div class="map-pop-status">${escapeHtml(status)}</div>` : ''}
       ${r.address ? `<div class="map-pop-row"><span class="map-pop-key">Адрес</span>${escapeHtml(r.address)}</div>` : ''}
       ${phones.length ? `<div class="map-pop-row"><span class="map-pop-key">Телефон</span>${escapeHtml(phones.join(', '))}</div>` : ''}
+      ${email ? `<div class="map-pop-row"><span class="map-pop-key">Email</span>`
+        + `<a href="${escapeHtml(emailUrl)}">${escapeHtml(email)}</a></div>` : ''}
+      ${hours ? `<div class="map-pop-row"><span class="map-pop-key">Часы</span>${escapeHtml(hours)}</div>` : ''}
+      ${services ? `<div class="map-pop-row map-pop-clamp"><span class="map-pop-key">Услуги</span>`
+        + `<span class="map-pop-val">${escapeHtml(services)}</span></div>` : ''}
+      ${description ? `<div class="map-pop-row map-pop-desc"><span class="map-pop-key">Описание</span>`
+        + `<span class="map-pop-val">${escapeHtml(description)}</span></div>` : ''}
       ${site ? `<div class="map-pop-row"><span class="map-pop-key">Сайт</span>`
         + `<a href="${escapeHtml(safeUrl(site))}" target="_blank" rel="noopener noreferrer">${escapeHtml(site)}</a></div>` : ''}
       ${score !== '' && score != null ? `<div class="map-pop-row"><span class="map-pop-key">Оценка лида</span>${escapeHtml(String(score))} из 100</div>` : ''}

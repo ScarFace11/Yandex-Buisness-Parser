@@ -172,10 +172,11 @@ globalThis.COLS = [
   { idx: 1, key: 'rev', label: '✓ Просмотрено' }, { idx: 2, key: 'num', label: '# Номер' },
   { idx: 3, key: 'name', label: 'Название' }, { idx: 4, key: 'category', label: 'Категория' },
   { idx: 5, key: 'address', label: 'Адрес' }, { idx: 6, key: 'phone', label: 'Телефон' },
+  { idx: 11, key: 'details', label: 'Сведения' },
   { idx: 7, key: 'score', label: 'Оценка' }, { idx: 8, key: 'socials', label: 'Соцсети' },
   { idx: 9, key: 'rating', label: 'Рейтинг' },
 ];
-globalThis.COL_ORDER_DEFAULT = ['rev', 'num', 'name', 'category', 'address', 'phone', 'score', 'rating', 'socials'];
+globalThis.COL_ORDER_DEFAULT = ['rev', 'num', 'name', 'category', 'address', 'phone', 'details', 'score', 'rating', 'socials'];
 globalThis.colOrder = globalThis.COL_ORDER_DEFAULT.slice();
 globalThis.hiddenCols = new Set();
 globalThis.allResults = [];
@@ -270,7 +271,8 @@ globalThis.clearTimeout = () => {};
 const fns = [
   'pluralNum', 'pluralRecords', 'pluralProfiles', 'pluralFiles', 'fmtBytes', 'basenameOf',
   'clampInt', 'safeSocialUrl', 'cityOf', 'reviewKey', 'isReviewed', 'escapeHtml', 'safeUrl',
-  'socialsHTML', 'phoneHTML', 'ratingHTML', 'siteHTML', 'renderPage', 'filterTable', 'refreshReviewedUI',
+  'socialsHTML', 'phoneHTML', 'ratingHTML', 'siteHTML', 'detailsHTML',
+  'contactEmail', 'emailHref', 'tblDetailText', 'renderPage', 'filterTable', 'refreshReviewedUI',
   // Живая перерисовка делит с filterTable общие фильтры и порядок
   '_applyRowFilters', '_orderFilteredRows', 'collapseChainsClient',
   'bulkScopeRows', 'bulkScopeStats', 'bulkOpenable', 'bulkWillOpen', 'renderCityTabs', 'setCityTab',
@@ -618,7 +620,7 @@ test('renderPage shows a full-width city row in «Все» mode', () => {
   globalThis.renderPage();
   const html = els['tbl-body'].innerHTML;
   assert.match(html, /<tr class="city-group" data-city="Уфа">/);
-  assert.match(html, /<td colspan="10">/);
+  assert.match(html, /<td colspan="11">/);
   assert.match(html, /<span class="city-group-name">Уфа<\/span>/);
   assert.match(html, /<span class="city-group-done"[^>]*>✓0\/2<\/span>/);
   // Нумерация столбца «#» — сквозная по таблице, а не внутри группы.
@@ -1798,4 +1800,27 @@ test('renderPage puts the site into its own column', () => {
   const html = els['tbl-body'].innerHTML;
   assert.match(html, /<td data-col="website"><a class="tbl-link site-link"/);
   assert.match(html, />klinika\.ru</);
+});
+
+test('detailsHTML puts email, hours, services, description and status into one cell', () => {
+  const html = globalThis.detailsHTML({
+    email: 'hello@klinika.ru', hours: 'Пн–Вс 10:00–22:00',
+    services: 'Чистка, лечение', description: 'Семейная клиника',
+    status: 'Открыто',
+  });
+  assert.match(html, /class="tbl-status"[^>]*>Открыто</);
+  assert.match(html, /href="mailto:hello@klinika\.ru"/);
+  assert.match(html, /<b>Часы<\/b> Пн–Вс 10:00–22:00/);
+  assert.match(html, /<b>Услуги<\/b> Чистка, лечение/);
+  assert.match(html, /<b>Описание<\/b> Семейная клиника/);
+  assert.match(html, /title="Описание: Семейная клиника"/);
+});
+
+test('detailsHTML does not make a link from junk email or empty fields', () => {
+  const empty = globalThis.detailsHTML({});
+  assert.match(empty, /—/);
+  assert.ok(!empty.includes('<div class="tbl-details"'));
+  const junk = globalThis.detailsHTML({ email: 'javascript:alert(1)', hours: '  ' });
+  assert.ok(!junk.includes('mailto:'), 'посторонняя строка не стала почтовой ссылкой');
+  assert.ok(!junk.includes('<a'), 'без рабочего адреса ссылки нет');
 });

@@ -66,7 +66,8 @@ globalThis.SLABELS = { vk: 'VK', telegram: 'TG' };
   grab('mapCatParts'), grab('mapCatKey'), grab('mapCatExtra'),
   grab('mapCityKey'), grab('mapCatHideKey'), grab('mapHideKey'),
   grab('mapCityGroups'), grab('mapCategories'), grab('mapCatColor'),
-  grab('mapRowVisible'), grab('mapPopupHtml'),
+  grab('mapRowVisible'), grab('mapText'), grab('contactEmail'), grab('emailHref'),
+  grab('mapPopupHtml'),
 ].join('\n'));
 
 const R = (name, city, extra = {}) => ({
@@ -263,6 +264,18 @@ test('попап показывает и остальные категории �
   assert.match(html, /Ещё: Шиномонтаж, Полировка/);
   // Одна категория — без пустой строки «Ещё:».
   assert.ok(!/Ещё:/.test(mapPopupHtml(R('Мойка', 'Москва', { category: 'Автомойка' }), MAP_CAT_COLORS[2])));
+});
+
+test('попап показывает статус, email, часы, услуги и описание', () => {
+  const html = mapPopupHtml(R('Клиника', 'Уфа', {
+    email: 'hello@klinika.ru', hours: 'Пн–Вс 10:00–22:00',
+    services: 'Чистка, лечение', description: 'Семейная клиника', status: 'Открыто',
+  }), MAP_CAT_COLORS[0]);
+  assert.match(html, /class="map-pop-status"[^>]*>Открыто</);
+  assert.match(html, /href="mailto:hello@klinika\.ru"/);
+  assert.match(html, /<span class="map-pop-key">Часы<\/span>Пн–Вс 10:00–22:00/);
+  assert.match(html, /<span class="map-pop-key">Услуги<\/span>/);
+  assert.match(html, /<span class="map-pop-key">Описание<\/span>/);
 });
 
 test('попап не выводит пустые поля и экранирует данные', () => {

@@ -23,10 +23,20 @@
    понятно, чем ещё занимается компания. */
 .map-pop-extra{font-size:12px;color:var(--sub);margin-top:3px;line-height:1.35}
 .map-pop-meta{font-size:12px;color:var(--sub);margin-top:3px;font-variant-numeric:tabular-nums}
+.map-pop-status{
+  display:inline-block;margin-top:5px;padding:1px 7px;border-radius:var(--pill);
+  background:var(--track);color:var(--sub);font-size:12px;font-weight:700;
+}
+.map-pop-val{min-width:0;overflow-wrap:anywhere}
+.map-pop-clamp .map-pop-val{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.map-pop-desc{align-items:flex-start}
+.map-pop-desc .map-pop-val{max-height:72px;overflow:auto;display:block}
 /* Значения — основным тоном: прежний бледно-серый адрес на белой подложке
    попапа не читался. Бледными остались только подписи полей. */
 .map-pop-row{
-  display:flex;gap:6px;margin-top:5px;line-height:1.35;
+  display:flex;align-items:flex-start;gap:6px;margin-top:5px;line-height:1.35;
   color:var(--txt);font-weight:500;font-variant-numeric:tabular-nums;
 }
 .map-pop-key{flex:0 0 66px;font-size:12px;color:var(--sub);font-weight:700}

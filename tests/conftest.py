@@ -9,11 +9,28 @@
 тесты не должны менять состояние модулей для других тестов (от этого зависел
 порядок файлов — см. tests/test_cdp_timeout.py, который ждёт исходный UA).
 """
+import os
 import sys
 
 import pytest
 
 from tests._browser import LiveApp, load_real_websocket
+
+
+def pytest_collection_modifyitems(config, items):
+    """Сетевые проверки — только по явному разрешению.
+
+    Полный прогон запускают и без интернета: живая проба тогда не падает
+    быстро, а висит на загрузке страницы Яндекса. Маркер `live` делает такие
+    тесты пропускаемыми по умолчанию; осознанный запуск — YP_LIVE_TESTS=1.
+    """
+    if os.getenv("YP_LIVE_TESTS", "").strip().lower() in ("1", "true", "yes"):
+        return
+    skip = pytest.mark.skip(
+        reason="живая сетевая проверка отключена; включите YP_LIVE_TESTS=1")
+    for item in items:
+        if "live" in item.keywords:
+            item.add_marker(skip)
 
 
 @pytest.fixture(scope="session")
