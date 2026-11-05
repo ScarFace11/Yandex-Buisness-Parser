@@ -251,13 +251,14 @@ class PageView:
 
     JSON_LIMIT = 200_000
 
-    __slots__ = ("html", "head", "_blobs", "_contacts")
+    __slots__ = ("html", "head", "_blobs", "_contacts", "_links")
 
     def __init__(self, html: str):
         self.html = html or ""
         self.head = self.html[:self.JSON_LIMIT]
         self._blobs = None
         self._contacts = None
+        self._links = None
 
     def blobs(self) -> list:
         """Встроенные данные страницы (state-JSON, ld+json), уже разобранные."""
@@ -270,6 +271,12 @@ class PageView:
         if self._contacts is None:
             self._contacts = own_contacts_html(self.html)
         return self._contacts
+
+    def links(self) -> list[str]:
+        """Ссылки страницы — одним проходом на все вопросы «сайт или витрина»."""
+        if self._links is None:
+            self._links = [m.group(1).strip() for m in _WEBSITE_LINK_RE.finditer(self.html)]
+        return self._links
 
 
 def view_of(html, view=None) -> "PageView":
@@ -515,9 +522,7 @@ def _is_own_website(url: str) -> bool:
 def _site_link_in_page(html: str, view, accept) -> str:
     """Первая ссылка «Сайт» на странице карточки, проходящая фильтр ``accept``."""
     v = view_of(html, view)
-    text = v.html or v.head
-    for m in _WEBSITE_LINK_RE.finditer(text):
-        cand = m.group(1).strip()
+    for cand in v.links():
         if accept(cand):
             return _clean_social_url(cand)
     return ""
@@ -616,6 +621,9 @@ def extract_phone(html: str, view=None) -> str:
 _EMAIL_RE = re.compile(r"[\w.!#$%&'*+/=?^`{|}~-]+@[\w-]+(?:\.[\w-]+)+")
 _EMAIL_KEYS = ("email", "emails", "mail", "contactemail", "emailaddress")
 _HOURS_KEYS = ("hours", "workinghours", "openinghours", "schedule", "timetable")
+_OPEN_HOURS_RE = re.compile(r'itemprop=["\']openingHours["\'][^>]*(?:content=["\']([^"\']+)["\']|>([^<]{2,120})<)', re.I)
+_HOURS_CLASS_RE = re.compile(r'<[^>]+class="[^"]*(?:working|hours|schedule)[^"]*"[^>]*>(.*?)</(?:div|span|p)>', re.I | re.S)
+_HOURS_TEXT_RE = re.compile(r"(?:Время|Режим) работы\s*[:—-]?\s*([^|]{3,120})", re.I)
 _DESCRIPTION_KEYS = ("description", "shortdescription", "about", "summary")
 _SERVICES_KEYS = ("services", "goods", "products", "features", "offers")
 _STATUS_KEYS = ("closed", "isclosed", "temporarilyclosed", "temporaryclosed")
@@ -728,27 +736,51 @@ def extract_email(html: str, view=None) -> str:
     return ", ".join(clean)
 
 
+def _inside_script(html: str, pos: int) -> bool:
+    return html.rfind("<script", 0, pos) > html.rfind("</script", 0, pos)
+
+
 def extract_hours(html: str, view=None) -> str:
     """Режим работы карточки, если он есть в разметке или данных страницы."""
     if not html:
         return ""
     v = view_of(html, view)
-    for m in re.finditer(r'itemprop=["\']openingHours["\'][^>]*(?:content=["\']([^"\']+)["\']|>([^<]{2,120})<)', v.html, re.I):
-        value = _plain_text(m.group(1) or m.group(2) or "")
-        if value:
-            return value
-    for m in re.finditer(r'<[^>]+class="[^"]*(?:working|hours|schedule)[^"]*"[^>]*>(.*?)</(?:div|span|p)>', v.html, re.I | re.S):
-        value = _plain_text(m.group(1))
-        if 3 <= len(value) <= 300:
-            return value
+    # Явные признаки часов ищем по всей странице, но только когда они там
+    # вообще есть: два регулярных прохода по 0,5–1 МБ впустую стоили до 15 мс.
+    if "openingHours" in v.html:
+        for m in _OPEN_HOURS_RE.finditer(v.html):
+            value = _plain_text(m.group(1) or m.group(2) or "")
+            if value:
+                return value
+    if any(marker in v.html for marker in ("working", "hours", "schedule")):
+        for m in _HOURS_CLASS_RE.finditer(v.html):
+            value = _plain_text(m.group(1))
+            if 3 <= len(value) <= 300:
+                return value
     for obj in v.blobs():
         for value in _json_strings(obj, _HOURS_KEYS):
             value = _plain_text(value)
             if 3 <= len(value) <= 300:
                 return value
-    text = _plain_text(_SCRIPT_BLOCK_RE.sub(" ", v.html))
-    m = re.search(r"(?:Время|Режим) работы\s*[:—-]?\s*([^|]{3,120})", text, re.I)
-    return m.group(1).strip(" ,;") if m else ""
+    # «Время работы» часто стоит отдельным разделом сразу после контактов.
+    # Сначала читаем контакты (или начало страницы), затем — окно вокруг
+    # заголовка, а не весь HTML: значение всё равно в 120 символах от него.
+    source = v.contacts() or v.head
+    text = _plain_text(_SCRIPT_BLOCK_RE.sub(" ", source))
+    m = _HOURS_TEXT_RE.search(text)
+    if m:
+        return m.group(1).strip(" ,;")
+    for needle in ("Время работы", "Режим работы", "время работы", "режим работы"):
+        start = v.html.find(needle)
+        while start >= 0:
+            if not _inside_script(v.html, start):
+                chunk = v.html[max(0, start - 200):start + 2000]
+                text = _plain_text(_SCRIPT_BLOCK_RE.sub(" ", chunk))
+                m = _HOURS_TEXT_RE.search(text)
+                if m:
+                    return m.group(1).strip(" ,;")
+            start = v.html.find(needle, start + 1)
+    return ""
 
 
 def extract_description(html: str, view=None) -> str:

@@ -15,6 +15,7 @@ from yandex_maps_parser.extractors import (
     extract_rating_reviews,
     extract_website,
     extract_aggregator,
+    extract_hours,
     extract_page,
     PageView,
     _extract_from_json_blob,
@@ -609,6 +610,27 @@ class TestExtractPage:
                         "hours": "", "description": "", "services": "",
                         "status": ""}
 
+    def test_hours_after_the_page_head_are_read_from_contacts(self):
+        """Секция контактов глубже 200 КБ всё равно даёт часы — без чтения всего HTML."""
+        html = ("x" * 250_000
+                + '<h3 class="card-section-header__title _wide">Контакты</h3>'
+                + '<div class="card-working-hours">ежедневно 10:00–20:00</div>')
+        assert extract_hours(html) == "ежедневно 10:00–20:00"
+        assert extract_page(html)["hours"] == "ежедневно 10:00–20:00"
+
+    @pytest.mark.parametrize("hours_html", (
+        '<div class="card-working-hours">ежедневно 10:00–20:00</div>',
+        '<div>ежедневно 10:00–20:00</div>',
+    ))
+    def test_hours_outside_contacts_after_the_head_are_not_lost(self, hours_html):
+        """Часы бывают отдельным разделом после контактов — их нельзя терять."""
+        html = ("x" * 250_000
+                + '<h3 class="card-section-header__title _wide">Контакты</h3>'
+                + '<div class="card-phones-view__phone">+7 900 000-00-00</div>'
+                + '<h3 class="card-section-header__title _wide">Время работы</h3>'
+                + hours_html)
+        assert extract_hours(html) == "ежедневно 10:00–20:00"
+
     def test_contact_details_are_read_from_the_card(self):
         html = (
             '<h3 class="card-section-header__title _wide">Контакты</h3>'
@@ -633,3 +655,4 @@ class TestExtractPage:
         first = view.blobs()
         assert view.blobs() is first, "данные страницы разбираются повторно"
         assert view.contacts() is view.contacts()
+        assert view.links() is view.links()
