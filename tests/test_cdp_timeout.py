@@ -96,6 +96,32 @@ def _load_ws_module():
 
 
 class TestCdpFetch:
+    def test_captcha_page_is_not_returned_as_a_card(self):
+        """Даже с разметкой карточки страница капчи не должна уйти в разбор."""
+        cdp_client.set_failure_reason("")
+        page = _html("Похоже, вы робот. showcaptcha")
+        ws_mod = _load_ws_module()
+        fake = FakeWebSocket(responses=[
+            _state(_ORG_URL, "complete", len(page)),
+            _eval(page),
+        ])
+        with patch.object(ws_mod, "create_connection", return_value=fake):
+            assert _cdp_navigate_and_get_html("ws://fake", _ORG_URL, timeout_s=5) is None
+
+        assert cdp_client.take_failure_reason() == "antibot"
+
+    def test_ordinary_script_word_captcha_is_not_an_antibot_page(self):
+        """Слово captcha в обычном скрипте не делает карточку заглушкой."""
+        cdp_client.set_failure_reason("")
+        page = _html("const captchaEnabled = false; // robot settings")
+        ws_mod = _load_ws_module()
+        fake = FakeWebSocket(responses=[
+            _state(_ORG_URL, "complete", len(page)),
+            _eval(page),
+        ])
+        with patch.object(ws_mod, "create_connection", return_value=fake):
+            assert _cdp_navigate_and_get_html("ws://fake", _ORG_URL, timeout_s=5) == page
+
     def test_returns_html_when_page_ready(self):
         """Normal case: document commits and is complete → HTML returned.
         A large-but-loading document must NOT trigger an early harvest — the

@@ -1,7 +1,6 @@
 """HTML / text extraction: social links, emails, descriptions, reviews."""
 import json
 import re
-import time
 from html import unescape as _html_unescape
 
 from .constants import (
@@ -93,10 +92,22 @@ _JSON_BLOB_RE = re.compile(
     re.I,
 )
 
+# Только явные признаки проверки Яндекса. Слова «robot» и «captcha»
+# встречаются в обычных скриптах карточки (аналитика, настройки), и по ним
+# хорошая страница ошибочно считалась антибот-заглушкой.
 _ANTIBOT_MARKERS = (
-    "showcaptcha", "robot", "captcha", "i-am-not-robot",
+    "showcaptcha", "smartcaptcha", "i-am-not-robot",
+    "вы не робот", "похоже, вы робот",
     "access denied", "too many requests",
 )
+
+
+def is_antibot_html(html: str) -> bool:
+    """Страница — проверка «Вы не робот?», а не карточка организации."""
+    if not html:
+        return False
+    lower = html[:4000].lower()
+    return any(marker in lower for marker in _ANTIBOT_MARKERS)
 
 # Fast pre-check: does this string look like it could contain social URLs?
 _HTTP_LIKE = re.compile(r'https?://[^\s"\'<>\\\\,}{]+', re.I)
@@ -170,10 +181,15 @@ def _normalize_social_url(platform: str, url: str) -> str | None:
     except Exception:
         return url# ── Fetch ─────────────────────────────────────────────────────
 
-def fetch_html(url: str, session=None, biz_id: str = "") -> str:
-    """Загрузить страницу карточки реальным браузером (CDP), с дисковым кэшем."""
+def fetch_html(url: str, session=None, biz_id: str = "",
+               force_refresh: bool = False) -> str:
+    """Загрузить страницу карточки реальным браузером (CDP), с дисковым кэшем.
+
+    `force_refresh` нужен режиму «Проверить старые»: он не должен отдавать
+    вчерашнюю страницу из суточного кэша вместо свежих данных.
+    """
     # Кэш страниц: повторный прогон не ждёт браузер на каждой карточке.
-    if biz_id:
+    if biz_id and not force_refresh:
         try:
             from .cache import get_cached
             cached = get_cached(biz_id)
@@ -197,18 +213,6 @@ def fetch_html(url: str, session=None, biz_id: str = "") -> str:
                        or state.is_skip_city())
         if aborted:
             return ""
-        # Первая неудача — не повод ругаться в лог: даём карточке второй шанс
-        # со свежей вкладкой. Пользователь видит ошибку, только если не вышло
-        # и со второй попытки, и не думает, что причина в нём.
-        state.syslog(f"fetch_html: retry after empty page: {url}")
-        time.sleep(1.0)
-        try:
-            text = cdp_client.fetch_page(url, biz_id=biz_id) or ""
-        except Exception as exc:
-            state.syslog(f"fetch_html: retry error: {type(exc).__name__}: {exc}")
-            text = ""
-
-    if not text:
         reason = ""
         try:
             reason = cdp_client.take_failure_reason()
@@ -217,14 +221,13 @@ def fetch_html(url: str, session=None, biz_id: str = "") -> str:
         if reason not in state.READ_FAILURE_LABELS:
             reason = "no_page"
         state.syslog(f"fetch_html: gave up ({reason}): {url}")
-        state.warn("Не удалось открыть карточку организации даже со второй попытки — "
+        state.warn("Не удалось открыть карточку организации после нескольких попыток — "
                    "пропустили её и продолжили. На остальные записи это не влияет.")
         # Счётчик потерь: запись всё равно попадёт в выгрузку, и без этой цифры её «пустые контакты» выглядят как «так и есть».
         state.inc_read_failure(reason, key=biz_id or url)
         return ""
 
-    lower = text[:4000].lower()
-    if any(m in lower for m in _ANTIBOT_MARKERS):
+    if is_antibot_html(text):
         state.warn("Яндекс вернул anti-bot страницу — детали этой карточки пропущены.")
         state.inc_read_failure("antibot", key=biz_id or url)
         return ""

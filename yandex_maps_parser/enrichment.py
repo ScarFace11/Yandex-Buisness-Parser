@@ -14,22 +14,11 @@ from .extractors import (
     extract_page,
     fetch_html,
     extract_socials,
-    _ANTIBOT_MARKERS,
 )
 from .exporters import record_key
 from .processing import crawl_skip_reason
 from . import state
 from . import cdp_client
-
-def _looks_like_antiblock(html) -> bool:
-    """True when a fetched page is an anti-bot stub / too short to be real."""
-    if not html:
-        return True
-    if len(html) < 800:
-        return True
-    lower = html[:4000].lower()
-    return any(m in lower for m in _ANTIBOT_MARKERS)
-
 
 def _stop_requested() -> bool:
     """True when stop or skip-city was requested."""
@@ -152,12 +141,15 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
         socials.update(extract_socials(raw_json))
 
         # Fetch the detail page unless the raw payload already gives a solid picture (>= 2 platforms).
+        # В режиме «Проверить старые» карточку открываем всегда: иначе запись
+        # с готовыми соцсетями считалась бы обновлённой по старым данным.
+        refresh = bool(getattr(state, "REFRESH_SEEN", False))
         _raw_missing_required = bool(state.REQUIRED_SOCIALS) and not all(
             socials.get(p) for p in state.REQUIRED_SOCIALS
         )
         should_fetch = (
             state.FETCH_DETAIL and biz_id
-            and (len(socials) < 2 or _raw_missing_required)
+            and (refresh or len(socials) < 2 or _raw_missing_required)
             and not record.pop("_skip_detail", False)
         )
         # Skip government institutions in with_socials mode — they never have socials
@@ -209,14 +201,9 @@ def enrich(candidates: list[dict], pbar: tqdm, pool: ThreadPoolExecutor | None =
             _fetch_t0 = time.monotonic()
             # Единственный способ — реальный браузер (Chrome/Chromium через CDP).
             if state.USE_BROWSER and cdp_client.is_available():
-                html = fetch_html(detail_url, biz_id=biz_id)
-                _fetch_source = "cdp"
-
-            # Anti-bot stub from the browser?
-            if (not _stop_requested() and _looks_like_antiblock(html)
-                    and state.USE_BROWSER and cdp_client.is_available()):
-                state.syslog(f"fetch_detail: anti-bot stub for {biz_name}, retrying on a fresh tab...")
-                html = fetch_html(detail_url, biz_id=biz_id)
+                # Повторы пустой страницы и капчи уже сделал fetch_page;
+                # второй вызов здесь только тратил бы лишний запрос.
+                html = fetch_html(detail_url, biz_id=biz_id, force_refresh=refresh)
                 _fetch_source = "cdp"
 
             # Резервный путь без браузера больше не используется: если пул вкладок не поднялся, запись уходит без соцсетей — это честнее, чем долбить Яндекс HTTP-запросами.

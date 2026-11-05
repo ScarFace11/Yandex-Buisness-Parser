@@ -674,6 +674,7 @@ def _cdp_navigate_and_get_html(ws_url: str, url: str, timeout_s: float = 40) -> 
     except ImportError:
         state.syslog("cdp_client: websocket-client not installed")
         return None
+    from .extractors import is_antibot_html
 
     overall_deadline = time.monotonic() + timeout_s
     ws = None
@@ -750,6 +751,12 @@ def _cdp_navigate_and_get_html(ws_url: str, url: str, timeout_s: float = 40) -> 
                 min(overall_deadline, time.monotonic() + 8.0),
             )
             if html and len(html) > _MIN_CONTENT_BYTES:
+                # Проверку «Вы не робот?» считаем неудачей, чтобы fetch_page
+                # повторил её по RETRY_COUNT, а не отдал как готовую карточку.
+                if is_antibot_html(html):
+                    state.syslog(f"cdp_client: Яндекс показал проверку вместо карточки: {url}")
+                    set_failure_reason("antibot")
+                    return None
                 if not needs_card or _looks_like_org_card(html):
                     return html
                 # Документ готов, а содержимого карточки в нём нет: SPA ещё дорисовывает блоки либо Яндекс отдал заглушку.

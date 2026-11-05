@@ -177,6 +177,19 @@ class TestFetchHtmlUsesTheCache:
         assert extractors.fetch_html(url, biz_id="123") == PAGE
         assert len(calls) == 1, "повторная загрузка ждала бы браузер зря"
 
+    def test_force_refresh_bypasses_the_cached_page(self, cache_dir, fake_cdp):
+        """«Проверить старые» не должен отдавать вчерашнюю копию из кэша."""
+        calls, page = fake_cdp
+        url = "https://yandex.ru/maps/org/123"
+        assert extractors.fetch_html(url, biz_id="123") == PAGE
+        fresh = "<html><body>" + "обновлённая карточка " * 80 + "</body></html>"
+        page["html"] = fresh
+        assert extractors.fetch_html(url, biz_id="123") == PAGE
+        assert len(calls) == 1
+
+        assert extractors.fetch_html(url, biz_id="123", force_refresh=True) == fresh
+        assert len(calls) == 2, "с force_refresh браузер должен открыться заново"
+
     def test_antiblock_stub_is_not_cached(self, cache_dir, fake_cdp):
         calls, page = fake_cdp
         page["html"] = "<html>Ой! Похоже, вы робот. showcaptcha</html>" + "x" * 1000
@@ -186,17 +199,16 @@ class TestFetchHtmlUsesTheCache:
         assert len(calls) == 2, "заглушка не должна жить в кэше сутки"
         assert not (cache_dir / "123.html").exists()
 
-    def test_empty_page_is_retried_before_reporting(self, cache_dir, fake_cdp, monkeypatch):
-        """Одна неудача — ещё не ошибка: карточку пробуют открыть заново."""
+    def test_empty_page_uses_the_browser_retry_policy_only(self, cache_dir, fake_cdp):
+        """Пустую страницу повторяет cdp_client — fetch_html не добавляет попытку."""
         from yandex_maps_parser import state
 
         calls, page = fake_cdp
         page["html"] = ""
-        monkeypatch.setattr(extractors.time, "sleep", lambda *_: None)
         state.reset_read_failures()
         url = "https://yandex.ru/maps/org/123"
         assert extractors.fetch_html(url, biz_id="123") == ""
-        assert len(calls) == 2, "после пустой страницы была вторая попытка"
+        assert len(calls) == 1, "после пустой страницы fetch_html сделал лишний запрос"
         assert state.read_failure_summary()["total"] == 1
         state.reset_read_failures()
 
@@ -239,6 +251,7 @@ class TestEnrichmentReusesTheCardPage:
         monkeypatch.setattr(state, "SOCIAL_MODE", "all", raising=False)
         monkeypatch.setattr(state, "REQUIRED_SOCIALS", set(), raising=False)
         monkeypatch.setattr(state, "MAX_WORKERS", 1, raising=False)
+        monkeypatch.setattr(state, "REFRESH_SEEN", False, raising=False)
         import types as _t
         pbar = _t.SimpleNamespace(update=lambda *a, **k: None)
         return types.SimpleNamespace(enrich=enrichment.enrich, opened=opened, pbar=pbar)
@@ -266,14 +279,29 @@ class TestEnrichmentReusesTheCardPage:
                              "<html>Похоже, вы робот. showcaptcha</html>" + "x" * 1000)[1])
         cdp.enrich([self._candidate()], cdp.pbar)
         cdp.enrich([self._candidate()], cdp.pbar)
-        assert len(cdp.opened) == 4, "две попытки на прогон, заглушка не кэшируется"
+        assert len(cdp.opened) == 2, "по одной попытке на прогон, заглушка не кэшируется"
         assert not (cache_dir / "15064875244.html").exists()
+
+    def test_refresh_mode_fetches_the_card_even_with_raw_socials(
+            self, cache_dir, cdp, monkeypatch):
+        """Старая запись с готовыми соцсетями всё равно проверяется заново."""
+        from yandex_maps_parser import state
+
+        monkeypatch.setattr(state, "REFRESH_SEEN", True)
+        candidate = self._candidate()
+        candidate["_raw_feature"] = {
+            "url": "https://vk.com/testcafe",
+            "site": "https://t.me/testcafe",
+        }
+        cdp.enrich([dict(candidate)], cdp.pbar)
+        cdp.enrich([dict(candidate)], cdp.pbar)
+        assert len(cdp.opened) == 2, "refresh должен обходить кэш и открывать карточку"
 
 
 class TestEnrichmentUsesTheCachedFetch:
     def test_detail_pages_go_through_fetch_html(self):
         text = (ROOT / "yandex_maps_parser" / "enrichment.py").read_text(
             encoding="utf-8")
-        assert "fetch_html(detail_url, biz_id=biz_id)" in text
+        assert "fetch_html(detail_url, biz_id=biz_id, force_refresh=refresh)" in text
         assert "cdp_client.fetch_page(detail_url, biz_id=biz_id)" not in text, (
             "прямой вызов браузера в обход fetch_html отключает кэш страниц")
