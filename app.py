@@ -1,6 +1,7 @@
 """Flask application entry point."""
 import sys
 import multiprocessing
+import mimetypes
 
 # MUST run before anything else when frozen: without this, a PyInstaller exe relaunches the whole application for every multiprocessing child.
 multiprocessing.freeze_support()
@@ -46,6 +47,12 @@ if paths.is_frozen():
     os.chdir(paths.user_dir())
 
 from flask import Flask, jsonify, request
+
+# Windows реестр иногда отдаёт .js как text/plain; Chrome с nosniff отказывается
+# исполнять такие файлы, и интерфейс остаётся пустым. Типы задаём явно.
+for _ext in (".js", ".mjs"):
+    mimetypes.add_type("text/javascript", _ext)
+mimetypes.add_type("text/css", ".css")
 
 from routes.parser import bp as parser_bp
 from routes.api   import bp as api_bp

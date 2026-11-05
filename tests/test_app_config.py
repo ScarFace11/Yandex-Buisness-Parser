@@ -107,6 +107,13 @@ class TestLocalSecurity:
         assert resp.headers["Referrer-Policy"] == "no-referrer"
         assert "camera=()" in resp.headers["Permissions-Policy"]
 
+    def test_static_javascript_is_served_as_javascript(self, client):
+        """Windows-реестр не должен превращать .js в text/plain: с nosniff
+        браузер такой файл не исполняет, и интерфейс остаётся без скриптов."""
+        resp = client.get("/static/js/01-core-state.js")
+        assert resp.status_code == 200
+        assert resp.headers["Content-Type"].startswith("text/javascript")
+
     def test_foreign_host_is_rejected(self, client):
         """DNS-rebinding: чужое имя хоста не должно попасть в localhost."""
         resp = client.get("/", headers={"Host": "evil.example"})
