@@ -66,11 +66,16 @@
   background:var(--card);color:var(--muted);
 }
 [data-theme="dark"] .leaflet-control-attribution a{color:var(--c)}
-.leaflet-popup-content-wrapper{border:1px solid var(--bdr);border-radius:var(--r-md);box-shadow:var(--sh-lg)}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--card);color:var(--txt)}
-.leaflet-popup-content{margin:10px 12px;line-height:1.4;color:var(--txt)}
-.leaflet-container a.leaflet-popup-close-button{color:var(--muted)}
-.leaflet-container a.leaflet-popup-close-button:hover{color:var(--txt)}
+/* Leaflet.css подключается позже (лениво, при открытии карты), поэтому его
+   `.leaflet-popup-content-wrapper{background:white}` перекрывал наши токены:
+   в тёмной теме светлый текст оказывался на белой подложке. ID в селекторе
+   гарантирует победу независимо от порядка подключения. */
+#map-container .leaflet-popup-content-wrapper{border:1px solid var(--bdr);border-radius:var(--r-md);box-shadow:var(--sh-lg)}
+#map-container .leaflet-popup-content-wrapper,
+#map-container .leaflet-popup-tip{background:var(--card);color:var(--txt)}
+#map-container .leaflet-popup-content{margin:10px 12px;line-height:1.4;color:var(--txt)}
+#map-container a.leaflet-popup-close-button{color:var(--muted)}
+#map-container a.leaflet-popup-close-button:hover{color:var(--txt)}
 .stats-body{flex:1;overflow-y:auto;padding:20px}
 .stat-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:12px;margin-bottom:26px}
 .stat-card{

@@ -236,6 +236,26 @@ class TestContrast:
                                f"= {ratio:.2f}:1")
         assert not bad, "белая надпись на светлом фоне: " + "; ".join(bad)
 
+    def test_map_popup_surface_beats_leaflet_default(self):
+        """Leaflet подключается позже и иначе возвращает белую подложку в тёмной теме.
+
+        Его `.leaflet-popup-content-wrapper, .leaflet-popup-tip{background:white}`
+        задан классами; правило приложения обязано быть сильнее, иначе текст
+        --txt на белом даёт контраст около 1.2:1.
+        """
+        leaflet = (ROOT / "static" / "vendor" / "leaflet" / "leaflet.css").read_text(encoding="utf-8")
+        # Leaflet объявляет подложку списком селекторов
+        # (`.leaflet-popup-content-wrapper, .leaflet-popup-tip`), поэтому
+        # между классом и `{` допустим второй селектор.
+        assert re.search(r"\.leaflet-popup-content-wrapper[^{}]*\{[^}]*background:\s*white", leaflet)
+        rule = re.search(
+            r"#map-container \.leaflet-popup-content-wrapper,\s*"
+            r"#map-container \.leaflet-popup-tip\{([^}]*)\}",
+            STYLE,
+        )
+        assert rule, "подложка попапа должна перебивать Leaflet по ID"
+        assert "background:var(--card)" in rule.group(1)
+
     def test_dense_semantic_buttons_exist_for_both_themes(self):
         """Кнопочные роли определены и темнее «текстовых» в тёмной теме."""
         for tok in ("--grn-btn", "--blu-btn"):

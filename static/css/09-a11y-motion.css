@@ -47,6 +47,12 @@ input[type=range]:focus-visible{outline:2px solid var(--c);outline-offset:4px;bo
 input:focus-visible,textarea:focus-visible,select:focus-visible{
   outline:2px solid var(--focus-ring);outline-offset:1px;
 }
+/* Длинное описание в попапе карты — прокручиваемая область. Ей нужен
+   видимый фокус: без рамки клавиатурный пользователь не понимает, куда
+   попал Tab и что можно листать стрелками. */
+.map-pop-desc .map-pop-val:focus-visible{
+  outline:2px solid var(--c);outline-offset:2px;border-radius:4px;
+}
 
 /* Text selection tint */
 ::selection{background:var(--glow);color:inherit}

@@ -324,7 +324,7 @@ function mapPopupHtml(r, color) {
       ${services ? `<div class="map-pop-row map-pop-clamp"><span class="map-pop-key">Услуги</span>`
         + `<span class="map-pop-val">${escapeHtml(services)}</span></div>` : ''}
       ${description ? `<div class="map-pop-row map-pop-desc"><span class="map-pop-key">Описание</span>`
-        + `<span class="map-pop-val">${escapeHtml(description)}</span></div>` : ''}
+        + `<span class="map-pop-val" role="region" aria-label="Описание организации" tabindex="0">${escapeHtml(description)}</span></div>` : ''}
       ${site ? `<div class="map-pop-row"><span class="map-pop-key">Сайт</span>`
         + `<a href="${escapeHtml(safeUrl(site))}" target="_blank" rel="noopener noreferrer">${escapeHtml(site)}</a></div>` : ''}
       ${score !== '' && score != null ? `<div class="map-pop-row"><span class="map-pop-key">Оценка лида</span>${escapeHtml(String(score))} из 100</div>` : ''}

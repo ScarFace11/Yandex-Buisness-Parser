@@ -75,18 +75,25 @@
         phone: '+7 999 123-45-67', site: 'https://romashka.ru', vk: 'https://vk.com/romashka',
         telegram: '', instagram: '', whatsapp: '', rating: 4.6, reviews_count: 128,
         lead_score: 72, query: 'кафе', yandex_maps_url: 'https://yandex.ru/maps/org/1',
-        without_site: false, reviewed: false, note: '' },
+        email: 'hello@romashka.ru', hours: 'Пн–Вс 09:00–22:00',
+        services: 'Кофе, завтраки, десерты', status: 'Открыто',
+        description: 'Уютное кафе у парка: домашняя выпечка, завтраки весь день и тихая терраса для встреч.',
+        lat: 55.75, lon: 37.61, without_site: false, reviewed: false, note: '' },
       { name: 'Стоматология «Улыбка»', category: 'Стоматология', city: 'Казань',
         address: 'ул. Баумана, 12', phone: '', site: '', vk: '', telegram: 'https://t.me/smile',
         instagram: '', whatsapp: '', rating: 4.1, reviews_count: 8, lead_score: 31,
         query: 'стоматология', yandex_maps_url: 'https://yandex.ru/maps/org/2',
-        without_site: true, reviewed: true, note: 'перезвонить' },
+        lat: 55.79, lon: 49.12, without_site: true, reviewed: true, note: 'перезвонить' },
       { name: 'Салон «Лилия»', category: '', city: 'Москва', address: '', phone: '+7 495 000-11-22',
         site: '', vk: '', telegram: '', instagram: '', whatsapp: '', rating: null,
         reviews_count: 0, lead_score: null, query: 'салон', yandex_maps_url: '',
-        without_site: true, reviewed: false, note: '' },
+        lat: 55.76, lon: 37.62, without_site: true, reviewed: false, note: '' },
     ];
-    try { renderTable(rows); window.__A11Y_ROWS = rows; } catch (e) { /* нет данных — не находка */ }
+    try {
+      renderTable(rows);
+      window.__A11Y_ROWS = rows;
+      if (typeof syncMapWithResults === 'function') syncMapWithResults();
+    } catch (e) { /* нет данных — не находка */ }
   }
   if (st.seedStats && typeof renderStats === 'function') {
     try { renderStats(window.__A11Y_ROWS || [], 125, 0); } catch (e) { /* см. выше */ }
@@ -113,6 +120,24 @@
   }
 
   if (st.tab && typeof showTab === 'function') showTab(st.tab);
+
+  // Попап карты живёт в Leaflet и появляется только после загрузки карты:
+  // без явного открытия аудит видел бы пустую подложку, а не новые сведения.
+  if (st.openMapPopup) {
+    for (let i = 0; i < 80; i += 1) {
+      if (typeof leafMap !== 'undefined' && leafMap
+          && document.querySelector('.leaflet-marker-icon')) break;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    if (typeof leafMap !== 'undefined' && leafMap) {
+      leafMap.eachLayer(layer => {
+        const popup = layer.getPopup && layer.getPopup();
+        if (popup) layer.openPopup();
+      });
+    }
+    await new Promise(r => setTimeout(r, 200));
+    stats.mapPopup = !!document.querySelector('.leaflet-popup-content .map-pop');
+  }
 
   if (st.canary) {
     // Контрольный образец: белая надпись на светлом фоне и кнопка без имени.

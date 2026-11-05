@@ -276,6 +276,7 @@ test('попап показывает статус, email, часы, услуг�
   assert.match(html, /<span class="map-pop-key">Часы<\/span>Пн–Вс 10:00–22:00/);
   assert.match(html, /<span class="map-pop-key">Услуги<\/span>/);
   assert.match(html, /<span class="map-pop-key">Описание<\/span>/);
+  assert.match(html, /role="region" aria-label="Описание организации" tabindex="0"/);
 });
 
 test('попап не выводит пустые поля и экранирует данные', () => {

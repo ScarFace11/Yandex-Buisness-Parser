@@ -131,6 +131,27 @@ def test_audit_detects_broken_markup(browser_cdp, live_app_url):
     assert float(contrast[0]["detail"].split(":1")[0]) < CONTRAST_FLOOR
 
 
+# ── Попап карты: новые сведения читаются в обеих темах ───────────
+@pytest.mark.parametrize("theme", ("light", "dark"))
+def test_map_popup_passes_audit(browser_cdp, live_app_url, theme):
+    """Подложка попапа не должна оставаться белой в тёмной теме.
+
+    Leaflet.css приходит позже и содержит собственный белый фон; без
+    сильного селектора текст --txt оказывался на нём с контрастом ~1.2:1.
+    Состояние с seedRows даёт настоящие координаты, а openMapPopup
+    открывает карточку до замера контраста.
+    """
+    result = run_audit(browser_cdp, live_app_url, {
+        "theme": theme, "fillForm": True, "tab": "map",
+        "seedRows": True, "openMapPopup": True,
+    })
+    assert result["stats"].get("mapPopup") is True, "попап карты не открылся — проверять нечего"
+    assert result["findings"] == [], (
+        f"{theme} тема, попап карты: {len(result['findings'])} нарушений\n"
+        + format_findings(result["findings"])
+    )
+
+
 # ── Тумблеры и попап уведомлений: тема переключается на живом интерфейсе ──
 def test_theme_switch_keeps_the_notify_popover_readable(browser_cdp, live_app_url):
     """Один и тот же попап проверяется в двух темах — переключение на месте.
