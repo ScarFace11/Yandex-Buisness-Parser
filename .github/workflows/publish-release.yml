@@ -57,7 +57,7 @@ jobs:
     steps:
       # Скрипты лежат в репозитории: без checkout `python3 scripts/...`
       # падает с «can't open file», и публикация не доходит до релиза.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check the tag — публикуем только стабильные релизы
         id: tag
