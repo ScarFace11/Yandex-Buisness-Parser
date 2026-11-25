@@ -1,10 +1,10 @@
 # 🔍 Поиск клиентов · Яндекс.Карты
 
-[![CI](https://github.com/ScarFace11/Yandex-Buisness-Parser/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ScarFace11/Yandex-Buisness-Parser/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/ScarFace11/Yandex-Buisness-Parser?label=release)](https://github.com/ScarFace11/Yandex-Buisness-Parser/releases/latest)
+[![CI](https://github.com/ScarFace11/Yandex-Business-Parser/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ScarFace11/Yandex-Business-Parser/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ScarFace11/Yandex-Business-Parser?label=release)](https://github.com/ScarFace11/Yandex-Business-Parser/releases/latest)
 [![Python](https://img.shields.io/badge/python-3.12-3776AB)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-1870%2B-brightgreen)](tests)
-[![License](https://img.shields.io/github/license/ScarFace11/Yandex-Buisness-Parser)](LICENSE)
+[![License](https://img.shields.io/github/license/ScarFace11/Yandex-Business-Parser)](LICENSE)
 
 **Локальное приложение для поиска компаний на Яндекс.Картах.** Находит организации без сайта, собирает телефоны и соцсети, считает оценку лида от 0 до 100 и выгружает базу в Excel или CSV. Работает на вашем компьютере, платные API не нужны.
 
@@ -30,8 +30,8 @@
 Нужен **Python 3.12** и **Google Chrome** (или другой браузер на Chromium).
 
 ```bash
-git clone https://github.com/ScarFace11/Yandex-Buisness-Parser.git
-cd Yandex-Buisness-Parser
+git clone https://github.com/ScarFace11/Yandex-Business-Parser.git
+cd Yandex-Business-Parser
 pip install -r requirements.txt
 python app.py
 ```
@@ -40,7 +40,7 @@ python app.py
 
 ## Скачать
 
-Готовые сборки — на странице [Releases](https://github.com/ScarFace11/Yandex-Buisness-Parser/releases/latest).
+Готовые сборки — на странице [Releases](https://github.com/ScarFace11/Yandex-Business-Parser/releases/latest).
 
 - **Windows:** `YandexBusinessParser-windows-x64-setup.exe` — установщик без прав администратора, данные в `%APPDATA%\YandexBusinessParser`. Либо portable-архив `.zip`.
 - **macOS:** `.dmg` для Apple Silicon или Intel; приложение нужно перетащить в «Программы».
@@ -71,7 +71,7 @@ python app.py
 - [ARCHITECTURE.md](ARCHITECTURE.md) — устройство приложения и поток данных.
 - [CHANGELOG.md](CHANGELOG.md) — что изменилось по версиям.
 - [docs/build.md](docs/build.md) — сборка `.exe`/`.app`, установщик, подпись macOS, CI/CD и тесты.
-- [Issues](https://github.com/ScarFace11/Yandex-Buisness-Parser/issues) — сообщения об ошибках и предложения.
+- [Issues](https://github.com/ScarFace11/Yandex-Business-Parser/issues) — сообщения об ошибках и предложения.
 
 ## Данные и безопасность
 
