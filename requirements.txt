@@ -24,7 +24,7 @@ websocket-client~=1.9  # CDP WebSocket
 openpyxl~=3.1.5
 
 # Maps (HTML)
-folium~=0.20.0
+folium~=1.0.0
 
 # Геокодирование города — из той же карты (browser_search.city_center), без API.
 
